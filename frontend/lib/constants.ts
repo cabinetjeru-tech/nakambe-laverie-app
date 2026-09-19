@@ -1,0 +1,66 @@
+export const COMPANY = {
+  name: 'NAKAMBÉ',
+  fullName: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE',
+  slogan: 'La propreté qui vient à vous',
+  address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
+  phone1: '+226 73 12 26 12',
+  phone2: '+226 54 54 28 18',
+  whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '22673122612',
+};
+
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  DEMANDE_RECUE: 'Demande reçue',
+  RDV_CONFIRME: 'Rendez-vous confirmé',
+  COLLECTE_PROGRAMMEE: 'Collecte programmée',
+  COLLECTE_EFFECTUEE: 'Collecté',
+  RECEPTIONNE: 'Réceptionné',
+  TRI: 'Tri',
+  LAVAGE: 'Lavage',
+  ESSORAGE: 'Essorage',
+  SECHAGE: 'Séchage',
+  REPASSAGE: 'Repassage',
+  CONTROLE_QUALITE: 'Contrôle qualité',
+  EMBALLAGE: 'Emballage',
+  PRET: 'Prêt',
+  LIVRAISON_PROGRAMMEE: 'Livraison programmée',
+  LIVRE: 'Livré',
+  TERMINE: 'Terminé',
+  ANNULE: 'Annulé',
+};
+
+export const ORDER_STATUS_SEQUENCE = [
+  'DEMANDE_RECUE',
+  'RDV_CONFIRME',
+  'COLLECTE_PROGRAMMEE',
+  'COLLECTE_EFFECTUEE',
+  'RECEPTIONNE',
+  'TRI',
+  'LAVAGE',
+  'ESSORAGE',
+  'SECHAGE',
+  'REPASSAGE',
+  'CONTROLE_QUALITE',
+  'EMBALLAGE',
+  'PRET',
+  'LIVRAISON_PROGRAMMEE',
+  'LIVRE',
+  'TERMINE',
+];
+
+export const SERVICE_DOMAIN_LABELS: Record<string, string> = {
+  LAVERIE_PRESSING: 'Laverie & Pressing',
+  AUTO_MOTO: 'Lavage auto/moto',
+  TEXTILE_MAISON: 'Tapis, moquettes, divans, matelas',
+  CHANTIER: 'Nettoyage de chantier',
+  MOBILE: 'Intervention mobile',
+};
+
+export const ROLE_LABELS: Record<string, string> = {
+  ADMIN: 'Administrateur',
+  GERANT: 'Gérant',
+  RECEPTIONNISTE: 'Réceptionniste',
+  AGENT_LAVERIE: 'Agent laverie',
+  AGENT_NETTOYAGE: 'Agent nettoyage',
+  CHAUFFEUR: 'Chauffeur / Livreur',
+  CLIENT: 'Client',
+};

@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f6f8fc;
+  --foreground: #10203b;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-blue px-5 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-brand-blue-dark active:scale-[0.99];
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border-2 border-brand-blue px-5 py-3 text-base font-semibold text-brand-blue transition hover:bg-brand-blue-light;
+  }
+  .btn-gold {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-gold px-5 py-3 text-base font-semibold text-brand-blue-dark shadow-sm transition hover:brightness-95;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white p-5 shadow-sm;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-base text-slate-900 placeholder:text-slate-400 focus:border-brand-blue focus:outline-none focus:ring-2 focus:ring-brand-blue/20;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-slate-700;
+  }
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+}

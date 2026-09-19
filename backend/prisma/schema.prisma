@@ -1,0 +1,831 @@
+// ============================================================================
+// NAKAMBÉ LAVERIE EXPRES ET DIGITALE — Schéma de base de données
+// Voir docs/01-ARCHITECTURE.md pour les choix d'architecture.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 1. ORGANISATION : agences, zones, utilisateurs, rôles
+// ============================================================================
+
+model Branch {
+  id        String   @id @default(uuid())
+  name      String // ex: "Nakambé Tenkodogo"
+  city      String // ex: "Tenkodogo"
+  address   String?
+  phone1    String?
+  phone2    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zones     Zone[]
+  users     User[]
+  clients   Client[]
+  orders    Order[]
+  products  Product[]
+  suppliers Supplier[]
+  expenses  Expense[]
+  revenues  Revenue[]
+  vehicles  Vehicle[]
+  employees Employee[]
+
+  @@map("branches")
+}
+
+model Zone {
+  id        String   @id @default(uuid())
+  branchId  String
+  name      String // ex: "Cité du 11 Décembre"
+  travelFee Decimal  @default(0) @db.Decimal(12, 2)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  branch       Branch        @relation(fields: [branchId], references: [id])
+  clients      Client[]
+  orders       Order[]
+  appointments Appointment[]
+
+  @@map("zones")
+}
+
+enum RoleName {
+  ADMIN
+  GERANT
+  RECEPTIONNISTE
+  AGENT_LAVERIE
+  AGENT_NETTOYAGE
+  CHAUFFEUR
+  CLIENT
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        RoleName @unique
+  description String?
+
+  users       User[]
+  permissions RolePermission[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id    String @id @default(uuid())
+  code  String @unique // ex: "clients.write", "finance.read"
+  label String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  fullName     String
+  email        String?   @unique
+  phone        String    @unique
+  passwordHash String
+  roleId       String
+  branchId     String?
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  role              Role                 @relation(fields: [roleId], references: [id])
+  branch            Branch?              @relation(fields: [branchId], references: [id])
+  employee          Employee?
+  client            Client?
+  refreshTokens     RefreshToken[]
+  auditLogs         AuditLog[]
+  assignedOrders    Order[]              @relation("OrderAssignedAgent")
+  driverMissions    Order[]              @relation("OrderDriver")
+  statusChanges     OrderStatusHistory[]
+  complaintsHandled Complaint[]          @relation("ComplaintHandledBy")
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  action     String // ex: "ORDER_STATUS_CHANGE", "CLIENT_UPDATE"
+  entityType String
+  entityId   String?
+  details    Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// 2. CLIENTS (CRM)
+// ============================================================================
+
+enum ClientType {
+  PARTICULIER
+  ENTREPRISE
+  ADMINISTRATION
+  HOTEL
+  RESTAURANT
+  AUTRE
+}
+
+model Client {
+  id            String     @id @default(uuid())
+  clientNumber  String     @unique // ex: NK-CLI-000001
+  userId        String?    @unique // lié à un compte de connexion si le client s'est inscrit
+  branchId      String?
+  zoneId        String?
+  fullName      String
+  phone         String     @unique
+  whatsapp      String?
+  email         String?
+  address       String?
+  district      String? // quartier
+  gpsLat        Float?
+  gpsLng        Float?
+  type          ClientType @default(PARTICULIER)
+  companyName   String?
+  notes         String?
+  loyaltyPoints Int        @default(0)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  user          User?          @relation(fields: [userId], references: [id])
+  branch        Branch?        @relation(fields: [branchId], references: [id])
+  zone          Zone?          @relation(fields: [zoneId], references: [id])
+  orders        Order[]
+  appointments  Appointment[]
+  quotes        Quote[]
+  invoices      Invoice[]
+  payments      Payment[]
+  complaints    Complaint[]
+  reviews       Review[]
+  contracts     Contract[]
+  subscriptions Subscription[]
+  notifications Notification[]
+
+  @@map("clients")
+}
+
+// ============================================================================
+// 3. CATALOGUE DE SERVICES (tarifs configurables, jamais codés en dur)
+// ============================================================================
+
+enum ServiceDomain {
+  LAVERIE_PRESSING
+  AUTO_MOTO
+  TEXTILE_MAISON // tapis, moquette, divan, matelas...
+  CHANTIER
+  MOBILE // intervention tricycle à domicile
+}
+
+model ServiceCategory {
+  id       String        @id @default(uuid())
+  domain   ServiceDomain
+  name     String // ex: "Lavage voiture", "Nettoyage divan"
+  isActive Boolean       @default(true)
+
+  services Service[]
+
+  @@map("service_categories")
+}
+
+model Service {
+  id               String   @id @default(uuid())
+  categoryId       String
+  name             String // ex: "Lavage haute pression - Moto"
+  description      String?
+  unit             String   @default("pièce") // pièce, m², kg, forfait
+  price            Decimal  @db.Decimal(12, 2)
+  estimatedMinutes Int?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  category   ServiceCategory @relation(fields: [categoryId], references: [id])
+  orderItems OrderItem[]
+  quoteItems QuoteItem[]
+
+  @@map("services")
+}
+
+// ============================================================================
+// 4. RENDEZ-VOUS
+// ============================================================================
+
+enum AppointmentStatus {
+  DEMANDE
+  CONFIRME
+  REPROGRAMME
+  ANNULE
+  CONVERTI // transformé en commande
+}
+
+enum InterventionMode {
+  A_DOMICILE
+  AU_SIEGE
+}
+
+model Appointment {
+  id            String            @id @default(uuid())
+  clientId      String
+  zoneId        String?
+  domain        ServiceDomain
+  mode          InterventionMode
+  scheduledDate DateTime
+  address       String?
+  quantityNote  String? // estimation libre donnée par le client
+  comment       String?
+  photoUrls     String[]          @default([])
+  status        AppointmentStatus @default(DEMANDE)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id])
+  zone   Zone?  @relation(fields: [zoneId], references: [id])
+  order  Order?
+
+  @@map("appointments")
+}
+
+// ============================================================================
+// 5. COMMANDES (cœur du système)
+// ============================================================================
+
+enum OrderStatus {
+  DEMANDE_RECUE
+  RDV_CONFIRME
+  COLLECTE_PROGRAMMEE
+  COLLECTE_EFFECTUEE
+  RECEPTIONNE
+  TRI
+  LAVAGE
+  ESSORAGE
+  SECHAGE
+  REPASSAGE
+  CONTROLE_QUALITE
+  EMBALLAGE
+  PRET
+  LIVRAISON_PROGRAMMEE
+  LIVRE
+  TERMINE
+  ANNULE
+}
+
+enum DeliveryMode {
+  RETRAIT_SUR_PLACE
+  LIVRAISON
+}
+
+model Order {
+  id              String        @id @default(uuid())
+  orderNumber     String        @unique // NK-2026-000001
+  clientId        String
+  branchId        String?
+  zoneId          String?
+  appointmentId   String?       @unique
+  domain          ServiceDomain
+  status          OrderStatus   @default(DEMANDE_RECUE)
+  deliveryMode    DeliveryMode  @default(RETRAIT_SUR_PLACE)
+  address         String?
+  assignedAgentId String?
+  driverId        String?
+  vehicleId       String?
+  notes           String?
+  defectsNote     String? // défauts constatés à la réception
+  photoUrls       String[]      @default([])
+  qrCode          String?       @unique
+  subtotal        Decimal       @default(0) @db.Decimal(12, 2)
+  discount        Decimal       @default(0) @db.Decimal(12, 2)
+  travelFee       Decimal       @default(0) @db.Decimal(12, 2)
+  total           Decimal       @default(0) @db.Decimal(12, 2)
+  amountPaid      Decimal       @default(0) @db.Decimal(12, 2)
+  expectedReadyAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  client        Client       @relation(fields: [clientId], references: [id])
+  branch        Branch?      @relation(fields: [branchId], references: [id])
+  zone          Zone?        @relation(fields: [zoneId], references: [id])
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  assignedAgent User?        @relation("OrderAssignedAgent", fields: [assignedAgentId], references: [id])
+  driver        User?        @relation("OrderDriver", fields: [driverId], references: [id])
+  vehicle       Vehicle?     @relation(fields: [vehicleId], references: [id])
+
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  invoice       Invoice?
+  payments      Payment[]
+  complaints    Complaint[]
+  review        Review?
+  notifications Notification[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  orderId    String
+  serviceId  String?
+  label      String // libellé libre (ex: "Chemise blanche - tache café")
+  category   String? // catégorie d'article
+  color      String?
+  quantity   Int     @default(1)
+  unitPrice  Decimal @db.Decimal(12, 2)
+  total      Decimal @db.Decimal(12, 2)
+  condition  String? // état constaté
+  itemNumber String? // numéro d'étiquette de l'article
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id          String      @id @default(uuid())
+  orderId     String
+  status      OrderStatus
+  comment     String?
+  changedById String?
+  createdAt   DateTime    @default(now())
+
+  order     Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  changedBy User? @relation(fields: [changedById], references: [id])
+
+  @@map("order_status_history")
+}
+
+// ============================================================================
+// 6. DEVIS / FACTURES / PAIEMENTS
+// ============================================================================
+
+enum QuoteStatus {
+  BROUILLON
+  ENVOYE
+  ACCEPTE
+  REFUSE
+  EXPIRE
+}
+
+model Quote {
+  id          String      @id @default(uuid())
+  quoteNumber String      @unique // NK-DEV-2026-000001
+  clientId    String
+  subtotal    Decimal     @default(0) @db.Decimal(12, 2)
+  discount    Decimal     @default(0) @db.Decimal(12, 2)
+  total       Decimal     @default(0) @db.Decimal(12, 2)
+  deposit     Decimal     @default(0) @db.Decimal(12, 2)
+  validUntil  DateTime?
+  conditions  String?
+  status      QuoteStatus @default(BROUILLON)
+  pdfPath     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  client Client      @relation(fields: [clientId], references: [id])
+  items  QuoteItem[]
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id        String  @id @default(uuid())
+  quoteId   String
+  serviceId String?
+  label     String
+  quantity  Int     @default(1)
+  unitPrice Decimal @db.Decimal(12, 2)
+  total     Decimal @db.Decimal(12, 2)
+
+  quote   Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id])
+
+  @@map("quote_items")
+}
+
+enum InvoiceStatus {
+  IMPAYEE
+  PARTIELLEMENT_PAYEE
+  PAYEE
+  ANNULEE
+}
+
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique // NK-FAC-2026-000001
+  orderId       String?       @unique
+  clientId      String
+  subtotal      Decimal       @default(0) @db.Decimal(12, 2)
+  discount      Decimal       @default(0) @db.Decimal(12, 2)
+  total         Decimal       @default(0) @db.Decimal(12, 2)
+  amountPaid    Decimal       @default(0) @db.Decimal(12, 2)
+  status        InvoiceStatus @default(IMPAYEE)
+  pdfPath       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  order    Order?    @relation(fields: [orderId], references: [id])
+  client   Client    @relation(fields: [clientId], references: [id])
+  payments Payment[]
+
+  @@map("invoices")
+}
+
+enum PaymentMethod {
+  ESPECES
+  ORANGE_MONEY
+  MOOV_MONEY
+  VIREMENT
+  PAIEMENT_ULTERIEUR
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  paymentNumber  String        @unique // NK-PAI-2026-000001
+  clientId       String
+  orderId        String?
+  invoiceId      String?
+  amount         Decimal       @db.Decimal(12, 2)
+  method         PaymentMethod
+  transactionRef String? // référence Mobile Money constatée (jamais de PIN)
+  receivedById   String?
+  createdAt      DateTime      @default(now())
+
+  client  Client   @relation(fields: [clientId], references: [id])
+  order   Order?   @relation(fields: [orderId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+
+  @@map("payments")
+}
+
+// ============================================================================
+// 7. VÉHICULES / TRICYCLES / MISSIONS MOBILES
+// ============================================================================
+
+enum VehicleType {
+  TRICYCLE
+  MOTO
+  VOITURE_SERVICE
+  AUTRE
+}
+
+model Vehicle {
+  id          String      @id @default(uuid())
+  branchId    String?
+  type        VehicleType
+  label       String // ex: "Tricycle 1"
+  plateNumber String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+  orders Order[]
+
+  @@map("vehicles")
+}
+
+// ============================================================================
+// 8. EMPLOYÉS
+// ============================================================================
+
+model Employee {
+  id        String    @id @default(uuid())
+  userId    String    @unique
+  branchId  String?
+  position  String // fonction
+  hireDate  DateTime?
+  salary    Decimal?  @db.Decimal(12, 2)
+  status    String    @default("ACTIF")
+  documents String[]  @default([])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id])
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@map("employees")
+}
+
+// ============================================================================
+// 9. STOCK / FOURNISSEURS
+// ============================================================================
+
+model Supplier {
+  id        String   @id @default(uuid())
+  branchId  String?
+  name      String
+  phone     String?
+  address   String?
+  products  String? // description libre des produits fournis
+  notes     String?
+  createdAt DateTime @default(now())
+
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  stockMovements StockMovement[]
+
+  @@map("suppliers")
+}
+
+model Product {
+  id            String   @id @default(uuid())
+  branchId      String?
+  name          String // ex: "Savon liquide", "Sacs emballage"
+  unit          String   @default("unité")
+  currentStock  Decimal  @default(0) @db.Decimal(12, 2)
+  minThreshold  Decimal  @default(0) @db.Decimal(12, 2)
+  purchasePrice Decimal? @db.Decimal(12, 2)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  branch         Branch?         @relation(fields: [branchId], references: [id])
+  stockMovements StockMovement[]
+
+  @@map("products")
+}
+
+enum StockMovementType {
+  ENTREE
+  SORTIE
+}
+
+model StockMovement {
+  id          String            @id @default(uuid())
+  productId   String
+  supplierId  String?
+  type        StockMovementType
+  quantity    Decimal           @db.Decimal(12, 2)
+  unitPrice   Decimal?          @db.Decimal(12, 2)
+  reason      String?
+  createdById String?
+  createdAt   DateTime          @default(now())
+
+  product  Product   @relation(fields: [productId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ============================================================================
+// 10. FINANCES : dépenses / recettes hors commandes
+// ============================================================================
+
+model Expense {
+  id        String   @id @default(uuid())
+  branchId  String?
+  category  String // salaires, loyer, eau, électricité, produits, transport...
+  label     String
+  amount    Decimal  @db.Decimal(12, 2)
+  spentAt   DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@map("expenses")
+}
+
+model Revenue {
+  id         String   @id @default(uuid())
+  branchId   String?
+  source     String // laverie, auto, moto, divans, tapis, chantiers, autres
+  label      String
+  amount     Decimal  @db.Decimal(12, 2)
+  receivedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  branch Branch? @relation(fields: [branchId], references: [id])
+
+  @@map("revenues")
+}
+
+// ============================================================================
+// 11. B2B : contrats & abonnements
+// ============================================================================
+
+enum ContractStatus {
+  ACTIF
+  EXPIRE
+  RESILIE
+}
+
+model Contract {
+  id           String         @id @default(uuid())
+  clientId     String
+  title        String
+  description  String?
+  frequency    String? // ex: "hebdomadaire"
+  price        Decimal        @db.Decimal(12, 2)
+  startDate    DateTime
+  endDate      DateTime?
+  paymentTerms String?
+  status       ContractStatus @default(ACTIF)
+  createdAt    DateTime       @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("contracts")
+}
+
+enum SubscriptionStatus {
+  ACTIF
+  SUSPENDU
+  RESILIE
+}
+
+model Subscription {
+  id            String             @id @default(uuid())
+  clientId      String
+  planName      String // ex: "4 collectes/mois"
+  description   String?
+  price         Decimal            @db.Decimal(12, 2)
+  quotaPerMonth Int?
+  status        SubscriptionStatus @default(ACTIF)
+  startDate     DateTime           @default(now())
+  endDate       DateTime?
+  createdAt     DateTime           @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+
+  @@map("subscriptions")
+}
+
+// ============================================================================
+// 12. FIDÉLITÉ / PROMOTIONS
+// ============================================================================
+
+model LoyaltyRule {
+  id            String   @id @default(uuid())
+  label         String // ex: "1 point par 500 FCFA dépensé"
+  pointsPerUnit Int      @default(1)
+  unitAmount    Decimal  @default(500) @db.Decimal(12, 2)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  @@map("loyalty_rules")
+}
+
+enum PromotionType {
+  CODE_PROMO
+  REDUCTION_PERCENT
+  REDUCTION_MONTANT
+  OFFRE_SAISONNIERE
+  NOUVEAU_CLIENT
+  ANNIVERSAIRE
+  ENTREPRISE
+}
+
+model Promotion {
+  id        String        @id @default(uuid())
+  code      String?       @unique
+  type      PromotionType
+  label     String
+  value     Decimal       @db.Decimal(12, 2) // % ou montant selon le type
+  startsAt  DateTime?
+  endsAt    DateTime?
+  isActive  Boolean       @default(true)
+  createdAt DateTime      @default(now())
+
+  @@map("promotions")
+}
+
+// ============================================================================
+// 13. AVIS / RÉCLAMATIONS
+// ============================================================================
+
+model Review {
+  id          String   @id @default(uuid())
+  clientId    String
+  orderId     String   @unique
+  rating      Int // 1 à 5
+  comment     String?
+  quality     Int?
+  punctuality Int?
+  welcome     Int?
+  createdAt   DateTime @default(now())
+
+  client Client @relation(fields: [clientId], references: [id])
+  order  Order  @relation(fields: [orderId], references: [id])
+
+  @@map("reviews")
+}
+
+enum ComplaintStatus {
+  NOUVELLE
+  EN_COURS
+  TRAITEE
+  CLOTUREE
+}
+
+model Complaint {
+  id              String          @id @default(uuid())
+  complaintNumber String          @unique // NK-REC-2026-000001
+  clientId        String
+  orderId         String?
+  subject         String
+  description     String
+  status          ComplaintStatus @default(NOUVELLE)
+  handledById     String?
+  resolution      String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  client    Client @relation(fields: [clientId], references: [id])
+  order     Order? @relation(fields: [orderId], references: [id])
+  handledBy User?  @relation("ComplaintHandledBy", fields: [handledById], references: [id])
+
+  @@map("complaints")
+}
+
+// ============================================================================
+// 14. NOTIFICATIONS
+// ============================================================================
+
+enum NotificationChannel {
+  IN_APP
+  WHATSAPP
+  SMS
+  EMAIL
+}
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String?
+  clientId  String?
+  orderId   String?
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  message   String
+  isRead    Boolean             @default(false)
+  sentAt    DateTime?
+  createdAt DateTime            @default(now())
+
+  user   User?   @relation(fields: [userId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
+  order  Order?  @relation(fields: [orderId], references: [id])
+
+  @@map("notifications")
+}
+
+// ============================================================================
+// 15. PARAMÈTRES DE L'ENTREPRISE
+// ============================================================================
+
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// ============================================================================
+// 16. NUMÉROTATION AUTOMATIQUE (compteurs par type de document)
+// ============================================================================
+
+model Sequence {
+  key   String @id // ex: "order", "invoice_2026", "quote_2026"
+  value Int    @default(0)
+
+  @@map("sequences")
+}
