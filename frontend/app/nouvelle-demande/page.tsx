@@ -71,16 +71,31 @@ function NouvelleDemandeForm() {
     }
     setGpsLoading(true);
     setGpsError(null);
+    const timeoutGuard = setTimeout(() => {
+      setGpsLoading(false);
+      setGpsError("Le téléphone ne répond pas. Vérifiez que la localisation (GPS) est activée dans les réglages du téléphone, puis réessayez.");
+    }, 12000);
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        clearTimeout(timeoutGuard);
         setGps({ lat: position.coords.latitude, lng: position.coords.longitude });
         setGpsLoading(false);
       },
-      () => {
-        setGpsError('Position non disponible. Vérifiez que la localisation est autorisée.');
+      (err) => {
+        clearTimeout(timeoutGuard);
         setGpsLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          setGpsError(
+            "Localisation refusée. Ouvrez les réglages du navigateur pour ce site et autorisez la localisation, puis réessayez.",
+          );
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setGpsError('Position introuvable. Vérifiez que le GPS/la localisation est activé sur le téléphone.');
+        } else {
+          setGpsError('Délai dépassé pour obtenir la position. Réessayez, de préférence en extérieur.');
+        }
       },
-      { enableHighAccuracy: true, timeout: 10000 },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
     );
   }
 
