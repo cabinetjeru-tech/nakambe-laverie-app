@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { OnlinePaymentsService } from './online-payments.service';
@@ -37,11 +37,25 @@ export class OnlinePaymentsController {
     return this.onlinePaymentsService.latestStatusForInvoice(id);
   }
 
-  /** Notification instantanée de paiement (IPN) envoyée par LigdiCash — jamais fiée sans re-vérification serveur-à-serveur. */
+  /**
+   * Notification instantanée de paiement (IPN) envoyée par LigdiCash ou CinetPay.
+   * Jamais fiée telle quelle : on ne fait que déclencher une re-vérification
+   * serveur-à-serveur auprès du fournisseur concerné (syncTransaction).
+   */
   @Public()
   @Post('callback')
-  async callback(@Body() body: Record<string, any>) {
-    const token = body?.token ?? body?.invoiceToken ?? body?.data?.token;
+  async callback(@Body() body: Record<string, any>, @Query() query: Record<string, any>) {
+    const token = body?.token ?? body?.invoiceToken ?? body?.data?.token ?? body?.cpm_trans_id ?? query?.cpm_trans_id ?? query?.token;
+    if (!token) return { received: true };
+    await this.onlinePaymentsService.syncTransaction(token);
+    return { received: true };
+  }
+
+  /** CinetPay peut aussi appeler notify_url en GET selon la configuration du compte marchand. */
+  @Public()
+  @Get('callback')
+  async callbackGet(@Query() query: Record<string, any>) {
+    const token = query?.cpm_trans_id ?? query?.token;
     if (!token) return { received: true };
     await this.onlinePaymentsService.syncTransaction(token);
     return { received: true };

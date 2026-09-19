@@ -4,6 +4,8 @@ import { OnlinePaymentStatus, PaymentMethod } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PaymentsService } from '../payments/payments.service';
 import { LigdicashService } from './ligdicash.service';
+import { CinetpayService } from './cinetpay.service';
+import { PaymentGateway } from './payment-gateway.interface';
 
 function mapOperatorToPaymentMethod(operatorName?: string): PaymentMethod {
   const op = (operatorName ?? '').toLowerCase();
@@ -11,7 +13,7 @@ function mapOperatorToPaymentMethod(operatorName?: string): PaymentMethod {
   return PaymentMethod.ORANGE_MONEY;
 }
 
-/** Un statut LigdiCash est considéré payé uniquement s'il contient explicitement "complet". */
+/** Un statut est considéré payé uniquement s'il contient explicitement un terme de succès. */
 function isPaidStatus(status: string): boolean {
   return status.includes('complet') || status.includes('success') || status.includes('succe');
 }
@@ -26,8 +28,19 @@ export class OnlinePaymentsService {
     private prisma: PrismaService,
     private config: ConfigService,
     private ligdicash: LigdicashService,
+    private cinetpay: CinetpayService,
     private paymentsService: PaymentsService,
   ) {}
+
+  /** Fournisseur actuellement actif pour de NOUVEAUX paiements (CINETPAY par défaut). */
+  private get activeProviderName(): string {
+    return (this.config.get<string>('ONLINE_PAYMENT_PROVIDER') ?? 'CINETPAY').toUpperCase();
+  }
+
+  /** Une transaction déjà créée doit toujours être vérifiée auprès du fournisseur qui l'a créée. */
+  private gatewayFor(providerName: string): PaymentGateway {
+    return providerName.toUpperCase() === 'LIGDICASH' ? this.ligdicash : this.cinetpay;
+  }
 
   private urls(type: 'quote' | 'invoice', id: string) {
     const frontendUrl = this.config.get<string>('FRONTEND_URL') ?? '';
@@ -50,8 +63,9 @@ export class OnlinePaymentsService {
 
     const { returnUrl, cancelUrl, callbackUrl } = this.urls('quote', quote.id);
     const [firstname, ...rest] = quote.client.fullName.split(' ');
+    const provider = this.activeProviderName;
 
-    const checkout = await this.ligdicash.createCheckout({
+    const checkout = await this.gatewayFor(provider).createCheckout({
       amount,
       description: `Devis ${quote.quoteNumber} — NAKAMBÉ LAVERIE EXPRES ET DIGITALE`,
       items: quote.items.map((i) => ({
@@ -73,6 +87,7 @@ export class OnlinePaymentsService {
     const transaction = await this.prisma.onlinePaymentTransaction.create({
       data: {
         token: checkout.token,
+        provider,
         clientId: quote.clientId,
         quoteId: quote.id,
         amount,
@@ -94,8 +109,9 @@ export class OnlinePaymentsService {
 
     const { returnUrl, cancelUrl, callbackUrl } = this.urls('invoice', invoice.id);
     const [firstname, ...rest] = invoice.client.fullName.split(' ');
+    const provider = this.activeProviderName;
 
-    const checkout = await this.ligdicash.createCheckout({
+    const checkout = await this.gatewayFor(provider).createCheckout({
       amount,
       description: `Facture ${invoice.invoiceNumber} — NAKAMBÉ LAVERIE EXPRES ET DIGITALE`,
       items: [{ name: `Solde facture ${invoice.invoiceNumber}`, quantity: 1, unit_price: amount, total_price: amount }],
@@ -112,6 +128,7 @@ export class OnlinePaymentsService {
     const transaction = await this.prisma.onlinePaymentTransaction.create({
       data: {
         token: checkout.token,
+        provider,
         clientId: invoice.clientId,
         invoiceId: invoice.id,
         amount,
@@ -129,7 +146,7 @@ export class OnlinePaymentsService {
 
     if (transaction.status === OnlinePaymentStatus.CONFIRME) return transaction;
 
-    const result = await this.ligdicash.confirmTransaction(token);
+    const result = await this.gatewayFor(transaction.provider).confirmTransaction(token);
 
     if (isPaidStatus(result.status)) {
       // Verrou optimiste sur paymentId=null : évite un double enregistrement de paiement

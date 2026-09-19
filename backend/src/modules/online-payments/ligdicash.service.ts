@@ -1,5 +1,6 @@
 import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { GatewayCheckoutResult, GatewayCreateCheckoutParams, GatewayStatusResult, PaymentGateway } from './payment-gateway.interface';
 
 /**
  * Client HTTP pour l'agrégateur de paiement Mobile Money LigdiCash.
@@ -13,45 +14,8 @@ const PLATFORM_BASE_URL: Record<string, string> = {
   test: 'https://test.ligdicash.com/pay/v01/',
 };
 
-export interface LigdicashInvoiceItem {
-  name: string;
-  description?: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
-
-export interface LigdicashCreateCheckoutParams {
-  amount: number;
-  description: string;
-  items: LigdicashInvoiceItem[];
-  externalId: string;
-  customerFirstname: string;
-  customerLastname: string;
-  customerEmail?: string;
-  returnUrl: string;
-  cancelUrl: string;
-  callbackUrl: string;
-  customData?: Record<string, string>;
-}
-
-export interface LigdicashCheckoutResult {
-  token: string;
-  paymentUrl: string;
-  raw: Record<string, unknown>;
-}
-
-export interface LigdicashStatusResult {
-  token: string;
-  status: string;
-  amount?: number;
-  operatorName?: string;
-  transactionId?: string;
-  raw: Record<string, unknown>;
-}
-
 @Injectable()
-export class LigdicashService {
+export class LigdicashService implements PaymentGateway {
   private readonly logger = new Logger(LigdicashService.name);
 
   constructor(private config: ConfigService) {}
@@ -70,7 +34,17 @@ export class LigdicashService {
     };
   }
 
-  async createCheckout(params: LigdicashCreateCheckoutParams): Promise<LigdicashCheckoutResult> {
+  /** Convertit une panne réseau (DNS, timeout, connexion refusée) en erreur propre plutôt qu'un 500 brut. */
+  private async safeFetch(url: string, init: RequestInit): Promise<Response> {
+    try {
+      return await fetch(url, init);
+    } catch (err) {
+      this.logger.error(`Impossible de joindre LigdiCash (${url}) : ${(err as Error).message}`);
+      throw new BadGatewayException("Impossible de joindre le serveur de paiement LigdiCash pour le moment. Réessayez dans un instant.");
+    }
+  }
+
+  async createCheckout(params: GatewayCreateCheckoutParams): Promise<GatewayCheckoutResult> {
     const storeName = this.config.get<string>('COMPANY_NAME') ?? 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE';
     const storeUrl = this.config.get<string>('FRONTEND_URL') ?? '';
 
@@ -99,7 +73,7 @@ export class LigdicashService {
       },
     };
 
-    const response = await fetch(`${this.baseUrl}redirect/checkout-invoice/create`, {
+    const response = await this.safeFetch(`${this.baseUrl}redirect/checkout-invoice/create`, {
       method: 'POST',
       headers: this.headers,
       body: JSON.stringify(body),
@@ -131,8 +105,8 @@ export class LigdicashService {
     };
   }
 
-  async confirmTransaction(token: string): Promise<LigdicashStatusResult> {
-    const response = await fetch(
+  async confirmTransaction(token: string): Promise<GatewayStatusResult> {
+    const response = await this.safeFetch(
       `${this.baseUrl}redirect/checkout-invoice/confirm/?invoiceToken=${encodeURIComponent(token)}`,
       { method: 'GET', headers: this.headers },
     );
