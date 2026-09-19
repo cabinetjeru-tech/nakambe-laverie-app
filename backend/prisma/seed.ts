@@ -43,6 +43,15 @@ async function nextClientNumber(): Promise<string> {
 }
 
 async function main() {
+  // Idempotence : ce script est exécuté à chaque démarrage en production
+  // (voir package.json "start"). On ne réinjecte les données de démo qu'une
+  // seule fois, jamais à chaque redéploiement.
+  const alreadySeeded = await prisma.user.findUnique({ where: { phone: '+22670000001' } });
+  if (alreadySeeded) {
+    console.log('Données de démonstration déjà présentes — seed ignoré.');
+    return;
+  }
+
   console.log('Démarrage du seed...');
 
   // ---------------------------------------------------------------------

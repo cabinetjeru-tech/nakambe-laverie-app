@@ -4,7 +4,10 @@
 // ============================================================================
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" pour le développement local, les autres cibles pour couvrir les
+  // environnements d'hébergement courants (Railway/Render, souvent Debian ou musl/Alpine).
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
