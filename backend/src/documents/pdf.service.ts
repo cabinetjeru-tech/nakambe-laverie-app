@@ -58,11 +58,11 @@ export class PdfService {
     const margin = 40;
     let y = 800;
 
-    const companyName = this.config.get<string>('COMPANY_NAME')!;
-    const companySlogan = this.config.get<string>('COMPANY_SLOGAN')!;
-    const companyAddress = this.config.get<string>('COMPANY_ADDRESS')!;
-    const phone1 = this.config.get<string>('COMPANY_PHONE_1')!;
-    const phone2 = this.config.get<string>('COMPANY_PHONE_2')!;
+    const companyName = this.config.get<string>('COMPANY_NAME') ?? 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE';
+    const companySlogan = this.config.get<string>('COMPANY_SLOGAN') ?? 'La propreté qui vient à vous';
+    const companyAddress = this.config.get<string>('COMPANY_ADDRESS') ?? '';
+    const phone1 = this.config.get<string>('COMPANY_PHONE_1') ?? '';
+    const phone2 = this.config.get<string>('COMPANY_PHONE_2') ?? '';
 
     // ---- En-tête ----
     page.drawText(companyName, { x: margin, y, size: 16, font: boldFont, color: BLUE });
