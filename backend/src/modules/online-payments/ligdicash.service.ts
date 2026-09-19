@@ -39,7 +39,10 @@ export class LigdicashService implements PaymentGateway {
     try {
       return await fetch(url, init);
     } catch (err) {
-      this.logger.error(`Impossible de joindre LigdiCash (${url}) : ${(err as Error).message}`);
+      const cause = (err as { cause?: unknown })?.cause;
+      this.logger.error(
+        `Impossible de joindre LigdiCash (${url}) : ${(err as Error).message} — cause : ${cause instanceof Error ? `${cause.name}: ${cause.message}` : JSON.stringify(cause)}`,
+      );
       throw new BadGatewayException("Impossible de joindre le serveur de paiement LigdiCash pour le moment. Réessayez dans un instant.");
     }
   }
