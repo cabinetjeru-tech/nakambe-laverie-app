@@ -41,6 +41,7 @@ export class AppointmentsService {
         address: dto.address,
         gpsLat: dto.gpsLat,
         gpsLng: dto.gpsLng,
+        gpsAccuracy: dto.gpsAccuracy,
         quantityNote: dto.quantityNote,
         comment: dto.comment,
         photoUrls: dto.photoUrls ?? [],

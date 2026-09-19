@@ -59,6 +59,12 @@ export class EngagementController {
     return this.engagementService.findReviews();
   }
 
+  @Roles(RoleName.CLIENT)
+  @Get('reviews/mine')
+  findMyReviews(@CurrentUser() user: AuthenticatedUser) {
+    return this.engagementService.findReviews(user.clientId ?? undefined);
+  }
+
   @Roles(RoleName.CLIENT, RoleName.ADMIN, RoleName.GERANT, RoleName.RECEPTIONNISTE)
   @Post('complaints')
   createComplaint(@Body() dto: any, @CurrentUser() user: AuthenticatedUser) {
@@ -70,6 +76,12 @@ export class EngagementController {
   @Get('complaints')
   findComplaints(@Query('status') status?: string) {
     return this.engagementService.findComplaints(status);
+  }
+
+  @Roles(RoleName.CLIENT)
+  @Get('complaints/mine')
+  findMyComplaints(@CurrentUser() user: AuthenticatedUser) {
+    return this.engagementService.findComplaints(undefined, user.clientId ?? undefined);
   }
 
   @Roles(RoleName.ADMIN, RoleName.GERANT, RoleName.RECEPTIONNISTE)

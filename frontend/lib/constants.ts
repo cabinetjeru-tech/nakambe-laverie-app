@@ -55,6 +55,35 @@ export const SERVICE_DOMAIN_LABELS: Record<string, string> = {
   MOBILE: 'Intervention mobile',
 };
 
+export const COMPLAINT_STATUS_LABELS: Record<string, string> = {
+  NOUVELLE: 'Nouvelle',
+  EN_COURS: 'En cours de traitement',
+  TRAITEE: 'Traitée',
+  CLOTUREE: 'Clôturée',
+};
+
+export const PAYMENT_TIMING_LABELS: Record<string, string> = {
+  AVANT_PRESTATION: 'Paiement avant la prestation',
+  APRES_PRESTATION: 'Paiement après la prestation',
+};
+
+export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
+  DEMANDE: 'Demande envoyée',
+  CONFIRME: 'Confirmé',
+  REPROGRAMME: 'Reprogrammé',
+  ANNULE: 'Annulé',
+  CONVERTI: 'Converti en commande',
+};
+
+export const CLIENT_TYPE_LABELS: Record<string, string> = {
+  PARTICULIER: 'Particulier',
+  ENTREPRISE: 'Entreprise',
+  ADMINISTRATION: 'Administration',
+  HOTEL: 'Hôtel',
+  RESTAURANT: 'Restaurant',
+  AUTRE: 'Autre',
+};
+
 export const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrateur',
   GERANT: 'Gérant',

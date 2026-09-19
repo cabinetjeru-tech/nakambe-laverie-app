@@ -3,6 +3,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { B2bService } from './b2b.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('b2b')
 @Roles(RoleName.ADMIN, RoleName.GERANT)
@@ -18,6 +19,12 @@ export class B2bController {
   @Get('contracts')
   findContracts(@Query('clientId') clientId?: string) {
     return this.b2bService.findContracts(clientId);
+  }
+
+  @Roles(RoleName.CLIENT)
+  @Get('contracts/mine')
+  findMyContracts(@CurrentUser() user: AuthenticatedUser) {
+    return this.b2bService.findContracts(user.clientId ?? undefined);
   }
 
   @Get('contracts/expiring')
@@ -38,6 +45,12 @@ export class B2bController {
   @Get('subscriptions')
   findSubscriptions(@Query('clientId') clientId?: string) {
     return this.b2bService.findSubscriptions(clientId);
+  }
+
+  @Roles(RoleName.CLIENT)
+  @Get('subscriptions/mine')
+  findMySubscriptions(@CurrentUser() user: AuthenticatedUser) {
+    return this.b2bService.findSubscriptions(user.clientId ?? undefined);
   }
 
   @Patch('subscriptions/:id')

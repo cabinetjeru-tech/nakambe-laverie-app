@@ -13,6 +13,7 @@ import { RoleName } from '@prisma/client';
 import { ClientsService } from './clients.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { UpdateClientDto } from './dto/update-client.dto';
+import { UpdateOwnProfileDto } from './dto/update-own-profile.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
@@ -20,6 +21,18 @@ import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-
 @Controller('clients')
 export class ClientsController {
   constructor(private clientsService: ClientsService) {}
+
+  @Roles(RoleName.CLIENT)
+  @Get('mine')
+  findMine(@CurrentUser() user: AuthenticatedUser) {
+    return this.clientsService.findOne(user.clientId!);
+  }
+
+  @Roles(RoleName.CLIENT)
+  @Patch('mine')
+  updateMine(@Body() dto: UpdateOwnProfileDto, @CurrentUser() user: AuthenticatedUser) {
+    return this.clientsService.update(user.clientId!, dto, user.userId);
+  }
 
   @Roles(RoleName.ADMIN, RoleName.GERANT, RoleName.RECEPTIONNISTE)
   @Post()

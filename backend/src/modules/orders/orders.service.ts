@@ -160,10 +160,11 @@ export class OrdersService {
         items: true,
         statusHistory: { orderBy: { createdAt: 'asc' }, include: { changedBy: { select: { fullName: true } } } },
         assignedAgent: { select: { id: true, fullName: true } },
-        driver: { select: { id: true, fullName: true } },
+        driver: { select: { id: true, fullName: true, phone: true } },
         vehicle: true,
         invoice: true,
         payments: true,
+        appointment: { select: { gpsLat: true, gpsLng: true, gpsAccuracy: true } },
       },
     });
     if (!order) throw new NotFoundException('Commande introuvable.');

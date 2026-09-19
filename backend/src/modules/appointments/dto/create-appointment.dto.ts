@@ -8,6 +8,7 @@ import {
   IsInt,
   IsLatitude,
   IsLongitude,
+  IsNumber,
   IsOptional,
   IsString,
   Min,
@@ -52,6 +53,12 @@ export class CreateAppointmentDto {
   @IsOptional()
   @IsLongitude()
   gpsLng?: number;
+
+  @ApiPropertyOptional({ description: 'Précision en mètres renvoyée par le navigateur (plus petit = plus précis).' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  gpsAccuracy?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

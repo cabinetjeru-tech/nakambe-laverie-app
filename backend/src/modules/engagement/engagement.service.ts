@@ -52,8 +52,9 @@ export class EngagementService {
     return this.prisma.review.create({ data: dto });
   }
 
-  findReviews() {
+  findReviews(clientId?: string) {
     return this.prisma.review.findMany({
+      where: clientId ? { clientId } : {},
       include: { client: true, order: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -65,9 +66,9 @@ export class EngagementService {
     return this.prisma.complaint.create({ data: { ...dto, complaintNumber } });
   }
 
-  findComplaints(status?: string) {
+  findComplaints(status?: string, clientId?: string) {
     return this.prisma.complaint.findMany({
-      where: status ? { status: status as any } : {},
+      where: { ...(status ? { status: status as any } : {}), ...(clientId ? { clientId } : {}) },
       include: { client: true, order: true, handledBy: { select: { fullName: true } } },
       orderBy: { createdAt: 'desc' },
     });

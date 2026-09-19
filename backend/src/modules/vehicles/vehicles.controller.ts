@@ -2,7 +2,9 @@ import { Body, Controller, Delete, Get, Param, Patch, Post } from '@nestjs/commo
 import { ApiTags } from '@nestjs/swagger';
 import { RoleName } from '@prisma/client';
 import { VehiclesService } from './vehicles.service';
+import { UpdateVehicleLocationDto } from './dto/update-vehicle-location.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser, AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('vehicles')
 @Controller('vehicles')
@@ -31,5 +33,15 @@ export class VehiclesController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.vehiclesService.remove(id);
+  }
+
+  @Roles(RoleName.CHAUFFEUR)
+  @Patch(':id/location')
+  updateLocation(
+    @Param('id') id: string,
+    @Body() dto: UpdateVehicleLocationDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.vehiclesService.updateLocation(id, user.userId, dto);
   }
 }
