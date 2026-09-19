@@ -194,19 +194,20 @@ model Client {
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 
-  user          User?          @relation(fields: [userId], references: [id])
-  branch        Branch?        @relation(fields: [branchId], references: [id])
-  zone          Zone?          @relation(fields: [zoneId], references: [id])
-  orders        Order[]
-  appointments  Appointment[]
-  quotes        Quote[]
-  invoices      Invoice[]
-  payments      Payment[]
-  complaints    Complaint[]
-  reviews       Review[]
-  contracts     Contract[]
-  subscriptions Subscription[]
-  notifications Notification[]
+  user           User?                      @relation(fields: [userId], references: [id])
+  branch         Branch?                    @relation(fields: [branchId], references: [id])
+  zone           Zone?                      @relation(fields: [zoneId], references: [id])
+  orders         Order[]
+  appointments   Appointment[]
+  quotes         Quote[]
+  invoices       Invoice[]
+  payments       Payment[]
+  complaints     Complaint[]
+  reviews        Review[]
+  contracts      Contract[]
+  subscriptions  Subscription[]
+  notifications  Notification[]
+  onlinePayments OnlinePaymentTransaction[]
 
   @@map("clients")
 }
@@ -278,15 +279,20 @@ model Appointment {
   mode          InterventionMode
   scheduledDate DateTime
   address       String?
+  gpsLat        Float? // position GPS du lieu de la demande (identification du client)
+  gpsLng        Float?
   quantityNote  String? // estimation libre donnée par le client
   comment       String?
   photoUrls     String[]          @default([])
+  paymentTiming PaymentTiming     @default(APRES_PRESTATION)
+  quoteId       String?           @unique // devis généré automatiquement à partir des articles demandés
   status        AppointmentStatus @default(DEMANDE)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
 
   client Client @relation(fields: [clientId], references: [id])
   zone   Zone?  @relation(fields: [zoneId], references: [id])
+  quote  Quote? @relation(fields: [quoteId], references: [id])
   order  Order?
 
   @@map("appointments")
@@ -427,8 +433,10 @@ model Quote {
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
 
-  client Client      @relation(fields: [clientId], references: [id])
-  items  QuoteItem[]
+  client         Client                     @relation(fields: [clientId], references: [id])
+  items          QuoteItem[]
+  appointment    Appointment?
+  onlinePayments OnlinePaymentTransaction[]
 
   @@map("quotes")
 }
@@ -469,9 +477,10 @@ model Invoice {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
-  order    Order?    @relation(fields: [orderId], references: [id])
-  client   Client    @relation(fields: [clientId], references: [id])
-  payments Payment[]
+  order          Order?                     @relation(fields: [orderId], references: [id])
+  client         Client                     @relation(fields: [clientId], references: [id])
+  payments       Payment[]
+  onlinePayments OnlinePaymentTransaction[]
 
   @@map("invoices")
 }
@@ -481,7 +490,20 @@ enum PaymentMethod {
   ORANGE_MONEY
   MOOV_MONEY
   VIREMENT
+  CHEQUE
   PAIEMENT_ULTERIEUR
+}
+
+enum PaymentTiming {
+  AVANT_PRESTATION
+  APRES_PRESTATION
+}
+
+enum OnlinePaymentStatus {
+  EN_ATTENTE
+  CONFIRME
+  ECHEC
+  ANNULE
 }
 
 model Payment {
@@ -496,11 +518,38 @@ model Payment {
   receivedById   String?
   createdAt      DateTime      @default(now())
 
-  client  Client   @relation(fields: [clientId], references: [id])
-  order   Order?   @relation(fields: [orderId], references: [id])
-  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  client        Client                    @relation(fields: [clientId], references: [id])
+  order         Order?                    @relation(fields: [orderId], references: [id])
+  invoice       Invoice?                  @relation(fields: [invoiceId], references: [id])
+  onlinePayment OnlinePaymentTransaction?
 
   @@map("payments")
+}
+
+/// Trace chaque tentative de paiement Mobile Money initiée depuis la plateforme
+/// (agrégateur LigdiCash). Le statut n'est validé qu'après vérification serveur-à-serveur
+/// auprès de LigdiCash (jamais sur la seule foi de la redirection ou du webhook reçu).
+model OnlinePaymentTransaction {
+  id           String              @id @default(uuid())
+  token        String              @unique // invoiceToken LigdiCash
+  provider     String              @default("LIGDICASH")
+  clientId     String
+  quoteId      String?
+  invoiceId    String?
+  amount       Decimal             @db.Decimal(12, 2)
+  status       OnlinePaymentStatus @default(EN_ATTENTE)
+  operatorName String?
+  rawResponse  Json?
+  paymentId    String?             @unique
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  client  Client   @relation(fields: [clientId], references: [id])
+  quote   Quote?   @relation(fields: [quoteId], references: [id])
+  invoice Invoice? @relation(fields: [invoiceId], references: [id])
+  payment Payment? @relation(fields: [paymentId], references: [id])
+
+  @@map("online_payment_transactions")
 }
 
 // ============================================================================

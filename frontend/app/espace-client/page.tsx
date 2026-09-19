@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { SiteHeader } from '@/components/site-header';
@@ -11,6 +12,20 @@ import { ORDER_STATUS_LABELS, SERVICE_DOMAIN_LABELS } from '@/lib/constants';
 
 export default function EspaceClientPage() {
   const { user, loading } = useRequireAuth(['CLIENT']);
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+
+  async function payNow(type: 'quotes' | 'invoices', id: string) {
+    setPayingId(id);
+    setPayError(null);
+    try {
+      const { data } = await api.post(`/online-payments/${type}/${id}/pay`);
+      window.location.href = data.paymentUrl;
+    } catch (err: any) {
+      setPayError(err?.response?.data?.message ?? 'Paiement indisponible pour le moment. Réessayez plus tard.');
+      setPayingId(null);
+    }
+  }
 
   const ordersQuery = useQuery({
     queryKey: ['mes-commandes'],
@@ -115,12 +130,23 @@ export default function EspaceClientPage() {
                     >
                       PDF
                     </button>
+                    {q.status !== 'ACCEPTE' && q.status !== 'REFUSE' && q.status !== 'EXPIRE' && (
+                      <button
+                        type="button"
+                        disabled={payingId === q.id}
+                        className="btn-primary !px-3 !py-1.5 text-xs disabled:opacity-60"
+                        onClick={() => payNow('quotes', q.id)}
+                      >
+                        {payingId === q.id ? '...' : 'Payer'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
             ) : (
               <p className="text-sm text-slate-400">Aucun devis pour le moment.</p>
             )}
+            {payError && <p className="text-sm text-red-600">{payError}</p>}
           </div>
         </section>
 
@@ -143,6 +169,16 @@ export default function EspaceClientPage() {
                     >
                       PDF
                     </button>
+                    {inv.status !== 'PAYEE' && inv.status !== 'ANNULEE' && (
+                      <button
+                        type="button"
+                        disabled={payingId === inv.id}
+                        className="btn-primary !px-3 !py-1.5 text-xs disabled:opacity-60"
+                        onClick={() => payNow('invoices', inv.id)}
+                      >
+                        {payingId === inv.id ? '...' : 'Payer'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))

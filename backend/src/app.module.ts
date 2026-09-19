@@ -24,6 +24,7 @@ import { B2bModule } from './modules/b2b/b2b.module';
 import { EngagementModule } from './modules/engagement/engagement.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { OnlinePaymentsModule } from './modules/online-payments/online-payments.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AdminModule } from './modules/admin/admin.module';
     EngagementModule,
     NotificationsModule,
     AdminModule,
+    OnlinePaymentsModule,
   ],
   controllers: [AppController],
   providers: [
