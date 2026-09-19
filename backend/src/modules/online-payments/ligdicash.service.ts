@@ -1,4 +1,4 @@
-import { BadGatewayException, Injectable } from '@nestjs/common';
+import { BadGatewayException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -52,6 +52,8 @@ export interface LigdicashStatusResult {
 
 @Injectable()
 export class LigdicashService {
+  private readonly logger = new Logger(LigdicashService.name);
+
   constructor(private config: ConfigService) {}
 
   private get baseUrl(): string {
@@ -102,12 +104,24 @@ export class LigdicashService {
       headers: this.headers,
       body: JSON.stringify(body),
     });
-    const data = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    const rawText = await response.text();
+    let data: Record<string, unknown> = {};
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      // réponse non-JSON, on garde rawText pour le diagnostic ci-dessous
+    }
 
     if (!response.ok || data.response_code !== '00' || !data.token || !data.response_text) {
-      throw new BadGatewayException(
-        `LigdiCash a refusé la demande de paiement : ${(data.description as string) ?? response.statusText}`,
+      this.logger.error(
+        `Échec création checkout LigdiCash — HTTP ${response.status} ${response.statusText} — réponse brute : ${rawText.slice(0, 500)}`,
       );
+      const detail =
+        (data.description as string) ||
+        (data.response_text as string) ||
+        (data.message as string) ||
+        `HTTP ${response.status} ${response.statusText}${!this.config.get('LIGDICASH_API_KEY') ? ' (clé API manquante côté serveur)' : ''}`;
+      throw new BadGatewayException(`LigdiCash a refusé la demande de paiement : ${detail}`);
     }
 
     return {

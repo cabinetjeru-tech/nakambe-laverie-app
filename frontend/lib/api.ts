@@ -67,11 +67,23 @@ api.interceptors.response.use(
  * Ouvre un PDF protégé par authentification dans un nouvel onglet.
  * Un simple lien <a href> ne fonctionnerait pas car le token JWT est
  * envoyé via l'en-tête Authorization (localStorage), pas via un cookie.
+ *
+ * La fenêtre est ouverte de façon SYNCHRONE (avant l'attente réseau) puis
+ * redirigée une fois le PDF récupéré : sur mobile, un window.open() appelé
+ * après un await n'est plus considéré comme déclenché par l'utilisateur et
+ * se fait bloquer silencieusement par le navigateur.
  */
 export async function openAuthenticatedPdf(path: string) {
-  const response = await api.get(path, { responseType: 'blob' });
-  const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-  window.open(blobUrl, '_blank');
+  const newWindow = window.open('', '_blank');
+  try {
+    const response = await api.get(path, { responseType: 'blob' });
+    const blobUrl = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+    if (newWindow) newWindow.location.href = blobUrl;
+    else window.location.href = blobUrl;
+  } catch (err) {
+    newWindow?.close();
+    throw err;
+  }
 }
 
 export { getStoredTokens, storeTokens };
