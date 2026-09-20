@@ -5,6 +5,7 @@ import { AuthProvider } from '@/lib/auth-context';
 import { QueryProvider } from '@/lib/query-provider';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
 import { WhatsAppButton } from '@/components/whatsapp-button';
+import { AssistantWidget } from '@/components/assistant-widget';
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <AuthProvider>{children}</AuthProvider>
         </QueryProvider>
         <WhatsAppButton />
+        <AssistantWidget />
         <ServiceWorkerRegistration />
       </body>
     </html>

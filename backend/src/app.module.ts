@@ -25,6 +25,7 @@ import { EngagementModule } from './modules/engagement/engagement.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { OnlinePaymentsModule } from './modules/online-payments/online-payments.module';
+import { AssistantModule } from './modules/assistant/assistant.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { OnlinePaymentsModule } from './modules/online-payments/online-payments.
     NotificationsModule,
     AdminModule,
     OnlinePaymentsModule,
+    AssistantModule,
   ],
   controllers: [AppController],
   providers: [
