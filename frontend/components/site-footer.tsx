@@ -9,7 +9,13 @@ export function SiteFooter() {
           <div>
             <div className="text-xl font-extrabold">{COMPANY.name}</div>
             <div className="text-sm text-brand-gold">{COMPANY.slogan}</div>
+            <div className="mt-1 text-xs text-slate-300">Département du Groupe AKAMBI SARL</div>
             <p className="mt-3 text-sm text-slate-200">{COMPANY.address}</p>
+            <div className="mt-3 flex flex-col gap-0.5 text-xs text-slate-400">
+              <span>RCCM N° : en cours</span>
+              <span>IFU N° : en cours</span>
+              <span>CNSS N° : en cours</span>
+            </div>
           </div>
           <div>
             <div className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Nous contacter</div>
