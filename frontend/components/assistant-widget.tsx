@@ -8,7 +8,7 @@ type ChatMessage = { role: 'user' | 'assistant'; content: string };
 const GREETING: ChatMessage = {
   role: 'assistant',
   content:
-    "Bonjour ! Je suis l'assistant Nakambé 🤖. Je peux répondre à vos questions sur nos services, nos tarifs, nos horaires ou le fonctionnement du site — surtout utile en dehors de nos heures d'ouverture.",
+    'Bonjour ! Je suis Kady, votre interlocutrice chez NAKAMBÉ Laverie Exprès et Digitale. Je peux répondre à vos questions sur nos services, nos tarifs, nos horaires, ou vous guider sur le site.',
 };
 
 const MAX_HISTORY_SENT = 10;
@@ -47,7 +47,7 @@ export function AssistantWidget() {
       {open && (
         <div className="fixed bottom-24 left-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between bg-brand-blue px-4 py-3 text-white">
-            <span className="font-semibold">Assistant Nakambé</span>
+            <span className="font-semibold">Kady — Nakambé</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="text-xl leading-none">
               ×
             </button>
@@ -87,10 +87,10 @@ export function AssistantWidget() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-label="Assistant Nakambé"
+        aria-label="Discuter avec Kady"
         className="fixed bottom-5 left-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-brand-blue text-2xl shadow-lg transition hover:scale-105"
       >
-        🤖
+        💬
       </button>
     </>
   );
