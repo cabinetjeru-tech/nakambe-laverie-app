@@ -47,7 +47,7 @@ export function AssistantWidget() {
       {open && (
         <div className="fixed bottom-24 left-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between bg-brand-blue px-4 py-3 text-white">
-            <span className="font-semibold">Kady — Nakambé</span>
+            <span className="font-semibold">Assistante Nakambé</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="text-xl leading-none">
               ×
             </button>
