@@ -24,17 +24,25 @@ export default function HomePage() {
       <section className="bg-gradient-to-b from-brand-blue-light to-white">
         <div className="mx-auto max-w-6xl px-4 py-14 text-center">
           <h1 className="text-3xl font-extrabold text-brand-blue sm:text-5xl">{COMPANY.name}</h1>
-          <p className="mt-1 text-lg font-semibold text-slate-600 sm:text-xl">LAVERIE EXPRES ET DIGITALE</p>
-          <p className="mx-auto mt-4 max-w-xl text-xl font-bold text-brand-gold">« {COMPANY.slogan} »</p>
+          <p className="mx-auto mt-3 max-w-xl text-xl font-bold text-brand-gold">« {COMPANY.slogan} »</p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/nouvelle-demande" className="btn-primary text-lg">
-              Faire une demande maintenant
+            <Link href="/inscription" className="btn-primary text-lg">
+              Créer mon compte client
+            </Link>
+            <Link href="/nouvelle-demande" className="btn-secondary text-lg">
+              Faire une demande
             </Link>
             <Link href="/suivi" className="btn-secondary text-lg">
               Suivre ma commande
             </Link>
           </div>
+          <p className="mt-3 text-sm text-slate-500">
+            Déjà client ?{' '}
+            <Link href="/connexion" className="font-semibold text-brand-blue underline">
+              Connectez-vous
+            </Link>
+          </p>
         </div>
       </section>
 

@@ -154,6 +154,8 @@ async function main() {
     { name: 'Boubou traditionnel - pressing', unit: 'pièce', price: 2000 },
     { name: 'Robe - lavage & repassage', unit: 'pièce', price: 1500 },
     { name: 'Draps de lit - lavage', unit: 'pièce', price: 1500 },
+    { name: 'Lavage de chaussures', unit: 'paire', price: 1500 },
+    { name: 'Désinfection UV des chaussures', unit: 'paire', price: 1000 },
   ]);
 
   await makeCategory(ServiceDomain.AUTO_MOTO, 'Lavage auto/moto', [
@@ -446,7 +448,7 @@ async function main() {
   // ---------------------------------------------------------------------
   const settings: Record<string, string> = {
     company_name: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE',
-    company_slogan: 'La propreté qui vient à vous',
+    company_slogan: 'Laverie express et digitale',
     company_address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
     company_phone_1: '+226 73 12 26 12',
     company_phone_2: '+226 54 54 28 18',

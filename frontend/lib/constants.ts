@@ -1,7 +1,7 @@
 export const COMPANY = {
   name: 'NAKAMBÉ',
   fullName: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE',
-  slogan: 'La propreté qui vient à vous',
+  slogan: 'Laverie express et digitale',
   address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
   phone1: '+226 73 12 26 12',
   phone2: '+226 54 54 28 18',

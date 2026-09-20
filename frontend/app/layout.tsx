@@ -4,6 +4,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { QueryProvider } from '@/lib/query-provider';
 import { ServiceWorkerRegistration } from '@/components/service-worker-registration';
+import { WhatsAppButton } from '@/components/whatsapp-button';
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -13,7 +14,7 @@ const geistSans = localFont({
 
 export const metadata: Metadata = {
   title: 'NAKAMBÉ Laverie Exprès et Digitale',
-  description: "Laverie, pressing, lavage auto/moto et nettoyage professionnel à Tenkodogo. La propreté qui vient à vous.",
+  description: "Laverie, pressing, lavage auto/moto et nettoyage professionnel à Tenkodogo. Laverie express et digitale.",
   manifest: '/manifest.webmanifest',
 };
 
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <QueryProvider>
           <AuthProvider>{children}</AuthProvider>
         </QueryProvider>
+        <WhatsAppButton />
         <ServiceWorkerRegistration />
       </body>
     </html>
