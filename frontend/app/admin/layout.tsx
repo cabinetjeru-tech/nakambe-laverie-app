@@ -52,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen bg-slate-50">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
         <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-4">
-          <Image src="/icons/icon-192.png" alt="Nakambé" width={36} height={36} className="rounded-full" />
+          <Image src="/icons/icon-192.png" alt={COMPANY.name} width={36} height={36} className="rounded-full" />
           <div className="leading-tight">
             <div className="text-sm font-extrabold text-brand-blue">{COMPANY.name}</div>
             <div className="text-[10px] text-slate-400">Espace professionnel</div>

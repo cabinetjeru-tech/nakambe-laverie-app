@@ -6,6 +6,6 @@ export class AppController {
   @Public()
   @Get('health')
   health() {
-    return { status: 'ok', service: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE — API', time: new Date().toISOString() };
+    return { status: 'ok', service: 'NOUVELLE LAVERIE AFRICAINE — API', time: new Date().toISOString() };
   }
 }

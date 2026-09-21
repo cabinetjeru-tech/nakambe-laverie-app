@@ -5,7 +5,7 @@ import { whatsappLink } from '@/lib/format';
 export function WhatsAppButton() {
   return (
     <a
-      href={whatsappLink(COMPANY.whatsapp, 'Bonjour Nakambé, je souhaite avoir des informations.')}
+      href={whatsappLink(COMPANY.whatsapp, `Bonjour ${COMPANY.name}, je souhaite avoir des informations.`)}
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Nous contacter sur WhatsApp"

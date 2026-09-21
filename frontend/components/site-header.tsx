@@ -27,9 +27,9 @@ export function SiteHeader() {
             </button>
           )}
           <Link href="/" className="flex items-center gap-2">
-            <Image src="/icons/icon-192.png" alt="Nakambé" width={40} height={40} className="rounded-full" />
+            <Image src="/icons/icon-192.png" alt={COMPANY.name} width={40} height={40} className="rounded-full shrink-0" />
             <div className="leading-tight">
-              <div className="text-lg font-extrabold text-brand-blue">{COMPANY.name}</div>
+              <div className="text-sm font-extrabold text-brand-blue sm:text-lg">{COMPANY.name}</div>
               <div className="text-[11px] font-medium text-brand-gold">{COMPANY.slogan}</div>
             </div>
           </Link>

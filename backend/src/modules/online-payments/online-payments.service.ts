@@ -67,7 +67,7 @@ export class OnlinePaymentsService {
 
     const checkout = await this.gatewayFor(provider).createCheckout({
       amount,
-      description: `Devis ${quote.quoteNumber} — NAKAMBÉ LAVERIE EXPRES ET DIGITALE`,
+      description: `Devis ${quote.quoteNumber} — NOUVELLE LAVERIE AFRICAINE`,
       items: quote.items.map((i) => ({
         name: i.label,
         quantity: i.quantity,
@@ -113,7 +113,7 @@ export class OnlinePaymentsService {
 
     const checkout = await this.gatewayFor(provider).createCheckout({
       amount,
-      description: `Facture ${invoice.invoiceNumber} — NAKAMBÉ LAVERIE EXPRES ET DIGITALE`,
+      description: `Facture ${invoice.invoiceNumber} — NOUVELLE LAVERIE AFRICAINE`,
       items: [{ name: `Solde facture ${invoice.invoiceNumber}`, quantity: 1, unit_price: amount, total_price: amount }],
       externalId: `FACTURE-${invoice.invoiceNumber}-${Date.now()}`,
       customerFirstname: firstname || invoice.client.fullName,

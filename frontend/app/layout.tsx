@@ -14,7 +14,7 @@ const geistSans = localFont({
 });
 
 export const metadata: Metadata = {
-  title: 'NAKAMBÉ Laverie Exprès et Digitale',
+  title: 'NOUVELLE LAVERIE AFRICAINE',
   description: "Laverie, pressing, lavage auto/moto et nettoyage professionnel à Tenkodogo. Laverie express et digitale.",
   manifest: '/manifest.webmanifest',
 };

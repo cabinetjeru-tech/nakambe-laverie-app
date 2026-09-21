@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, openAuthenticatedPdf } from '@/lib/api';
 import { formatDateTime, formatFcfa, whatsappLink } from '@/lib/format';
-import { ORDER_STATUS_LABELS, ORDER_STATUS_SEQUENCE, SERVICE_DOMAIN_LABELS } from '@/lib/constants';
+import { COMPANY, ORDER_STATUS_LABELS, ORDER_STATUS_SEQUENCE, SERVICE_DOMAIN_LABELS } from '@/lib/constants';
 
 const PAYMENT_METHODS: Record<string, string> = {
   ESPECES: 'Espèces',
@@ -119,7 +119,7 @@ export default function CommandeDetailPage() {
 
           <div className="mt-4 flex gap-2">
             <a
-              href={whatsappLink(order.client?.whatsapp ?? order.client?.phone, `Bonjour, votre commande ${order.orderNumber} est en cours de traitement chez Nakambé.`)}
+              href={whatsappLink(order.client?.whatsapp ?? order.client?.phone, `Bonjour, votre commande ${order.orderNumber} est en cours de traitement chez ${COMPANY.name}.`)}
               target="_blank"
               rel="noreferrer"
               className="btn-secondary !px-3 !py-1.5 text-xs"

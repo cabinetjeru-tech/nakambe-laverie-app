@@ -32,7 +32,7 @@ export class AssistantService {
   }
 
   private async buildSystemPrompt(): Promise<string> {
-    const companyName = this.config.get<string>('COMPANY_NAME') ?? 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE';
+    const companyName = this.config.get<string>('COMPANY_NAME') ?? 'NOUVELLE LAVERIE AFRICAINE';
     const address = this.config.get<string>('COMPANY_ADDRESS') ?? 'Tenkodogo, Burkina Faso';
     const phone1 = this.config.get<string>('COMPANY_PHONE_1') ?? '';
     const phone2 = this.config.get<string>('COMPANY_PHONE_2') ?? '';

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { COMPANY } from '@/lib/constants';
 
 function ConnexionForm() {
   const { login } = useAuth();
@@ -35,7 +36,7 @@ function ConnexionForm() {
   return (
     <div className="mx-auto flex max-w-md flex-col px-4 py-16">
       <h1 className="text-2xl font-bold text-brand-blue">Connexion</h1>
-      <p className="mt-1 text-sm text-slate-500">Accédez à votre espace Nakambé.</p>
+      <p className="mt-1 text-sm text-slate-500">Accédez à votre espace {COMPANY.name}.</p>
 
       <form onSubmit={handleSubmit} className="card mt-6 flex flex-col gap-4">
         <div>

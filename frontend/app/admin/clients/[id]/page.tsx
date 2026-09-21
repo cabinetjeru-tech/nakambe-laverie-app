@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatFcfa, whatsappLink } from '@/lib/format';
-import { ORDER_STATUS_LABELS } from '@/lib/constants';
+import { COMPANY, ORDER_STATUS_LABELS } from '@/lib/constants';
 
 export default function ClientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,7 +31,7 @@ export default function ClientDetailPage() {
           </p>
         </div>
         <a
-          href={whatsappLink(client.whatsapp ?? client.phone, `Bonjour ${client.fullName}, ici Nakambé.`)}
+          href={whatsappLink(client.whatsapp ?? client.phone, `Bonjour ${client.fullName}, ici ${COMPANY.name}.`)}
           target="_blank"
           rel="noreferrer"
           className="btn-secondary !px-4 !py-2 text-sm"

@@ -9,7 +9,7 @@ export function SiteFooter() {
           <div>
             <div className="text-xl font-extrabold">{COMPANY.name}</div>
             <div className="text-sm text-brand-gold">{COMPANY.slogan}</div>
-            <div className="mt-1 text-xs text-slate-300">Département du Groupe AKAMBI SARL</div>
+            <div className="mt-1 text-xs text-slate-300">{COMPANY.parentCompany}</div>
             <p className="mt-3 text-sm text-slate-200">{COMPANY.address}</p>
             <div className="mt-3 flex flex-col gap-0.5 text-xs text-slate-400">
               <span>RCCM N° : en cours</span>
@@ -27,7 +27,7 @@ export function SiteFooter() {
                 📞 {COMPANY.phone2}
               </a>
               <a
-                href={whatsappLink(COMPANY.whatsapp, 'Bonjour Nakambé, je souhaite avoir des informations.')}
+                href={whatsappLink(COMPANY.whatsapp, `Bonjour ${COMPANY.name}, je souhaite avoir des informations.`)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-brand-gold"

@@ -58,7 +58,7 @@ export class PdfService {
     const margin = 40;
     let y = 800;
 
-    const companyName = this.config.get<string>('COMPANY_NAME') ?? 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE';
+    const companyName = this.config.get<string>('COMPANY_NAME') ?? 'NOUVELLE LAVERIE AFRICAINE';
     const companySlogan = this.config.get<string>('COMPANY_SLOGAN') ?? 'Laverie express et digitale';
     const companyAddress = this.config.get<string>('COMPANY_ADDRESS') ?? '';
     const phone1 = this.config.get<string>('COMPANY_PHONE_1') ?? '';
@@ -161,7 +161,7 @@ export class PdfService {
       page.drawText(data.extraNote, { x: margin, y, size: 9, font, color: GRAY });
     }
 
-    page.drawText('Merci de votre confiance — NAKAMBÉ, laverie express et digitale.', {
+    page.drawText('Merci de votre confiance — NOUVELLE LAVERIE AFRICAINE, laverie express et digitale.', {
       x: margin,
       y: 40,
       size: 8,

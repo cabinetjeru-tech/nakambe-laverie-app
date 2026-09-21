@@ -1,5 +1,5 @@
 /**
- * Jeu de données de démonstration — NAKAMBÉ LAVERIE EXPRES ET DIGITALE.
+ * Jeu de données de démonstration — NOUVELLE LAVERIE AFRICAINE.
  * Toutes les données ci-dessous sont FICTIVES et destinées uniquement aux tests (§44 du cahier des charges).
  */
 import { PrismaClient, RoleName, ClientType, ServiceDomain, DeliveryMode, OrderStatus, PaymentMethod, VehicleType, InterventionMode, AppointmentStatus } from '@prisma/client';
@@ -83,7 +83,7 @@ async function main() {
     where: { id: 'seed-branch-tenkodogo' },
     create: {
       id: 'seed-branch-tenkodogo',
-      name: 'Nakambé Tenkodogo',
+      name: 'Nouvelle Laverie Africaine — Tenkodogo',
       city: 'Tenkodogo',
       address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
       phone1: '+226 73 12 26 12',
@@ -447,7 +447,7 @@ async function main() {
   // 12. Paramètres de l'entreprise
   // ---------------------------------------------------------------------
   const settings: Record<string, string> = {
-    company_name: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE',
+    company_name: 'NOUVELLE LAVERIE AFRICAINE',
     company_slogan: 'Laverie express et digitale',
     company_address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
     company_phone_1: '+226 73 12 26 12',

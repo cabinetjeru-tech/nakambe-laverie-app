@@ -22,7 +22,7 @@ async function bootstrap() {
   );
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('NAKAMBÉ LAVERIE EXPRES ET DIGITALE — API')
+    .setTitle('NOUVELLE LAVERIE AFRICAINE — API')
     .setDescription("API centrale de gestion de l'entreprise (laverie, pressing, auto/moto, nettoyage, CRM, facturation).")
     .setVersion('1.0')
     .addBearerAuth()
@@ -33,6 +33,6 @@ async function bootstrap() {
   const port = config.get<number>('PORT') ?? 3001;
   await app.listen(port);
   // eslint-disable-next-line no-console
-  console.log(`API NAKAMBÉ démarrée sur http://localhost:${port}/api (docs: /api/docs)`);
+  console.log(`API NOUVELLE LAVERIE AFRICAINE démarrée sur http://localhost:${port}/api (docs: /api/docs)`);
 }
 bootstrap();

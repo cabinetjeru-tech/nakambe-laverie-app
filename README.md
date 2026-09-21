@@ -1,6 +1,6 @@
-# NAKAMBÉ LAVERIE EXPRES ET DIGITALE — Plateforme de gestion
+# NOUVELLE LAVERIE AFRICAINE — Plateforme de gestion
 
-Système de gestion central pour **NAKAMBÉ LAVERIE EXPRES ET DIGITALE** (Tenkodogo, Burkina Faso) :
+Système de gestion central pour **NOUVELLE LAVERIE AFRICAINE** (Tenkodogo, Burkina Faso) :
 laverie, pressing, lavage auto/moto, nettoyage textile/chantier, CRM, devis, facturation, paiements,
 stock, finances et statistiques.
 

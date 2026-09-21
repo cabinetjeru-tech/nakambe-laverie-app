@@ -11,6 +11,7 @@ import { formatDate, formatDateTime, formatFcfa } from '@/lib/format';
 import {
   APPOINTMENT_STATUS_LABELS,
   CLIENT_TYPE_LABELS,
+  COMPANY,
   COMPLAINT_STATUS_LABELS,
   ORDER_STATUS_LABELS,
   PAYMENT_TIMING_LABELS,
@@ -107,7 +108,7 @@ export default function EspaceClientPage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-brand-blue">Bonjour {user.fullName.split(' ')[0]} 👋</h1>
-            <p className="text-sm text-slate-500">Voici le suivi de vos prestations Nakambé.</p>
+            <p className="text-sm text-slate-500">Voici le suivi de vos prestations {COMPANY.name}.</p>
           </div>
           <div className="flex items-center gap-2">
             {client && (

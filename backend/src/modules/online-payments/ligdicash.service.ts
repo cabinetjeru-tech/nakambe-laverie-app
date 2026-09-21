@@ -48,7 +48,7 @@ export class LigdicashService implements PaymentGateway {
   }
 
   async createCheckout(params: GatewayCreateCheckoutParams): Promise<GatewayCheckoutResult> {
-    const storeName = this.config.get<string>('COMPANY_NAME') ?? 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE';
+    const storeName = this.config.get<string>('COMPANY_NAME') ?? 'NOUVELLE LAVERIE AFRICAINE';
     const storeUrl = this.config.get<string>('FRONTEND_URL') ?? '';
 
     const body = {

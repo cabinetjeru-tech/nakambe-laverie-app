@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { api } from '@/lib/api';
+import { COMPANY } from '@/lib/constants';
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
 const GREETING: ChatMessage = {
   role: 'assistant',
-  content:
-    'Bonjour ! Je suis Kady, votre interlocutrice chez NAKAMBÉ Laverie Exprès et Digitale. Je peux répondre à vos questions sur nos services, nos tarifs, nos horaires, ou vous guider sur le site.',
+  content: `Bonjour ! Je suis Kady, votre interlocutrice chez ${COMPANY.name}. Je peux répondre à vos questions sur nos services, nos tarifs, nos horaires, ou vous guider sur le site.`,
 };
 
 const MAX_HISTORY_SENT = 10;
@@ -47,7 +47,7 @@ export function AssistantWidget() {
       {open && (
         <div className="fixed bottom-24 left-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
           <div className="flex items-center justify-between bg-brand-blue px-4 py-3 text-white">
-            <span className="font-semibold">Assistante Nakambé</span>
+            <span className="font-semibold">Assistante {COMPANY.shortName}</span>
             <button type="button" onClick={() => setOpen(false)} aria-label="Fermer" className="text-xl leading-none">
               ×
             </button>

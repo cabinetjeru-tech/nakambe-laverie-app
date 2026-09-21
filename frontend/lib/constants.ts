@@ -1,7 +1,9 @@
 export const COMPANY = {
-  name: 'NAKAMBÉ',
-  fullName: 'NAKAMBÉ LAVERIE EXPRES ET DIGITALE',
+  name: 'NOUVELLE LAVERIE AFRICAINE',
+  fullName: 'NOUVELLE LAVERIE AFRICAINE',
+  shortName: 'NLA',
   slogan: 'Laverie express et digitale',
+  parentCompany: 'Une marque du Groupe Akambi SARL',
   address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
   phone1: '+226 73 12 26 12',
   phone2: '+226 54 54 28 18',
