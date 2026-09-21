@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth, UserRole } from './auth-context';
+import { useAuth, UserRole, getRoleHomePath } from './auth-context';
 
 export function useRequireAuth(allowedRoles?: UserRole[]) {
   const { user, loading } = useAuth();
@@ -16,7 +16,7 @@ export function useRequireAuth(allowedRoles?: UserRole[]) {
       return;
     }
     if (allowedRoles && !allowedRoles.includes(user.role)) {
-      router.replace(user.role === 'CLIENT' ? '/espace-client' : '/admin');
+      router.replace(getRoleHomePath(user.role));
     }
   }, [user, loading, allowedRoles, router, pathname]);
 

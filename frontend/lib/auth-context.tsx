@@ -104,3 +104,22 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth doit être utilisé à l\'intérieur de <AuthProvider>.');
   return ctx;
 }
+
+/** Page d'atterrissage par rôle après connexion ou en cas d'accès refusé à une page. */
+export function getRoleHomePath(role: UserRole): string {
+  switch (role) {
+    case 'CLIENT':
+      return '/espace-client';
+    case 'ADMIN':
+    case 'GERANT':
+      return '/admin';
+    case 'CHAUFFEUR':
+    case 'AGENT_LAVERIE':
+    case 'AGENT_NETTOYAGE':
+      return '/admin/mes-missions';
+    case 'RECEPTIONNISTE':
+      return '/admin/commandes';
+    default:
+      return '/admin';
+  }
+}

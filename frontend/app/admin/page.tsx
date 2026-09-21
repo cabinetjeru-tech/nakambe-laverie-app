@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatFcfa } from '@/lib/format';
+import { useRequireAuth } from '@/lib/use-require-auth';
 
 interface PeriodStats {
   revenue: number;
@@ -46,11 +47,21 @@ function PeriodBlock({ title, stats }: { title: string; stats: PeriodStats }) {
 }
 
 export default function AdminDashboardPage() {
-  const { data, isLoading } = useQuery<Overview>({
+  const { user, loading: authLoading } = useRequireAuth(['ADMIN', 'GERANT']);
+  const { data, isLoading, isError } = useQuery<Overview>({
     queryKey: ['dashboard-overview'],
     queryFn: async () => (await api.get('/dashboard/overview')).data,
+    enabled: !!user,
   });
 
+  if (authLoading || !user) return <p className="text-slate-400">Chargement...</p>;
+  if (isError) {
+    return (
+      <p className="text-red-600">
+        Impossible de charger le tableau de bord. Vérifiez votre connexion et réessayez.
+      </p>
+    );
+  }
   if (isLoading || !data) return <p className="text-slate-400">Chargement du tableau de bord...</p>;
 
   return (

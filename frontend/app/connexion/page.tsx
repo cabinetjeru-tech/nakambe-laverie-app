@@ -3,7 +3,7 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/lib/auth-context';
+import { useAuth, getRoleHomePath } from '@/lib/auth-context';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { COMPANY } from '@/lib/constants';
@@ -25,7 +25,7 @@ function ConnexionForm() {
       const user = await login(phone, password);
       const redirect = params.get('redirect');
       if (redirect) router.push(redirect);
-      else router.push(user.role === 'CLIENT' ? '/espace-client' : '/admin');
+      else router.push(getRoleHomePath(user.role));
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Identifiants incorrects.');
     } finally {
