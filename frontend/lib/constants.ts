@@ -3,12 +3,20 @@ export const COMPANY = {
   fullName: 'NOUVELLE LAVERIE AFRICAINE',
   shortName: 'Laverie',
   slogan: 'Laverie express et digitale',
+  tagline: 'Un simple coup de fil, nous voici !',
   parentCompany: 'Une marque du Groupe Akambi SARL',
-  address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
+  headOffice: { city: 'Ouagadougou', district: 'Somgandé', phone: '+226 58 58 00 00' },
   phone1: '+226 73 12 26 12',
   phone2: '+226 54 54 28 18',
   whatsapp: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? '22673122612',
 };
+
+export const BRANCHES = [
+  { city: 'Tenkodogo', detail: 'Secteur 6, Cité du 11 Décembre' },
+  { city: 'Bagré', detail: 'Non loin du centre universitaire' },
+  { city: "Fada N'Gourma", detail: 'Secteur 2, route du Niger' },
+  { city: 'Koudougou', detail: 'Centre universitaire' },
+];
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   DEMANDE_RECUE: 'Demande reçue',
