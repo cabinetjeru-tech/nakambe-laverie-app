@@ -36,8 +36,9 @@ export function SiteHeader() {
             <Link href="/" className="flex items-center gap-2">
               <Image src="/icons/icon-192.png" alt={COMPANY.name} width={40} height={40} className="rounded-full shrink-0" />
               <div className="leading-tight">
-                <div className="text-sm font-extrabold text-brand-blue sm:text-lg">{COMPANY.name}</div>
-                <div className="text-[11px] font-medium text-brand-gold">{COMPANY.slogan}</div>
+                <div className="text-base font-extrabold text-brand-blue sm:hidden">{COMPANY.shortName}</div>
+                <div className="hidden text-lg font-extrabold text-brand-blue sm:block">{COMPANY.name}</div>
+                <div className="hidden text-[11px] font-medium text-brand-gold sm:block">{COMPANY.slogan}</div>
               </div>
             </Link>
           </div>
@@ -63,8 +64,11 @@ export function SiteHeader() {
               </>
             ) : (
               <>
-                <Link href="/connexion" className="btn-secondary !px-4 !py-2 text-sm">Connexion</Link>
-                <Link href="/inscription" className="btn-primary !px-4 !py-2 text-sm">Créer un compte</Link>
+                <Link href="/connexion" className="btn-secondary !px-3 !py-2 text-sm sm:!px-4">Connexion</Link>
+                <Link href="/inscription" className="btn-primary whitespace-nowrap !px-3 !py-2 text-sm sm:!px-4">
+                  <span className="sm:hidden">Créer</span>
+                  <span className="hidden sm:inline">Créer un compte</span>
+                </Link>
               </>
             )}
           </div>
