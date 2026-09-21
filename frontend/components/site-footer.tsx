@@ -29,6 +29,9 @@ export function SiteFooter() {
               <a href={`tel:${COMPANY.phone1.replace(/\s/g, '')}`} className="hover:text-brand-gold">
                 📞 {COMPANY.phone1}
               </a>
+              <a href={`tel:${COMPANY.phone2.replace(/\s/g, '')}`} className="hover:text-brand-gold">
+                📞 {COMPANY.phone2}
+              </a>
               <a
                 href={whatsappLink(COMPANY.whatsapp, `Bonjour ${COMPANY.name}, je souhaite avoir des informations.`)}
                 target="_blank"

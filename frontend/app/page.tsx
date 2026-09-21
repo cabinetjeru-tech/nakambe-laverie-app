@@ -5,6 +5,7 @@ import { COMPANY } from '@/lib/constants';
 
 const SERVICE_TILES = [
   { emoji: '🧺', label: 'Laver mon linge', href: '/nouvelle-demande?domaine=LAVERIE_PRESSING' },
+  { emoji: '👟', label: 'Laver & désinfecter mes chaussures', href: '/nouvelle-demande?domaine=LAVERIE_PRESSING' },
   { emoji: '🚗', label: 'Laver ma voiture', href: '/nouvelle-demande?domaine=AUTO_MOTO' },
   { emoji: '🏍️', label: 'Laver ma moto', href: '/nouvelle-demande?domaine=AUTO_MOTO' },
   { emoji: '🛋️', label: 'Nettoyer mon divan', href: '/nouvelle-demande?domaine=TEXTILE_MAISON' },

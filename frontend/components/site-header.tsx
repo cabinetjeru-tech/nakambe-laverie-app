@@ -16,9 +16,16 @@ export function SiteHeader() {
     <>
       <a
         href={`tel:${COMPANY.phone1.replace(/\s/g, '')}`}
-        className="block bg-brand-gold px-4 py-2 text-center text-sm font-bold text-brand-blue-dark transition hover:brightness-95"
+        aria-label={`${COMPANY.tagline} — Appeler le ${COMPANY.phone1}`}
+        className="flex overflow-hidden bg-brand-gold py-2 text-brand-blue-dark transition hover:brightness-95"
       >
-        📞 {COMPANY.tagline} — <span className="underline underline-offset-2">{COMPANY.phone1}</span>
+        <div className="flex w-max animate-marquee items-center gap-16 whitespace-nowrap pr-16 text-sm font-bold">
+          {[0, 1].map((i) => (
+            <span key={i} aria-hidden={i === 1}>
+              📞 {COMPANY.tagline} — <span className="underline underline-offset-2">{COMPANY.phone1}</span>
+            </span>
+          ))}
+        </div>
       </a>
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
