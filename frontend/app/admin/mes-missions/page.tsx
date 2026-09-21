@@ -48,6 +48,11 @@ export default function MesMissionsPage() {
       setSharing(false);
       return;
     }
+    if (activeVehicleIds.length === 0) {
+      // Plus aucune mission en cours : on coupe le GPS pour économiser la batterie.
+      setSharing(false);
+      return;
+    }
 
     watchIdRef.current = navigator.geolocation.watchPosition(
       async (position) => {
@@ -84,22 +89,23 @@ export default function MesMissionsPage() {
 
       {isDriver && (
         <div className="card mt-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="font-semibold text-slate-700">Partager ma position</div>
+              <div className="font-semibold text-slate-700">Partage de position GPS</div>
               <p className="text-xs text-slate-500">
-                Permet aux clients de voir où en est le tricycle pendant une collecte ou une livraison.
+                Permet aux clients de voir où en est le tricycle pendant une collecte ou une livraison. Se coupe
+                automatiquement dès qu&apos;il n&apos;y a plus de mission en cours.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setSharing((v) => !v)}
               disabled={activeVehicleIds.length === 0}
-              className={`rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-semibold disabled:opacity-50 ${
                 sharing ? 'bg-red-600 text-white' : 'btn-primary'
               }`}
             >
-              {sharing ? 'Arrêter le partage' : 'Activer le partage'}
+              {sharing ? 'Arrêter le partage' : 'Activer le partage de position'}
             </button>
           </div>
           {activeVehicleIds.length === 0 && (

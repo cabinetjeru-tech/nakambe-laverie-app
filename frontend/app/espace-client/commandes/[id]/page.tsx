@@ -32,6 +32,9 @@ export default function OrderDetailPage() {
     queryKey: ['commande', id],
     queryFn: async () => (await api.get(`/orders/${id}`)).data,
     enabled: !!user && !!id,
+    // Rafraîchit automatiquement pendant une collecte/livraison pour suivre le tricycle en direct,
+    // sans sollicitation inutile une fois la commande terminée.
+    refetchInterval: (query) => (ACTIVE_TRANSIT_STATUSES.includes(query.state.data?.status) ? 15000 : false),
   });
   const reviewsQuery = useQuery({
     queryKey: ['mes-avis'],
