@@ -1,7 +1,7 @@
 export const COMPANY = {
   name: 'NOUVELLE LAVERIE AFRICAINE',
   fullName: 'NOUVELLE LAVERIE AFRICAINE',
-  shortName: 'NLA',
+  shortName: 'Laverie',
   slogan: 'Laverie express et digitale',
   parentCompany: 'Une marque du Groupe Akambi SARL',
   address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
