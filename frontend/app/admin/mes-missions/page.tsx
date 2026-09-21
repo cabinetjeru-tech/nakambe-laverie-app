@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
@@ -12,6 +12,7 @@ const MIN_SECONDS_BETWEEN_UPDATES = 20;
 
 export default function MesMissionsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const isDriver = user?.role === 'CHAUFFEUR';
   const endpoint = isDriver ? '/orders/missions' : '/orders/assigned';
 
@@ -122,7 +123,14 @@ export default function MesMissionsPage() {
         {isLoading && <p className="text-slate-400">Chargement...</p>}
         {data?.length === 0 && <p className="text-slate-400">Aucune mission en cours.</p>}
         {data?.map((o: any) => (
-          <Link key={o.id} href={`/admin/commandes/${o.id}`} className="card flex items-center justify-between hover:shadow-md">
+          <div
+            key={o.id}
+            role="link"
+            tabIndex={0}
+            onClick={() => router.push(`/admin/commandes/${o.id}`)}
+            onKeyDown={(e) => e.key === 'Enter' && router.push(`/admin/commandes/${o.id}`)}
+            className="card flex cursor-pointer items-center justify-between hover:shadow-md"
+          >
             <div>
               <div className="font-semibold text-brand-blue">{o.orderNumber}</div>
               <div className="text-xs text-slate-500">
@@ -144,7 +152,7 @@ export default function MesMissionsPage() {
                 💬
               </a>
             </div>
-          </Link>
+          </div>
         ))}
       </div>
     </div>
