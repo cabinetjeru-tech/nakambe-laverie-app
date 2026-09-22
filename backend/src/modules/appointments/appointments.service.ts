@@ -1,7 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { AppointmentStatus } from '@prisma/client';
+import { AppointmentStatus, RoleName } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QuotesService } from '../quotes/quotes.service';
+import { PushNotificationsService } from '../push-notifications/push-notifications.service';
 import { CreateAppointmentDto } from './dto/create-appointment.dto';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class AppointmentsService {
   constructor(
     private prisma: PrismaService,
     private quotesService: QuotesService,
+    private pushNotifications: PushNotificationsService,
   ) {}
 
   async create(dto: CreateAppointmentDto, requestingClientId?: string) {
@@ -31,7 +33,7 @@ export class AppointmentsService {
       quoteId = quote.id;
     }
 
-    return this.prisma.appointment.create({
+    const appointment = await this.prisma.appointment.create({
       data: {
         clientId,
         zoneId: dto.zoneId,
@@ -48,8 +50,18 @@ export class AppointmentsService {
         paymentTiming: dto.paymentTiming,
         quoteId,
       },
-      include: { quote: { include: { items: true } } },
+      include: { quote: { include: { items: true } }, client: { select: { fullName: true } } },
     });
+
+    this.pushNotifications
+      .sendToRoles([RoleName.ADMIN, RoleName.GERANT], {
+        title: '🧺 Nouvelle demande client',
+        body: `${appointment.client.fullName} vient de faire une demande.`,
+        url: '/admin/rendez-vous',
+      })
+      .catch(() => null);
+
+    return appointment;
   }
 
   findAll(status?: AppointmentStatus, clientId?: string) {

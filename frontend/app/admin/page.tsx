@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { formatFcfa } from '@/lib/format';
 import { useRequireAuth } from '@/lib/use-require-auth';
+import { PushNotificationCard } from '@/components/push-notification-card';
 
 interface PeriodStats {
   revenue: number;
@@ -70,6 +71,8 @@ export default function AdminDashboardPage() {
         <h1 className="text-2xl font-bold text-brand-blue">Tableau de bord</h1>
         <p className="text-sm text-slate-500">Vue d&apos;ensemble de l&apos;activité de l&apos;agence.</p>
       </div>
+
+      <PushNotificationCard />
 
       <PeriodBlock title="Aujourd'hui" stats={data.today} />
       <PeriodBlock title="Cette semaine" stats={data.week} />

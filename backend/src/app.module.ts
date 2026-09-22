@@ -26,6 +26,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AdminModule } from './modules/admin/admin.module';
 import { OnlinePaymentsModule } from './modules/online-payments/online-payments.module';
 import { AssistantModule } from './modules/assistant/assistant.module';
+import { PushNotificationsModule } from './modules/push-notifications/push-notifications.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { AssistantModule } from './modules/assistant/assistant.module';
     AdminModule,
     OnlinePaymentsModule,
     AssistantModule,
+    PushNotificationsModule,
   ],
   controllers: [AppController],
   providers: [

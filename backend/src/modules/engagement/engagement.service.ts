@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { RoleName } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NumberingService } from '../../common/numbering.service';
+import { PushNotificationsService } from '../push-notifications/push-notifications.service';
 
 @Injectable()
 export class EngagementService {
   constructor(
     private prisma: PrismaService,
     private numbering: NumberingService,
+    private pushNotifications: PushNotificationsService,
   ) {}
 
   // ---- Fidélité ----
@@ -63,7 +66,20 @@ export class EngagementService {
   // ---- Réclamations ----
   async createComplaint(dto: { clientId: string; orderId?: string; subject: string; description: string }) {
     const complaintNumber = await this.numbering.next('REC');
-    return this.prisma.complaint.create({ data: { ...dto, complaintNumber } });
+    const complaint = await this.prisma.complaint.create({
+      data: { ...dto, complaintNumber },
+      include: { client: { select: { fullName: true } } },
+    });
+
+    this.pushNotifications
+      .sendToRoles([RoleName.ADMIN, RoleName.GERANT], {
+        title: '⚠️ Nouvelle réclamation',
+        body: `${complaint.client.fullName} — ${complaint.subject}`,
+        url: '/admin/reclamations',
+      })
+      .catch(() => null);
+
+    return complaint;
   }
 
   findComplaints(status?: string, clientId?: string) {

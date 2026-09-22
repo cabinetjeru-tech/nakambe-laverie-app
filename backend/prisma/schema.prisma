@@ -126,8 +126,22 @@ model User {
   statusChanges     OrderStatusHistory[]
   complaintsHandled Complaint[]          @relation("ComplaintHandledBy")
   notifications     Notification[]
+  pushSubscriptions PushSubscription[]
 
   @@map("users")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }
 
 model RefreshToken {
