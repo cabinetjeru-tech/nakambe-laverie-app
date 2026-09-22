@@ -1,0 +1,24 @@
+{
+  "id": "/?app=client",
+  "name": "Allô-Coursier — Livraison • Courses • Services",
+  "short_name": "Allô-Coursier",
+  "description": "Livraison de colis, courses et achats à Ouagadougou et Tenkodogo.",
+  "lang": "fr",
+  "start_url": "/accueil",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0B2A5B",
+  "theme_color": "#0B2A5B",
+  "categories": ["shopping", "lifestyle", "business"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Envoyer un colis", "url": "/commander?service=PARCEL", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Faire des courses", "url": "/commander?service=ERRAND", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Mes commandes", "url": "/commandes", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
