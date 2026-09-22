@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { assertCityAccess, AuthUser } from '../../common/auth-user';
 import { ComplaintStatus, DriverStatus, OrderStatus, PaymentStatus, PayoutStatus, Prisma } from '@prisma/client';
 import { ROLE } from '../../common/permissions';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -19,6 +20,17 @@ const IN_PROGRESS: OrderStatus[] = [
 @Injectable()
 export class StatsService {
   constructor(private prisma: PrismaService) {}
+
+  /** Ville des statistiques pour un membre limité à certaines villes. */
+  scopedCity(user: AuthUser, requested?: string): string | undefined {
+    if (!user.cityIds) return requested;
+    if (requested) {
+      assertCityAccess(user, requested);
+      return requested;
+    }
+    if (user.cityIds.length === 1) return user.cityIds[0];
+    throw new BadRequestException('Choisissez une ville.');
+  }
 
   async overview(params: { cityId?: string; from?: Date; to?: Date }) {
     const to = params.to ?? new Date();

@@ -4,6 +4,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { StorageService } from '../storage/storage.service';
 import * as bcrypt from 'bcrypt';
 import { AuditService } from '../../audit/audit.service';
+import { assertCityAccess, AuthUser, cityFilter } from '../../common/auth-user';
 import { paginate } from '../../common/dto/pagination.dto';
 import { ROLE } from '../../common/permissions';
 import { generateTemporaryPin } from '../../common/utils/secret-policy';
@@ -25,12 +26,12 @@ export class DriversService {
     private notifications: NotificationsService,
   ) {}
 
-  async list(query: DriverQueryDto) {
+  async list(query: DriverQueryDto, user: AuthUser) {
     const search = query.search?.trim();
     const digits = search?.replace(/\D/g, '');
     const where: Prisma.DriverProfileWhereInput = {
       status: query.status,
-      cityId: query.cityId,
+      cityId: cityFilter(user, query.cityId),
       employmentType: query.employmentType,
       user: search
         ? {
@@ -49,12 +50,13 @@ export class DriversService {
     return { items, total, page: query.page, pageSize: query.pageSize };
   }
 
-  async get(userId: string) {
+  async get(userId: string, user?: AuthUser) {
     const driver = await this.prisma.driverProfile.findUnique({
       where: { userId },
       include: { ...driverInclude, documents: { orderBy: { createdAt: 'desc' } } },
     });
     if (!driver) throw new NotFoundException('Livreur introuvable.');
+    if (user) assertCityAccess(user, driver.cityId);
     const wallet = await this.prisma.wallet.findUnique({ where: { kind_userId: { kind: 'DRIVER', userId } } });
     return {
       ...driver,
@@ -64,7 +66,9 @@ export class DriversService {
     };
   }
 
-  async reviewDocument(driverId: string, documentId: string, approve: boolean, reason: string | undefined, actorId: string) {
+  async reviewDocument(driverId: string, documentId: string, approve: boolean, reason: string | undefined, actor: AuthUser) {
+    const actorId = actor.id;
+    await this.get(driverId, actor);
     const doc = await this.prisma.driverDocument.findFirst({ where: { id: documentId, driverId } });
     if (!doc) throw new NotFoundException('Document introuvable.');
     if (!approve && !reason) throw new BadRequestException('Indiquez le motif du refus.');
@@ -89,8 +93,9 @@ export class DriversService {
     return updated;
   }
 
-  async approve(userId: string, actorId: string) {
-    const before = await this.get(userId);
+  async approve(userId: string, actor: AuthUser) {
+    const actorId = actor.id;
+    const before = await this.get(userId, actor);
     if (before.status === DriverStatus.APPROVED) return before;
     const driver = await this.prisma.driverProfile.update({
       where: { userId },
@@ -107,8 +112,9 @@ export class DriversService {
     return driver;
   }
 
-  async reject(userId: string, reason: string, actorId: string) {
-    const before = await this.get(userId);
+  async reject(userId: string, reason: string, actor: AuthUser) {
+    const actorId = actor.id;
+    const before = await this.get(userId, actor);
     if (before.status !== DriverStatus.PENDING) {
       throw new BadRequestException('Seule une inscription en attente peut être refusée ; sinon, suspendez le livreur.');
     }
@@ -122,8 +128,10 @@ export class DriversService {
     return driver;
   }
 
-  async update(userId: string, dto: UpdateDriverDto, actorId: string) {
-    const before = await this.get(userId);
+  async update(userId: string, dto: UpdateDriverDto, actor: AuthUser) {
+    const actorId = actor.id;
+    const before = await this.get(userId, actor);
+    if (dto.cityId) assertCityAccess(actor, dto.cityId);
     if (dto.status === DriverStatus.APPROVED && before.status !== DriverStatus.SUSPENDED && before.status !== DriverStatus.APPROVED) {
       throw new BadRequestException("Utilisez « Valider l'inscription » pour un livreur en attente.");
     }
@@ -145,7 +153,9 @@ export class DriversService {
   }
 
   /** Création directe par l'administration (typiquement les salariés) ; le livreur est validé d'office. */
-  async create(dto: CreateDriverDto, actorId: string) {
+  async create(dto: CreateDriverDto, actor: AuthUser) {
+    const actorId = actor.id;
+    assertCityAccess(actor, dto.cityId);
     const phone = requirePhone(dto.phone);
     if (await this.prisma.user.findUnique({ where: { phone } })) {
       throw new ConflictException('Un compte existe déjà avec ce numéro.');

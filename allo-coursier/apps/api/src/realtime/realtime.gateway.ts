@@ -42,10 +42,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
       const token = (socket.handshake.auth?.token as string | undefined) ?? undefined;
       if (!token) return next(); // connexion anonyme : uniquement le suivi public par lien
       try {
-        const payload = this.jwt.verify<{ sub: string; roles: string[]; perms: string[] }>(token, {
+        const payload = this.jwt.verify<{ sub: string; roles: string[]; perms: string[]; cities?: string[] | null }>(token, {
           secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         });
-        (socket.data as SocketData).user = { id: payload.sub, roles: payload.roles ?? [], permissions: payload.perms ?? [] };
+        (socket.data as SocketData).user = { id: payload.sub, roles: payload.roles ?? [], permissions: payload.perms ?? [], cityIds: payload.cities ?? null };
         next();
       } catch {
         next(new Error('Session expirée'));
@@ -66,9 +66,10 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     const user = (socket.data as SocketData).user;
     if (!user || typeof body?.orderId !== 'string') return { ok: false };
     const order = await this.prisma.order
-      .findUnique({ where: { id: body.orderId }, select: { id: true, clientId: true, driverId: true } })
+      .findUnique({ where: { id: body.orderId }, select: { id: true, clientId: true, driverId: true, cityId: true } })
       .catch(() => null);
-    const isStaff = hasPermissions(user, [PERMISSIONS.ORDERS_READ.code]);
+    const isStaff =
+      hasPermissions(user, [PERMISSIONS.ORDERS_READ.code]) && (!user.cityIds || (!!order && user.cityIds.includes(order.cityId)));
     if (!order || !(isStaff || order.clientId === user.id || order.driverId === user.id)) return { ok: false };
     await socket.join([orderRoom(order.id), chatRoom(order.id)]);
     return { ok: true };

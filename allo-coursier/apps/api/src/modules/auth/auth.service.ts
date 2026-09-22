@@ -253,13 +253,23 @@ export class AuthService {
       ? [ALL_PERMISSIONS_WILDCARD]
       : [...new Set(user.roles.flatMap((ur) => ur.role.permissions.map((rp) => rp.permission.code)))];
     const accessToken = this.jwt.sign(
-      { sub: user.id, roles, perms },
+      { sub: user.id, roles, perms, cities: this.cityScope(user) },
       {
         secret: this.config.getOrThrow<string>('JWT_ACCESS_SECRET'),
         expiresIn: this.config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m',
       },
     );
     return { accessToken };
+  }
+
+  /**
+   * Périmètre géographique de l'équipe : null si au moins un rôle d'équipe s'applique à toutes les villes,
+   * sinon la liste des villes des rôles limités.
+   */
+  private cityScope(user: UserWithAccess): string[] | null {
+    const staffRoles = user.roles.filter((ur) => ur.role.code === ROLE.SUPER_ADMIN || ur.role.permissions.length > 0);
+    if (staffRoles.length === 0 || staffRoles.some((ur) => !ur.cityId)) return null;
+    return [...new Set(staffRoles.map((ur) => ur.cityId!))];
   }
 
   toPublicUser(user: UserWithAccess) {

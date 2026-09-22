@@ -15,34 +15,34 @@ export class DriversController {
 
   @Get()
   @RequirePermissions(PERMISSIONS.DRIVERS_READ.code)
-  list(@Query() query: DriverQueryDto) {
-    return this.drivers.list(query);
+  list(@Query() query: DriverQueryDto, @CurrentUser() user: AuthUser) {
+    return this.drivers.list(query, user);
   }
 
   @Get(':id')
   @RequirePermissions(PERMISSIONS.DRIVERS_READ.code)
-  get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.drivers.get(id);
+  get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    return this.drivers.get(id, user);
   }
 
   @Post()
   @RequirePermissions(PERMISSIONS.DRIVERS_MANAGE.code, PERMISSIONS.DRIVERS_VALIDATE.code)
   create(@Body() dto: CreateDriverDto, @CurrentUser() user: AuthUser) {
-    return this.drivers.create(dto, user.id);
+    return this.drivers.create(dto, user);
   }
 
   @HttpCode(200)
   @Post(':id/approve')
   @RequirePermissions(PERMISSIONS.DRIVERS_VALIDATE.code)
   approve(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    return this.drivers.approve(id, user.id);
+    return this.drivers.approve(id, user);
   }
 
   @HttpCode(200)
   @Post(':id/reject')
   @RequirePermissions(PERMISSIONS.DRIVERS_VALIDATE.code)
   reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectDriverDto, @CurrentUser() user: AuthUser) {
-    return this.drivers.reject(id, dto.reason, user.id);
+    return this.drivers.reject(id, dto.reason, user);
   }
 
   @HttpCode(200)
@@ -54,12 +54,12 @@ export class DriversController {
     @Body() dto: ReviewDocumentDto,
     @CurrentUser() user: AuthUser,
   ) {
-    return this.drivers.reviewDocument(id, documentId, dto.approve, dto.reason, user.id);
+    return this.drivers.reviewDocument(id, documentId, dto.approve, dto.reason, user);
   }
 
   @Patch(':id')
   @RequirePermissions(PERMISSIONS.DRIVERS_MANAGE.code)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDriverDto, @CurrentUser() user: AuthUser) {
-    return this.drivers.update(id, dto, user.id);
+    return this.drivers.update(id, dto, user);
   }
 }

@@ -40,8 +40,8 @@ export class PricingController {
   @ApiBearerAuth()
   @Get('admin/pricing-rules')
   @RequirePermissions(PERMISSIONS.PRICING_READ.code)
-  list(@Query() query: PricingRuleQueryDto) {
-    return this.pricing.listRules(query);
+  list(@Query() query: PricingRuleQueryDto, @CurrentUser() user: AuthUser) {
+    return this.pricing.listRules(query, user);
   }
 
   @ApiBearerAuth()
@@ -55,20 +55,20 @@ export class PricingController {
   @Post('admin/pricing-rules')
   @RequirePermissions(PERMISSIONS.PRICING_MANAGE.code)
   create(@Body() dto: CreatePricingRuleDto, @CurrentUser() user: AuthUser) {
-    return this.pricing.createRule(dto, user.id);
+    return this.pricing.createRule(dto, user);
   }
 
   @ApiBearerAuth()
   @Patch('admin/pricing-rules/:id')
   @RequirePermissions(PERMISSIONS.PRICING_MANAGE.code)
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePricingRuleDto, @CurrentUser() user: AuthUser) {
-    return this.pricing.updateRule(id, dto, user.id);
+    return this.pricing.updateRule(id, dto, user);
   }
 
   @ApiBearerAuth()
   @Delete('admin/pricing-rules/:id')
   @RequirePermissions(PERMISSIONS.PRICING_MANAGE.code)
   deactivate(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    return this.pricing.deactivateRule(id, user.id);
+    return this.pricing.deactivateRule(id, user);
   }
 }

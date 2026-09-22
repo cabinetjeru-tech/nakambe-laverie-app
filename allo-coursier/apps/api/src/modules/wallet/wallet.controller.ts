@@ -78,7 +78,7 @@ export class WalletController {
   @Post('admin/drivers/:id/cash-settlements')
   @RequirePermissions(PERMISSIONS.WALLETS_MANAGE.code)
   settle(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CashSettlementDto, @CurrentUser() user: AuthUser) {
-    return this.wallets.recordCashSettlement(id, dto, user.id);
+    return this.wallets.recordCashSettlement(id, dto, user);
   }
 
   @Get('admin/cash-settlements')

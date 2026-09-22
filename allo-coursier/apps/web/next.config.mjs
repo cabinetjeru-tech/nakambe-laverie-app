@@ -1,8 +1,15 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '../..');
+
 /** @type {import('next').NextConfig} */
 const API_URL = process.env.API_URL ?? 'http://localhost:3002';
 
 const nextConfig = {
   output: 'standalone',
+  // Monorepo : inclure les dépendances installées à la racine dans l'image autonome.
+  experimental: { outputFileTracingRoot: root },
   reactStrictMode: true,
   poweredByHeader: false,
   // En développement, l'API est servie sur le même domaine que l'application (pas de CORS).

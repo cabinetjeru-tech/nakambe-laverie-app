@@ -8,6 +8,7 @@ interface AccessTokenPayload {
   sub: string;
   roles: string[];
   perms: string[];
+  cities?: string[] | null;
 }
 
 @Injectable()
@@ -22,6 +23,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   validate(payload: AccessTokenPayload): AuthUser {
     if (!payload?.sub) throw new UnauthorizedException();
-    return { id: payload.sub, roles: payload.roles ?? [], permissions: payload.perms ?? [] };
+    return { id: payload.sub, roles: payload.roles ?? [], permissions: payload.perms ?? [], cityIds: payload.cities ?? null };
   }
 }

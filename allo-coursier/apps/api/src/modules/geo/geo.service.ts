@@ -1,6 +1,7 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { City, Prisma, Zone } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import { assertCityAccess, AuthUser } from '../../common/auth-user';
 import { GeoJsonPolygon, haversineKm, LatLng, pointInPolygon, polygonValidationError } from '../../common/utils/geo';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCityDto, CreateZoneDto, UpdateCityDto, UpdateZoneDto } from './dto/geo.dto';
@@ -71,7 +72,9 @@ export class GeoService {
     return city;
   }
 
-  async createCity(dto: CreateCityDto, actorId: string) {
+  async createCity(dto: CreateCityDto, actor: AuthUser) {
+    const actorId = actor.id;
+    if (actor.cityIds) throw new ForbiddenException('Seule une personne sans limite de ville peut ouvrir une nouvelle ville.');
     const city = await this.prisma.city
       .create({ data: dto })
       .catch((e) => this.rethrowUnique(e, 'Une ville avec ce slug existe déjà.'));
@@ -79,7 +82,9 @@ export class GeoService {
     return city;
   }
 
-  async updateCity(id: string, dto: UpdateCityDto, actorId: string) {
+  async updateCity(id: string, dto: UpdateCityDto, actor: AuthUser) {
+    const actorId = actor.id;
+    assertCityAccess(actor, id);
     const before = await this.getCity(id);
     const city = await this.prisma.city
       .update({ where: { id }, data: dto })
@@ -94,7 +99,9 @@ export class GeoService {
     return this.prisma.zone.findMany({ where: { cityId }, orderBy: [{ priority: 'desc' }, { name: 'asc' }] });
   }
 
-  async createZone(cityId: string, dto: CreateZoneDto, actorId: string) {
+  async createZone(cityId: string, dto: CreateZoneDto, actor: AuthUser) {
+    const actorId = actor.id;
+    assertCityAccess(actor, cityId);
     await this.getCity(cityId);
     this.assertPolygon(dto.polygon);
     const zone = await this.prisma.zone.create({
@@ -104,9 +111,11 @@ export class GeoService {
     return zone;
   }
 
-  async updateZone(id: string, dto: UpdateZoneDto, actorId: string) {
+  async updateZone(id: string, dto: UpdateZoneDto, actor: AuthUser) {
+    const actorId = actor.id;
     const before = await this.prisma.zone.findUnique({ where: { id } });
     if (!before) throw new NotFoundException('Zone introuvable.');
+    assertCityAccess(actor, before.cityId);
     if (dto.polygon !== undefined) this.assertPolygon(dto.polygon);
     const zone = await this.prisma.zone.update({
       where: { id },
@@ -116,12 +125,14 @@ export class GeoService {
     return zone;
   }
 
-  async deleteZone(id: string, actorId: string) {
+  async deleteZone(id: string, actor: AuthUser) {
+    const actorId = actor.id;
     const zone = await this.prisma.zone.findUnique({
       where: { id },
       include: { _count: { select: { pricingRules: true, merchants: true } } },
     });
     if (!zone) throw new NotFoundException('Zone introuvable.');
+    assertCityAccess(actor, zone.cityId);
     if (zone._count.pricingRules > 0 || zone._count.merchants > 0) {
       throw new BadRequestException(
         'Cette zone est utilisée par des tarifs ou des commerçants : désactivez-la plutôt que de la supprimer.',

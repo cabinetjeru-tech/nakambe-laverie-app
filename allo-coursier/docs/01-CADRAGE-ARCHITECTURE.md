@@ -63,7 +63,7 @@ Réalités du terrain prises en compte :
 | Serveur / API | **NestJS** (Node.js), API **REST** `/api/v1`, documentation Swagger | Même technologie que la plateforme de la laverie : compétences et hébergement mutualisables. |
 | Temps réel | **Socket.IO** (WebSocket, avec repli automatique si la connexion est mauvaise) | Suivi GPS, chat, nouvelles missions, commandes entrantes des commerçants. |
 | Base de données | **PostgreSQL** via **Prisma** | Fiable pour l'argent. Zones stockées en GeoJSON et distances calculées dans l'application : suffisant pour deux villes, compatible avec tous les hébergeurs bon marché (PostGIS pourra être ajouté si le volume l'exige). |
-| Tâches différées | **pg-boss** (file de tâches stockée dans PostgreSQL) | Expiration des offres, livraisons programmées, notifications — **sans serveur Redis à payer**. |
+| Tâches automatiques | **Planificateur intégré à l'API**, qui lit l'état en base toutes les 5 secondes | Expiration des offres, livraisons programmées, relances, paiements non validés : rien n'est perdu en cas de redémarrage, **sans serveur Redis à payer**. |
 | Applications (client, livreur, commerçant, admin) | **Next.js + Tailwind CSS**, en **PWA** | Une seule base de code web, installable sur téléphone, utilisable aussi sur ordinateur. |
 | Cartes | **Leaflet + tuiles OpenStreetMap** (fournisseur de tuiles interchangeable) | Gratuit, pas de clé Google payante. |
 | Distances | Au lancement : distance à vol d'oiseau × coefficient routier configurable (ex. 1,3). Interface `RoutingProvider` pour brancher plus tard un calcul d'itinéraire réel (OSRM gratuit auto-hébergé). | Gratuit et sans dépendance au démarrage. |
@@ -367,11 +367,11 @@ aux heures de pointe, livraisons groupées, parrainage/fidélité, Play Store.
 
 ### Ordre de développement de la phase 1
 1. ✅ Socle : projet, base de données, connexion, rôles, villes/zones, tarifs (+ tests du calcul de prix)
-2. Commandes, attribution des missions, suivi en temps réel, chat
-3. Application livreur
-4. Application client
-5. Administration
-6. Paiements, portefeuille, caisse, notifications, installation sur serveur
+2. ✅ Commandes, attribution des missions, suivi en temps réel, chat
+3. ✅ Application livreur
+4. ✅ Application client
+5. ✅ Administration
+6. ✅ Paiements, portefeuille, caisse, notifications, installation sur serveur
 
 À la fin de chaque lot, une version testable est disponible.
 

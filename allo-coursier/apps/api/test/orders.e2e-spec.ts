@@ -350,6 +350,35 @@ describe('API ALLÔ-COURSIER — commandes et argent (e2e)', () => {
     });
   });
 
+  describe('périmètre par ville', () => {
+    it('limite un responsable de Tenkodogo à sa ville', async () => {
+      const cities = (await http.get('/api/v1/cities')).body as { id: string; slug: string }[];
+      const tenko = cities.find((c) => c.slug === 'tenkodogo')!;
+      const ouaga = cities.find((c) => c.slug === 'ouagadougou')!;
+      const created = await http.post('/api/v1/admin/staff').set(auth(admin)).send({
+        phone: '70 60 60 60', firstName: 'Rasmané', lastName: 'Kiemdé', roles: [{ roleCode: 'CITY_MANAGER', cityId: tenko.id }],
+      });
+      expect(created.status).toBe(201);
+      const manager = (await login('70606060', created.body.temporaryPassword)).accessToken;
+
+      const ouagaOrder = (await http.get('/api/v1/admin/orders?pageSize=1').set(auth(admin))).body.items[0];
+      expect((await http.get(`/api/v1/admin/orders/${ouagaOrder.id}`).set(auth(manager))).status).toBe(403);
+      const list = await http.get('/api/v1/admin/orders').set(auth(manager));
+      expect(list.body.items.every((o: { city: { name: string } }) => o.city.name === 'Tenkodogo')).toBe(true);
+      expect((await http.get(`/api/v1/admin/orders?cityId=${ouaga.id}`).set(auth(manager))).status).toBe(403);
+      expect((await http.get(`/api/v1/admin/drivers/${driverId}`).set(auth(manager))).status).toBe(403);
+
+      const rule = { name: 'Test', baseFare: 100, minFare: 100, pricePerKm: 10, commissionPercent: 10, isActive: false };
+      expect((await http.post('/api/v1/admin/pricing-rules').set(auth(manager)).send({ ...rule, cityId: ouaga.id })).status).toBe(403);
+      expect((await http.post('/api/v1/admin/pricing-rules').set(auth(manager)).send({ ...rule, cityId: tenko.id })).status).toBe(201);
+      expect((await http.post('/api/v1/admin/cities').set(auth(manager)).send({ name: 'Koudougou', slug: 'koudougou', centerLat: 12.25, centerLng: -2.36 })).status).toBe(403);
+
+      const stats = await http.get('/api/v1/admin/stats/overview').set(auth(manager));
+      expect(stats.status).toBe(200);
+      expect(stats.body.orders.delivered).toBe(0);
+    });
+  });
+
   describe('temps réel', () => {
     it('prévient le livreur d’une offre et le client de l’acceptation', async () => {
       await app.listen(0);

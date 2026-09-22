@@ -53,14 +53,14 @@ export class GeoController {
   @Post('admin/cities')
   @RequirePermissions(PERMISSIONS.CITIES_MANAGE.code)
   createCity(@Body() dto: CreateCityDto, @CurrentUser() user: AuthUser) {
-    return this.geo.createCity(dto, user.id);
+    return this.geo.createCity(dto, user);
   }
 
   @ApiBearerAuth()
   @Patch('admin/cities/:id')
   @RequirePermissions(PERMISSIONS.CITIES_MANAGE.code)
   updateCity(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCityDto, @CurrentUser() user: AuthUser) {
-    return this.geo.updateCity(id, dto, user.id);
+    return this.geo.updateCity(id, dto, user);
   }
 
   @ApiBearerAuth()
@@ -74,20 +74,20 @@ export class GeoController {
   @Post('admin/cities/:cityId/zones')
   @RequirePermissions(PERMISSIONS.CITIES_MANAGE.code)
   createZone(@Param('cityId', ParseUUIDPipe) cityId: string, @Body() dto: CreateZoneDto, @CurrentUser() user: AuthUser) {
-    return this.geo.createZone(cityId, dto, user.id);
+    return this.geo.createZone(cityId, dto, user);
   }
 
   @ApiBearerAuth()
   @Patch('admin/zones/:id')
   @RequirePermissions(PERMISSIONS.CITIES_MANAGE.code)
   updateZone(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateZoneDto, @CurrentUser() user: AuthUser) {
-    return this.geo.updateZone(id, dto, user.id);
+    return this.geo.updateZone(id, dto, user);
   }
 
   @ApiBearerAuth()
   @Delete('admin/zones/:id')
   @RequirePermissions(PERMISSIONS.CITIES_MANAGE.code)
   deleteZone(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
-    return this.geo.deleteZone(id, user.id);
+    return this.geo.deleteZone(id, user);
   }
 }

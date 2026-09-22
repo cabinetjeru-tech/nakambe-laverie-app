@@ -416,9 +416,9 @@ export class OrdersService {
 
   /** Accès en lecture à une commande (client, livreur affecté, équipe). */
   async assertCanView(user: AuthUser, orderId: string) {
-    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { id: true, clientId: true, driverId: true } });
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { id: true, clientId: true, driverId: true, cityId: true } });
     if (!order) throw new NotFoundException('Commande introuvable.');
-    const staff = hasPermissions(user, [PERMISSIONS.ORDERS_READ.code]);
+    const staff = hasPermissions(user, [PERMISSIONS.ORDERS_READ.code]) && (!user.cityIds || user.cityIds.includes(order.cityId));
     if (!staff && order.clientId !== user.id && order.driverId !== user.id) throw new NotFoundException('Commande introuvable.');
     return { order, staff };
   }

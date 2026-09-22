@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DriverStatus, OrderStatus, Prisma } from '@prisma/client';
+import { assertCityAccess, AuthUser, cityFilter } from '../../common/auth-user';
 import { paginate } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
@@ -20,13 +21,13 @@ export class AdminOrdersService {
     private storage: StorageService,
   ) {}
 
-  async list(query: AdminOrderQueryDto) {
+  async list(query: AdminOrderQueryDto, user: AuthUser) {
     const statuses = query.status ? (Array.isArray(query.status) ? query.status : [query.status]) : undefined;
     const search = query.search?.trim();
     const digits = search?.replace(/\D/g, '');
     const where: Prisma.OrderWhereInput = {
       status: statuses ? { in: statuses } : undefined,
-      cityId: query.cityId,
+      cityId: cityFilter(user, query.cityId),
       driverId: query.driverId,
       clientId: query.clientId,
       createdAt: query.from || query.to ? { gte: query.from, lte: query.to } : undefined,
@@ -73,9 +74,17 @@ export class AdminOrdersService {
     };
   }
 
-  async detail(orderId: string) {
+  /** Vérifie l'existence de la commande et le périmètre géographique du membre de l'équipe. */
+  async assertAccess(orderId: string, user: AuthUser) {
+    const order = await this.prisma.order.findUnique({ where: { id: orderId }, select: { cityId: true } });
+    if (!order) throw new NotFoundException('Commande introuvable.');
+    assertCityAccess(user, order.cityId);
+  }
+
+  async detail(orderId: string, user: AuthUser) {
     const order = await this.prisma.order.findUnique({ where: { id: orderId }, include: orderDetailInclude });
     if (!order) throw new NotFoundException('Commande introuvable.');
+    assertCityAccess(user, order.cityId);
     const [offers, payments, trail] = await Promise.all([
       this.prisma.dispatchOffer.findMany({
         where: { orderId },
@@ -109,36 +118,39 @@ export class AdminOrdersService {
   }
 
   /** Corrections par l'équipe : livraison confirmée, échec, retour, annulation. */
-  async forceStatus(orderId: string, dto: AdminStatusDto, actorId: string) {
+  async forceStatus(orderId: string, dto: AdminStatusDto, actor: AuthUser) {
+    const actorId = actor.id;
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Commande introuvable.');
+    assertCityAccess(actor, order.cityId);
     if (!canAdminForce(order.status, dto.status)) {
       throw new BadRequestException(`Passage impossible de « ${STATUS_LABELS[order.status]} » à « ${STATUS_LABELS[dto.status]} ».`);
     }
     if (dto.status === OrderStatus.CANCELLED) {
       const cancellable = Object.values(OrderStatus).filter((s) => !FINAL_STATUSES.includes(s));
       await this.orders.cancel(orderId, cancellable, { id: actorId, role: 'STAFF' }, dto.reason);
-      return this.detail(orderId);
+      return this.detail(orderId, actor);
     }
-    const actor = { id: actorId, role: 'STAFF' as const };
+    const staffActor = { id: actorId, role: 'STAFF' as const };
     const updated = await this.prisma.$transaction(async (tx) => {
       if (dto.status === OrderStatus.DELIVERED) {
         const driver = await tx.driverProfile.findUniqueOrThrow({ where: { userId: order.driverId! } });
-        return this.courier.settleDelivery(tx, orderId, driver.employmentType, driver.commissionPercent, 0, actor, new Date());
+        return this.courier.settleDelivery(tx, orderId, driver.employmentType, driver.commissionPercent, 0, staffActor, new Date());
       }
       const from = dto.status === OrderStatus.RETURNED ? [OrderStatus.FAILED] : ACTIVE_DRIVER_STATUSES;
-      const res = await this.lifecycle.transition(tx, orderId, from, dto.status, actor, { note: dto.reason });
+      const res = await this.lifecycle.transition(tx, orderId, from, dto.status, staffActor, { note: dto.reason });
       if (!res) throw new BadRequestException('La commande a changé entre-temps.');
       return res;
     });
     await this.lifecycle.announce(updated, {
       notifyDriver: { title: 'Mission mise à jour', body: `L’équipe a indiqué « ${STATUS_LABELS[updated.status]} » pour ${updated.reference}.` },
     });
-    return this.detail(orderId);
+    return this.detail(orderId, actor);
   }
 
   /** Carte en direct : livreurs en ligne et commandes en cours. */
-  async live(cityId?: string) {
+  async live(user: AuthUser, requestedCityId?: string) {
+    const cityId = cityFilter(user, requestedCityId);
     const [drivers, orders] = await Promise.all([
       this.prisma.driverProfile.findMany({
         where: { status: DriverStatus.APPROVED, isOnline: true, cityId },

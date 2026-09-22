@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { DeliverySpeed, PricingRule, Prisma, ServiceType } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import { assertCityAccess, AuthUser, cityFilter } from '../../common/auth-user';
 import { localTimeHHmm } from '../../common/utils/time';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GeoService } from '../geo/geo.service';
@@ -133,10 +134,10 @@ export class PricingService {
 
   // ------------------------------------------------------------------ règles (admin)
 
-  listRules(query: PricingRuleQueryDto) {
+  listRules(query: PricingRuleQueryDto, user: AuthUser) {
     return this.prisma.pricingRule.findMany({
       where: {
-        cityId: query.cityId,
+        cityId: cityFilter(user, query.cityId),
         isActive: query.isActive === undefined ? undefined : query.isActive === 'true',
       },
       include: { city: { select: { id: true, name: true } }, zone: { select: { id: true, name: true } } },
@@ -150,15 +151,19 @@ export class PricingService {
     return rule;
   }
 
-  async createRule(dto: CreatePricingRuleDto, actorId: string) {
+  async createRule(dto: CreatePricingRuleDto, actor: AuthUser) {
+    const actorId = actor.id;
+    assertCityAccess(actor, dto.cityId);
     await this.assertRuleConsistency(dto.cityId, dto);
     const rule = await this.prisma.pricingRule.create({ data: { ...dto, createdById: actorId } });
     await this.audit.log({ actorId, action: 'pricing_rule.create', entityType: 'PricingRule', entityId: rule.id, after: rule });
     return rule;
   }
 
-  async updateRule(id: string, dto: UpdatePricingRuleDto, actorId: string) {
+  async updateRule(id: string, dto: UpdatePricingRuleDto, actor: AuthUser) {
+    const actorId = actor.id;
     const before = await this.getRule(id);
+    assertCityAccess(actor, before.cityId);
     await this.assertRuleConsistency(before.cityId, { ...before, ...dto });
     const rule = await this.prisma.pricingRule.update({ where: { id }, data: dto as Prisma.PricingRuleUpdateInput });
     await this.audit.log({ actorId, action: 'pricing_rule.update', entityType: 'PricingRule', entityId: id, before, after: rule });
@@ -166,8 +171,10 @@ export class PricingService {
   }
 
   /** Les commandes gardent le détail de prix figé : désactiver une règle n'altère aucun historique. */
-  async deactivateRule(id: string, actorId: string) {
+  async deactivateRule(id: string, actor: AuthUser) {
+    const actorId = actor.id;
     const before = await this.getRule(id);
+    assertCityAccess(actor, before.cityId);
     const rule = await this.prisma.pricingRule.update({ where: { id }, data: { isActive: false } });
     await this.audit.log({ actorId, action: 'pricing_rule.deactivate', entityType: 'PricingRule', entityId: id, before, after: rule });
     return rule;

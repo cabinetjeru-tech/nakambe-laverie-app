@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { LedgerTransactionType, PayoutStatus, Prisma, WalletKind } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import { assertCityAccess, AuthUser } from '../../common/auth-user';
 import { paginate } from '../../common/dto/pagination.dto';
 import { PERMISSIONS } from '../../common/permissions';
 import { normalizeBurkinaPhone } from '../../common/utils/phone';
@@ -125,9 +126,11 @@ export class WalletService {
   // ------------------------------------------------------------------ espèces des livreurs
 
   /** Le livreur remet à l'entreprise les espèces encaissées : sa dette diminue. */
-  async recordCashSettlement(driverId: string, dto: CashSettlementDto, actorId: string) {
+  async recordCashSettlement(driverId: string, dto: CashSettlementDto, actor: AuthUser) {
+    const actorId = actor.id;
     const driver = await this.prisma.driverProfile.findUnique({ where: { userId: driverId } });
     if (!driver) throw new NotFoundException('Livreur introuvable.');
+    assertCityAccess(actor, driver.cityId);
     const result = await this.prisma.$transaction(async (tx) => {
       const wallet = await this.ledger.userWallet('DRIVER', driverId, tx);
       const external = await this.ledger.systemWallet('CASH_CLEARING', tx);

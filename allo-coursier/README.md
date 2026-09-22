@@ -4,28 +4,47 @@
 
 Projet indépendant de la plateforme de la laverie présente à la racine de ce dépôt.
 
-- 📄 [Cadrage, architecture, base de données et MVP](docs/01-CADRAGE-ARCHITECTURE.md)
+| Document | Contenu |
+|---|---|
+| [01 — Cadrage et architecture](docs/01-CADRAGE-ARCHITECTURE.md) | Décisions, architecture, base de données, périmètre |
+| [02 — Mise en ligne](docs/02-MISE-EN-LIGNE.md) | Installation sur un serveur économique, HTTPS, sauvegardes, mises à jour |
+| [03 — Guide de l'équipe](docs/03-GUIDE-EQUIPE.md) | Travail quotidien dans l'administration |
 
-## Avancement (phase 1)
+## Ce que contient la plateforme (phase 1 terminée)
 
-| Lot | Contenu | État |
-|---|---|---|
-| 1 | Socle : base de données complète, comptes (téléphone + code secret), sessions, rôles et permissions, villes et zones, moteur de tarifs + simulateur, livreurs (inscription, validation, salariés/indépendants), paramètres, journal d'audit | ✅ Terminé |
-| 2 | Commandes, attribution des missions, suivi en temps réel, chat | À venir |
-| 3 | Application livreur (PWA) | À venir |
-| 4 | Application client (PWA) | À venir |
-| 5 | Administration web | À venir |
-| 6 | Paiements, portefeuille, caisse, notifications, mise en ligne | À venir |
+**Application client** (web installable sur le téléphone, `/`) : compte par numéro + code secret ;
+colis et documents, retrait et dépôt, petites courses, achats par le livreur ; standard ou express ; moto
+ou tricycle ; livraison programmée ; prix affiché avant de commander ; espèces (au départ ou à l'arrivée),
+portefeuille ou Mobile Money ; code promo ; suivi GPS en direct ; code de livraison à partager par
+WhatsApp ; chat avec le livreur ; notation ; réclamations ; notifications.
+
+**Application livreur** (web installable, `/livreur`) : inscription et documents ; en ligne / hors ligne ;
+offres avec sonnerie et compte à rebours ; mission guidée étape par étape (itinéraire Google Maps, appel,
+achats avec photo du ticket, code du destinataire et photo) ; actions gardées sur le téléphone en cas de
+coupure réseau ; gains, espèces à reverser, retraits ; historique.
+
+**Administration** (`/admin`) : tableau de bord ; carte en direct ; commandes (affectation, relance,
+annulation, corrections) ; livreurs (salariés/indépendants, validation, documents, versements) ;
+clients ; paiements Mobile Money à vérifier ; finances ; tarifs et simulateur ; villes et zones
+dessinées sur la carte ; promotions ; réclamations ; notifications ; équipe, rôles et droits ;
+paramètres ; journal d'audit.
+
+**Serveur** : API REST + temps réel, moteur de tarifs configurable, attribution automatique des
+missions, registre comptable en partie double, architecture `PaymentProvider` prête pour Orange Money et
+Moov Money.
 
 ## Structure
 
 ```
 allo-coursier/
-├── apps/api/        API NestJS + Prisma + PostgreSQL
-│   ├── prisma/      schéma (48 tables), migrations, seed
-│   ├── src/         modules : auth, users, access (rôles), drivers, geo, pricing, settings, audit
+├── apps/api/        API NestJS + Prisma + PostgreSQL (+ Socket.IO)
+│   ├── prisma/      schéma, migrations, seed
+│   ├── src/         modules : auth, users, access, drivers, geo, pricing, orders (commandes, attribution,
+│   │                livreur, chat, planificateur), payments, wallet, promotions, complaints,
+│   │                notifications, storage, stats, settings, audit, realtime
 │   └── test/        tests de bout en bout
-├── infra/           docker-compose de développement (PostgreSQL)
+├── apps/web/        Next.js (PWA) : espaces client, livreur et administration
+├── infra/           docker-compose (dev et production), Caddy (HTTPS), sauvegardes
 └── docs/
 ```
 
@@ -40,66 +59,54 @@ docker compose -f infra/docker-compose.yml up -d
 #    sudo -u postgres psql -c "CREATE USER allo WITH PASSWORD 'allo_dev_pwd' CREATEDB;"
 #    sudo -u postgres psql -c "CREATE DATABASE allo_coursier OWNER allo;"
 
-# 2. Dépendances
+# 2. Dépendances (à la racine du projet allo-coursier/)
 npm install
 
-# 3. Configuration, schéma et données initiales
+# 3. API : configuration, schéma, données initiales, démarrage
 cd apps/api
 cp .env.example .env
 npx prisma migrate deploy
 npm run prisma:seed
+npm run start:dev            # http://localhost:3002/api/v1 — documentation : /api/docs
 
-# 4. Lancer l'API
-npm run start:dev
+# 4. Application web (autre terminal)
+cd apps/web
+cp .env.local.example .env.local
+npm run dev                  # http://localhost:3000
 ```
-
-- API : http://localhost:3002/api/v1
-- Documentation interactive : http://localhost:3002/api/docs
 
 ## Comptes créés par le seed
 
-| Compte | Téléphone | Code / mot de passe |
-|---|---|---|
-| Super-administrateur | +226 70 00 00 00 | `AlloAdmin@2026` (variables `SEED_ADMIN_*`) |
-| Client de démonstration | +226 76 00 00 01 | `482913` |
-| Livreur de démonstration (Ouagadougou, validé) | +226 76 00 00 02 | `482913` |
+| Compte | Téléphone | Code / mot de passe | Espace |
+|---|---|---|---|
+| Super-administrateur | 70 00 00 00 | `AlloAdmin@2026` (variables `SEED_ADMIN_*`) | `/admin` |
+| Client de démonstration | 76 00 00 01 | `482913` | `/accueil` |
+| Livreur de démonstration (Ouagadougou, validé) | 76 00 00 02 | `482913` | `/livreur` |
 
 Les comptes de démonstration ne sont pas créés quand `NODE_ENV=production`.
 
-> ⚠️ Les **tarifs créés par le seed sont des exemples** (ex. Ouagadougou moto : prise en charge 500,
-> minimum 1 000, 150 FCFA/km au-delà de 2 km, express +500, commission 20 %). Ils se modifient dans
-> l'administration (`/admin/pricing-rules`) et doivent être validés par GROUPE AKAMBI SARL avant le lancement.
+> ⚠️ Les **tarifs créés par le seed sont des exemples** : par exemple Ouagadougou en moto, 500 FCFA de
+> prise en charge, 1 000 FCFA minimum, 150 FCFA/km au-delà de 2 km, express +500, commission 20 %. Ils
+> se modifient dans l'administration, menu **Tarifs**.
 
 ## Tests
 
 ```bash
 cd apps/api
-npm test            # tests unitaires (moteur de prix, zones, téléphones, codes secrets)
-npm run test:e2e    # tests de bout en bout, sur une base dont le nom finit par _test
+npm test            # 61 tests unitaires : prix, zones, répartition de l'argent, étapes de commande…
+npm run test:e2e    # 42 tests de bout en bout (base dont le nom finit par _test, vidée à chaque lancement)
+cd ../web && npm run lint   # vérification des types de l'application web
 ```
-
-Base des tests de bout en bout : `TEST_DATABASE_URL`, par défaut
-`postgresql://allo:allo_dev_pwd@localhost:5432/allo_coursier_test`. Elle est **vidée** à chaque lancement
-(les tests refusent toute base dont le nom ne finit pas par `_test`).
-
-## Principaux points d'API (lot 1)
-
-| Domaine | Routes |
-|---|---|
-| Comptes | `POST /auth/register` (client ou livreur), `/auth/login`, `/auth/refresh`, `/auth/logout`, `GET /auth/me`, `POST /auth/change-secret` |
-| Mon compte | `PATCH /me`, `GET/POST/PATCH/DELETE /me/addresses` |
-| Villes | `GET /cities`, `GET /geo/locate?lat&lng` |
-| Devis | `POST /pricing/quote` → prix standard **et** express en un seul appel |
-| Admin — tarifs | `GET/POST/PATCH/DELETE /admin/pricing-rules`, `POST /admin/pricing/simulate` |
-| Admin — villes/zones | `/admin/cities`, `/admin/cities/:id/zones`, `/admin/zones/:id` |
-| Admin — accès | `/admin/permissions`, `/admin/roles`, `/admin/users`, `/admin/staff` |
-| Admin — livreurs | `/admin/drivers` (liste, validation, refus, modification, création des salariés) |
-| Admin — divers | `/admin/settings`, `/admin/audit-logs` |
 
 ## Sécurité en bref
 
-- Codes secrets et mots de passe chiffrés (bcrypt) ; blocage temporaire après 5 essais erronés.
-- Jeton d'accès de 15 minutes + jeton de renouvellement à usage unique ; la réutilisation d'un ancien jeton ferme toutes les sessions du compte.
-- Permissions vérifiées sur chaque route d'administration ; impossible d'accorder un droit qu'on ne possède pas ou de retirer le dernier super-administrateur.
-- Les rôles attribués à l'inscription (client, livreur, commerçant) ne peuvent pas recevoir de droits d'administration.
-- Prix toujours calculés par le serveur ; journal d'audit des actions sensibles.
+- Codes secrets et mots de passe chiffrés ; blocage temporaire après 5 essais erronés.
+- Sessions courtes renouvelables ; la réutilisation d'un ancien jeton ferme toutes les sessions.
+- Permissions vérifiées sur chaque action d'administration ; impossible d'accorder un droit qu'on ne
+  possède pas. Un rôle limité à une ville ne donne accès qu'aux commandes, livreurs, carte, statistiques,
+  tarifs et zones de cette ville. Les paiements, les finances et les réclamations restent communs à toute
+  l'entreprise : réservez ces droits aux rôles sans limite de ville.
+- Prix toujours calculés par le serveur ; argent tracé dans un registre à écritures équilibrées.
+- Photos vérifiées (vrai format d'image) et servies par des liens signés à durée limitée.
+- Le livreur ne voit jamais le code de livraison ; le suivi public ne montre aucun numéro de téléphone.
+- Journal d'audit des actions sensibles.
