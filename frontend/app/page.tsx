@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { COMPANY } from '@/lib/constants';
@@ -23,27 +24,41 @@ export default function HomePage() {
       <SiteHeader />
 
       <section className="bg-gradient-to-b from-brand-blue-light to-white">
-        <div className="mx-auto max-w-6xl px-4 py-14 text-center">
-          <h1 className="text-3xl font-extrabold text-brand-blue sm:text-5xl">{COMPANY.name}</h1>
-          <p className="mx-auto mt-3 max-w-xl text-xl font-bold text-brand-gold">« {COMPANY.slogan} »</p>
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 md:grid-cols-2">
+          <div className="order-2 text-center md:order-1 md:text-left">
+            <h1 className="text-3xl font-extrabold text-brand-blue sm:text-5xl">{COMPANY.name}</h1>
+            <p className="mt-3 text-xl font-bold text-brand-gold md:max-w-md">« {COMPANY.slogan} »</p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Link href="/inscription" className="btn-primary text-lg">
-              Créer mon compte client
-            </Link>
-            <Link href="/nouvelle-demande" className="btn-secondary text-lg">
-              Faire une demande
-            </Link>
-            <Link href="/suivi" className="btn-secondary text-lg">
-              Suivre ma commande
-            </Link>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+              <Link href="/inscription" className="btn-primary text-lg">
+                Créer mon compte client
+              </Link>
+              <Link href="/nouvelle-demande" className="btn-secondary text-lg">
+                Faire une demande
+              </Link>
+              <Link href="/suivi" className="btn-secondary text-lg">
+                Suivre ma commande
+              </Link>
+            </div>
+            <p className="mt-3 text-sm text-slate-500">
+              Déjà client ?{' '}
+              <Link href="/connexion" className="font-semibold text-brand-blue underline">
+                Connectez-vous
+              </Link>
+            </p>
           </div>
-          <p className="mt-3 text-sm text-slate-500">
-            Déjà client ?{' '}
-            <Link href="/connexion" className="font-semibold text-brand-blue underline">
-              Connectez-vous
-            </Link>
-          </p>
+
+          <div className="order-1 md:order-2">
+            <Image
+              src="/images/tricycle-laverie.jpg"
+              alt={`Tricycle de collecte et livraison ${COMPANY.name}`}
+              width={1295}
+              height={1214}
+              priority
+              sizes="(min-width: 768px) 480px, 90vw"
+              className="mx-auto w-full max-w-md rounded-3xl shadow-xl md:max-w-none"
+            />
+          </div>
         </div>
       </section>
 

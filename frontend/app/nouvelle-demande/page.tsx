@@ -3,11 +3,12 @@
 import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
+import Image from 'next/image';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { useRequireAuth } from '@/lib/use-require-auth';
 import { api, openAuthenticatedPdf } from '@/lib/api';
-import { SERVICE_DOMAIN_LABELS } from '@/lib/constants';
+import { COMPANY, SERVICE_DOMAIN_LABELS } from '@/lib/constants';
 import { formatFcfa } from '@/lib/format';
 
 const DOMAINS = Object.entries(SERVICE_DOMAIN_LABELS).filter(([key]) => key !== 'MOBILE');
@@ -190,6 +191,21 @@ function NouvelleDemandeForm() {
 
   return (
     <div className="mx-auto max-w-lg px-4 py-10">
+      <div className="relative mb-6 overflow-hidden rounded-2xl shadow-md">
+        <Image
+          src="/images/tricycle-laverie.jpg"
+          alt={`Tricycle de collecte et livraison ${COMPANY.name}`}
+          width={1295}
+          height={1214}
+          sizes="(min-width: 640px) 512px, 100vw"
+          className="h-40 w-full object-cover object-[center_25%]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-blue-dark/80 via-brand-blue-dark/10 to-transparent" />
+        <p className="absolute bottom-2 left-3 text-sm font-semibold text-white">
+          On vient récupérer votre linge où que vous soyez à Tenkodogo.
+        </p>
+      </div>
+
       <h1 className="text-2xl font-bold text-brand-blue">Nouvelle demande</h1>
       <p className="mt-1 text-sm text-slate-500">
         Choisissez vos prestations, nous calculons le devis automatiquement.
