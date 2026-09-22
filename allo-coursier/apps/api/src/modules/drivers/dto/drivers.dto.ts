@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsEnum, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID, Length, Max, MaxLength, Min } from 'class-validator';
 import { DriverStatus, EmploymentType, VehicleType } from '@prisma/client';
 import { PaginationQueryDto } from '../../../common/dto/pagination.dto';
 
@@ -70,4 +70,12 @@ export class CreateDriverDto {
 
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(20)
   plateNumber?: string;
+}
+
+export class ReviewDocumentDto {
+  @ApiProperty() @IsBoolean()
+  approve: boolean;
+
+  @ApiPropertyOptional({ description: 'Obligatoire en cas de refus' }) @IsOptional() @IsString() @Length(3, 300)
+  reason?: string;
 }

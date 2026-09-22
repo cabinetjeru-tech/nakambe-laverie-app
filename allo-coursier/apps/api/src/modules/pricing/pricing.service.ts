@@ -18,7 +18,7 @@ import { computeQuote, PricingRuleParams, selectPricingRule } from './pricing.en
 const PURCHASE_SERVICES: ServiceType[] = [ServiceType.ERRAND, ServiceType.PURCHASE];
 
 /** Valeurs par défaut des paramètres facultatifs (identiques à celles du schéma). */
-function toParams(p: PricingParamsDto | PricingRule): PricingRuleParams {
+export function toParams(p: PricingParamsDto | PricingRule): PricingRuleParams {
   return {
     baseFare: p.baseFare,
     minFare: p.minFare,
@@ -101,6 +101,7 @@ export class PricingService {
       serviceType: dto.serviceType,
       vehicleType: dto.vehicleType,
       at,
+      localTime,
       distanceKm: route.distanceKm,
       routingMethod: route.method,
       standard: computeQuote(params, { ...base, speed: DeliverySpeed.STANDARD }),

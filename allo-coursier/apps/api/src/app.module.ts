@@ -14,7 +14,17 @@ import { GeoModule } from './modules/geo/geo.module';
 import { PricingModule } from './modules/pricing/pricing.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
+import { ComplaintsModule } from './modules/complaints/complaints.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { PromotionsModule } from './modules/promotions/promotions.module';
+import { StatsModule } from './modules/stats/stats.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RealtimeModule } from './realtime/realtime.module';
+import { RolesGuard } from './common/guards/roles.guard';
 
 @Module({
   imports: [
@@ -33,13 +43,23 @@ import { PrismaModule } from './prisma/prisma.module';
     DriversModule,
     GeoModule,
     PricingModule,
+    RealtimeModule,
+    NotificationsModule,
+    StorageModule,
+    WalletModule,
+    PromotionsModule,
+    OrdersModule,
+    PaymentsModule,
+    ComplaintsModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [
-    // Ordre : limitation de débit, puis authentification, puis permissions.
+    // Ordre : limitation de débit, puis authentification, puis permissions et rôles.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

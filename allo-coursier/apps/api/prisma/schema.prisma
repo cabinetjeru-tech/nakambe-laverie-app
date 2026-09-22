@@ -627,7 +627,17 @@ model Order {
   paymentMethod        PaymentProvider
   paymentStatus        PaymentStatus   @default(PENDING)
   promotionId          String?
-  deliveryCodeHash     String?
+  // Code à 4 chiffres remis par le client au destinataire, demandé par le livreur à la remise.
+  deliveryCode         String?
+  // Jeton du lien de suivi public partageable au destinataire.
+  trackingToken        String        @unique
+  // Clé fournie par l'application : une commande renvoyée après une coupure réseau n'est pas dupliquée.
+  idempotencyKey       String?       @unique
+  // Paiement en espèces : encaissé au ramassage (expéditeur) ou à la livraison (destinataire).
+  cashCollectAt        StopKind?
+  dispatchAttempts     Int           @default(0)
+  lastDispatchAt       DateTime?
+  dispatchAlertedAt    DateTime?
   driverId             String?
   note                 String?
   cancelledById        String?
@@ -635,6 +645,7 @@ model Order {
   acceptedAt           DateTime?
   pickedUpAt           DateTime?
   deliveredAt          DateTime?
+  completedAt          DateTime?
   cancelledAt          DateTime?
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
@@ -1204,4 +1215,27 @@ model AppSetting {
   updatedAt   DateTime @updatedAt
 
   @@map("app_settings")
+}
+
+// Fichiers envoyés (photos de preuve, tickets, documents des livreurs, pièces jointes du chat).
+// Servis uniquement par des liens signés à durée limitée.
+enum FilePurpose {
+  DRIVER_DOCUMENT
+  DELIVERY_PROOF
+  RECEIPT
+  CHAT
+  COMPLAINT
+  AVATAR
+}
+
+model StoredFile {
+  key       String      @id // nom aléatoire sur le disque
+  ownerId   String
+  purpose   FilePurpose
+  mimeType  String
+  size      Int
+  createdAt DateTime    @default(now())
+
+  @@index([ownerId])
+  @@map("stored_files")
 }

@@ -5,7 +5,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { RequirePermissions } from '../../common/decorators/permissions.decorator';
 import { PERMISSIONS } from '../../common/permissions';
 import { DriversService } from './drivers.service';
-import { CreateDriverDto, DriverQueryDto, RejectDriverDto, UpdateDriverDto } from './dto/drivers.dto';
+import { CreateDriverDto, DriverQueryDto, RejectDriverDto, ReviewDocumentDto, UpdateDriverDto } from './dto/drivers.dto';
 
 @ApiTags('Administration — Livreurs')
 @ApiBearerAuth()
@@ -43,6 +43,18 @@ export class DriversController {
   @RequirePermissions(PERMISSIONS.DRIVERS_VALIDATE.code)
   reject(@Param('id', ParseUUIDPipe) id: string, @Body() dto: RejectDriverDto, @CurrentUser() user: AuthUser) {
     return this.drivers.reject(id, dto.reason, user.id);
+  }
+
+  @HttpCode(200)
+  @Post(':id/documents/:documentId/review')
+  @RequirePermissions(PERMISSIONS.DRIVERS_VALIDATE.code)
+  reviewDocument(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('documentId', ParseUUIDPipe) documentId: string,
+    @Body() dto: ReviewDocumentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.drivers.reviewDocument(id, documentId, dto.approve, dto.reason, user.id);
   }
 
   @Patch(':id')

@@ -4,41 +4,16 @@
  *   TEST_DATABASE_URL (par défaut : base allo_coursier_test locale).
  */
 import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import { PrismaClient } from '@prisma/client';
-import { execSync } from 'child_process';
 import request from 'supertest';
+import { configureTestEnv, createTestApp, resetTestDatabase } from './helpers';
 
-const TEST_DATABASE_URL =
-  process.env.TEST_DATABASE_URL ?? 'postgresql://allo:allo_dev_pwd@localhost:5432/allo_coursier_test?schema=public';
-
-process.env.DATABASE_URL = TEST_DATABASE_URL;
-process.env.JWT_ACCESS_SECRET = 'secret-de-test-suffisamment-long-pour-les-tests';
-process.env.THROTTLE_DISABLED = 'true';
-process.env.SEED_ADMIN_PHONE = '+22670000000';
-process.env.SEED_ADMIN_PASSWORD = 'AlloAdmin@2026';
+configureTestEnv();
 
 // Points de test
 const OUAGA_A = { lat: 12.3569, lng: -1.5352 }; // Gounghin
 const OUAGA_B = { lat: 12.3905, lng: -1.4952 }; // ~6 km
 const TENKODOGO = { lat: 11.785, lng: -0.365 };
 const BOBO = { lat: 11.1771, lng: -4.2979 };
-
-/** Applique les migrations, vide toutes les tables de la base de TEST puis relance le seed. */
-async function resetTestDatabase() {
-  const dbName = new URL(TEST_DATABASE_URL).pathname.slice(1);
-  if (!dbName.endsWith('_test')) {
-    throw new Error(`Par sécurité, les tests e2e ne s'exécutent que sur une base dont le nom finit par _test (reçu : ${dbName}).`);
-  }
-  const env = { ...process.env, DATABASE_URL: TEST_DATABASE_URL };
-  execSync('npx prisma migrate deploy', { env, stdio: 'ignore' });
-  const prisma = new PrismaClient({ datasources: { db: { url: TEST_DATABASE_URL } } });
-  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
-  await prisma.$executeRawUnsafe(`TRUNCATE ${tables.map((t) => `"${t.tablename}"`).join(', ')} RESTART IDENTITY CASCADE`);
-  await prisma.$disconnect();
-  execSync('npx ts-node --transpile-only prisma/seed.ts', { env, stdio: 'ignore' });
-}
 
 describe('API ALLÔ-COURSIER — lot 1 (e2e)', () => {
   let app: INestApplication;
@@ -49,13 +24,7 @@ describe('API ALLÔ-COURSIER — lot 1 (e2e)', () => {
 
   beforeAll(async () => {
     await resetTestDatabase();
-    // Import après la configuration de l'environnement.
-    const { AppModule } = await import('../src/app.module');
-    const { setupApp } = await import('../src/setup-app');
-    const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
-    app = setupApp(moduleRef.createNestApplication());
-    await app.init();
-    http = request(app.getHttpServer());
+    ({ app, http } = await createTestApp());
 
     const res = await http.post('/api/v1/auth/login').send({ phone: '70 00 00 00', secret: 'AlloAdmin@2026' });
     expect(res.status).toBe(200);

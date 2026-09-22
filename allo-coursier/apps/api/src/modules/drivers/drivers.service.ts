@@ -1,5 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { DriverStatus, Prisma, SecretKind } from '@prisma/client';
+import { DocumentStatus, DriverStatus, Prisma, SecretKind } from '@prisma/client';
+import { NotificationsService } from '../notifications/notifications.service';
+import { StorageService } from '../storage/storage.service';
 import * as bcrypt from 'bcrypt';
 import { AuditService } from '../../audit/audit.service';
 import { paginate } from '../../common/dto/pagination.dto';
@@ -19,6 +21,8 @@ export class DriversService {
   constructor(
     private prisma: PrismaService,
     private audit: AuditService,
+    private storage: StorageService,
+    private notifications: NotificationsService,
   ) {}
 
   async list(query: DriverQueryDto) {
@@ -51,7 +55,38 @@ export class DriversService {
       include: { ...driverInclude, documents: { orderBy: { createdAt: 'desc' } } },
     });
     if (!driver) throw new NotFoundException('Livreur introuvable.');
-    return driver;
+    const wallet = await this.prisma.wallet.findUnique({ where: { kind_userId: { kind: 'DRIVER', userId } } });
+    return {
+      ...driver,
+      documents: driver.documents.map((d) => ({ ...d, url: this.storage.signedUrl(d.fileKey) })),
+      walletId: wallet?.id ?? null,
+      walletBalance: wallet?.balance ?? 0,
+    };
+  }
+
+  async reviewDocument(driverId: string, documentId: string, approve: boolean, reason: string | undefined, actorId: string) {
+    const doc = await this.prisma.driverDocument.findFirst({ where: { id: documentId, driverId } });
+    if (!doc) throw new NotFoundException('Document introuvable.');
+    if (!approve && !reason) throw new BadRequestException('Indiquez le motif du refus.');
+    const updated = await this.prisma.driverDocument.update({
+      where: { id: documentId },
+      data: {
+        status: approve ? DocumentStatus.APPROVED : DocumentStatus.REJECTED,
+        rejectionReason: approve ? null : reason,
+        reviewedById: actorId,
+        reviewedAt: new Date(),
+      },
+    });
+    await this.audit.log({ actorId, action: approve ? 'driver_document.approve' : 'driver_document.reject', entityType: 'DriverDocument', entityId: documentId, after: { reason } });
+    if (!approve) {
+      await this.notifications.notify(driverId, {
+        type: 'DRIVER',
+        title: 'Document refusé',
+        body: `${reason} — envoyez une nouvelle photo depuis votre profil.`,
+        url: '/livreur/profil',
+      });
+    }
+    return updated;
   }
 
   async approve(userId: string, actorId: string) {
@@ -63,6 +98,12 @@ export class DriversService {
       include: driverInclude,
     });
     await this.audit.log({ actorId, action: 'driver.approve', entityType: 'DriverProfile', entityId: userId, before: { status: before.status }, after: { status: driver.status } });
+    await this.notifications.notify(userId, {
+      type: 'DRIVER',
+      title: 'Bienvenue chez Allô-Coursier 🎉',
+      body: 'Votre compte livreur est validé. Passez « En ligne » pour recevoir des missions.',
+      url: '/livreur',
+    });
     return driver;
   }
 
@@ -77,6 +118,7 @@ export class DriversService {
       include: driverInclude,
     });
     await this.audit.log({ actorId, action: 'driver.reject', entityType: 'DriverProfile', entityId: userId, before: { status: before.status }, after: { status: driver.status, reason } });
+    await this.notifications.notify(userId, { type: 'DRIVER', title: 'Inscription non retenue', body: reason, url: '/livreur' });
     return driver;
   }
 

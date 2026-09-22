@@ -33,6 +33,41 @@ export const SETTING_DEFINITIONS = {
     description: "Nombre de livreurs sollicités avant d'alerter l'administration",
     validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 50,
   },
+  'dispatch.alertAfterMinutes': {
+    default: 5,
+    description: "Alerter l'administration si aucun livreur n'est trouvé après X minutes",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 120,
+  },
+  'dispatch.locationMaxAgeMinutes': {
+    default: 15,
+    description: "Ignorer les livreurs dont la dernière position GPS date de plus de X minutes",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 240,
+  },
+  'orders.requireDeliveryCode': {
+    default: true,
+    description: 'Exiger le code de livraison du destinataire (sinon une photo suffit)',
+    validate: (v: unknown) => typeof v === 'boolean',
+  },
+  'orders.autoCompleteHours': {
+    default: 24,
+    description: 'Clôture automatique des commandes livrées après X heures',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 720,
+  },
+  'chat.openHoursAfterDelivery': {
+    default: 24,
+    description: 'Durée pendant laquelle le chat reste ouvert après la livraison (heures)',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 168,
+  },
+  'payments.manualTimeoutMinutes': {
+    default: 60,
+    description: 'Annulation automatique des commandes dont le paiement Mobile Money n’est pas validé après X minutes',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 10 && (v as number) <= 1440,
+  },
+  'payouts.minAmount': {
+    default: 1000,
+    description: 'Montant minimum d’une demande de retrait des livreurs indépendants (FCFA)',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0,
+  },
   'drivers.defaultCashDebtLimit': {
     default: 25000,
     description: "Montant maximal d'espèces qu'un livreur peut détenir avant de devoir les reverser (FCFA)",
@@ -58,7 +93,9 @@ export const SETTING_DEFINITIONS = {
 export type SettingKey = keyof typeof SETTING_DEFINITIONS;
 export type SettingValue<K extends SettingKey> = (typeof SETTING_DEFINITIONS)[K]['default'] extends number
   ? number
-  : string;
+  : (typeof SETTING_DEFINITIONS)[K]['default'] extends boolean
+    ? boolean
+    : string;
 
 export function isSettingKey(key: string): key is SettingKey {
   return Object.prototype.hasOwnProperty.call(SETTING_DEFINITIONS, key);

@@ -12,7 +12,7 @@ export interface AuditEntry {
   ip?: string | null;
 }
 
-const SENSITIVE_KEYS = new Set(['secretHash', 'refreshTokenHash', 'deliveryCodeHash', 'codeHash']);
+const SENSITIVE_KEYS = new Set(['secretHash', 'refreshTokenHash', 'deliveryCode', 'trackingToken', 'codeHash']);
 
 function sanitize(value: unknown): Prisma.InputJsonValue | undefined {
   if (value === undefined || value === null) return undefined;
