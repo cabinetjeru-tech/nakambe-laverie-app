@@ -62,7 +62,7 @@ Réalités du terrain prises en compte :
 | Langage | **TypeScript** partout | Un seul langage pour tout le projet. |
 | Serveur / API | **NestJS** (Node.js), API **REST** `/api/v1`, documentation Swagger | Même technologie que la plateforme de la laverie : compétences et hébergement mutualisables. |
 | Temps réel | **Socket.IO** (WebSocket, avec repli automatique si la connexion est mauvaise) | Suivi GPS, chat, nouvelles missions, commandes entrantes des commerçants. |
-| Base de données | **PostgreSQL + PostGIS** via **Prisma** | Fiable pour l'argent ; PostGIS pour les zones et la recherche du livreur le plus proche. |
+| Base de données | **PostgreSQL** via **Prisma** | Fiable pour l'argent. Zones stockées en GeoJSON et distances calculées dans l'application : suffisant pour deux villes, compatible avec tous les hébergeurs bon marché (PostGIS pourra être ajouté si le volume l'exige). |
 | Tâches différées | **pg-boss** (file de tâches stockée dans PostgreSQL) | Expiration des offres, livraisons programmées, notifications — **sans serveur Redis à payer**. |
 | Applications (client, livreur, commerçant, admin) | **Next.js + Tailwind CSS**, en **PWA** | Une seule base de code web, installable sur téléphone, utilisable aussi sur ordinateur. |
 | Cartes | **Leaflet + tuiles OpenStreetMap** (fournisseur de tuiles interchangeable) | Gratuit, pas de clé Google payante. |
@@ -112,7 +112,7 @@ quand le téléphone est verrouillé ou que l'application est fermée. Solution 
                      └──────┬──────────────────────┬──────────────┘
                             │                      │
                  ┌──────────▼──────────┐   ┌───────▼──────────────────────┐
-                 │ PostgreSQL + PostGIS │   │ Fournisseurs (à brancher)     │
+                 │ PostgreSQL           │   │ Fournisseurs (à brancher)     │
                  │ + file de tâches     │   │ PaymentProvider · SmsProvider │
                  └──────────────────────┘   │ RoutingProvider · Stockage    │
                                             └───────────────────────────────┘
@@ -260,10 +260,10 @@ allo-coursier/
 
 ---
 
-## 4. Base de données (PostgreSQL + PostGIS)
+## 4. Base de données (PostgreSQL)
 
 Conventions : identifiants `uuid` ; `created_at`/`updated_at` partout ; montants en entiers (FCFA) ;
-coordonnées GPS en `geography(Point)`.
+coordonnées GPS en latitude/longitude ; zones en polygones GeoJSON.
 
 ### 4.1 Comptes et droits
 | Table | Contenu |
@@ -366,7 +366,7 @@ Comptes entreprises avec facturation mensuelle, envoi de livraisons en lot, nouv
 aux heures de pointe, livraisons groupées, parrainage/fidélité, Play Store.
 
 ### Ordre de développement de la phase 1
-1. Socle : projet, base de données, connexion, rôles, villes/zones, tarifs (+ tests du calcul de prix)
+1. ✅ Socle : projet, base de données, connexion, rôles, villes/zones, tarifs (+ tests du calcul de prix)
 2. Commandes, attribution des missions, suivi en temps réel, chat
 3. Application livreur
 4. Application client
