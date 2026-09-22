@@ -153,7 +153,11 @@ export class AccessService {
     const digits = search?.replace(/\D/g, '');
     const where: Prisma.UserWhereInput = {
       status: query.status,
-      roles: query.roleCode ? { some: { role: { code: query.roleCode } } } : undefined,
+      roles: query.roleCode
+        ? { some: { role: { code: query.roleCode } } }
+        : query.staff === 'true'
+          ? { some: { role: { code: { notIn: PUBLIC_ROLE_CODES } } } }
+          : undefined,
       OR: search
         ? [
             { firstName: { contains: search, mode: 'insensitive' } },

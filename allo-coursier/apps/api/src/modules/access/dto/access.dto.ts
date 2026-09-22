@@ -92,6 +92,10 @@ export class UserQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({ enum: UserStatus })
   @IsOptional() @IsEnum(UserStatus)
   status?: UserStatus;
+
+  @ApiPropertyOptional({ description: 'true = uniquement les membres de l’équipe' })
+  @IsOptional() @IsIn(['true', 'false'])
+  staff?: 'true' | 'false';
 }
 
 export class SetUserStatusDto {

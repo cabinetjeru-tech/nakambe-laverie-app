@@ -82,3 +82,11 @@ export const COMPLAINT_CATEGORIES: Record<string, string> = {
   AUTRE: 'Autre',
 };
 
+
+export const DRIVER_STATUS: Record<string, { label: string; tone: 'amber' | 'green' | 'red' | 'gray' }> = {
+  PENDING: { label: 'À valider', tone: 'amber' },
+  APPROVED: { label: 'Validé', tone: 'green' },
+  REJECTED: { label: 'Refusé', tone: 'gray' },
+  SUSPENDED: { label: 'Suspendu', tone: 'red' },
+};
+
