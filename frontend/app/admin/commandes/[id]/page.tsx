@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, openAuthenticatedPdf } from '@/lib/api';
-import { formatDateTime, formatFcfa, whatsappLink } from '@/lib/format';
+import { formatDateTime, formatFcfa, mapLink, whatsappLink } from '@/lib/format';
 import { COMPANY, ORDER_STATUS_LABELS, ORDER_STATUS_SEQUENCE, SERVICE_DOMAIN_LABELS } from '@/lib/constants';
 
 const PAYMENT_METHODS: Record<string, string> = {
@@ -226,6 +226,46 @@ export default function CommandeDetailPage() {
       </div>
 
       <div className="flex flex-col gap-6">
+        <div className="card">
+          <h3 className="mb-3 text-sm font-bold uppercase text-slate-500">Collecte / Livraison</h3>
+          <p className="text-sm text-slate-700">
+            {order.deliveryMode === 'LIVRAISON' ? '🚚 Livraison' : '🏬 Retrait sur place'}
+            {order.appointment?.mode &&
+              ` (${order.appointment.mode === 'A_DOMICILE' ? 'à domicile' : 'au siège'})`}
+          </p>
+          {order.address && <p className="mt-1 text-sm text-slate-600">📍 {order.address}</p>}
+          {order.appointment?.scheduledDate && (
+            <p className="mt-1 text-sm text-slate-600">🗓️ {formatDateTime(order.appointment.scheduledDate)}</p>
+          )}
+          {order.appointment?.gpsLat && order.appointment?.gpsLng ? (
+            <>
+              <a
+                href={mapLink(order.appointment.gpsLat, order.appointment.gpsLng)}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-block text-sm font-semibold text-brand-blue underline"
+              >
+                🗺️ Voir la position exacte sur la carte
+              </a>
+              {order.driver?.phone && (
+                <a
+                  href={whatsappLink(
+                    order.driver.phone,
+                    `Nouvelle mission ${order.orderNumber} — position du client : ${mapLink(order.appointment.gpsLat, order.appointment.gpsLng)}`,
+                  )}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-secondary mt-3 block w-full !py-2 text-center text-sm"
+                >
+                  📤 Envoyer la position au chauffeur
+                </a>
+              )}
+            </>
+          ) : (
+            <p className="mt-2 text-xs text-slate-400">Le client n&apos;a pas partagé sa position GPS.</p>
+          )}
+        </div>
+
         <div className="card">
           <h3 className="mb-3 text-sm font-bold uppercase text-slate-500">Affectation</h3>
           <label className="label">Agent</label>

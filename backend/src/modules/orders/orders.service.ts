@@ -164,7 +164,7 @@ export class OrdersService {
         vehicle: true,
         invoice: true,
         payments: true,
-        appointment: { select: { gpsLat: true, gpsLng: true, gpsAccuracy: true } },
+        appointment: { select: { gpsLat: true, gpsLng: true, gpsAccuracy: true, scheduledDate: true, mode: true } },
       },
     });
     if (!order) throw new NotFoundException('Commande introuvable.');
