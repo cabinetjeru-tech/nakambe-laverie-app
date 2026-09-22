@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { COMPANY, BRANCHES } from '@/lib/constants';
 import { whatsappLink } from '@/lib/format';
 
@@ -60,9 +61,14 @@ export function SiteFooter() {
             <p className="text-sm text-slate-200">Lundi - Samedi : 7h30 - 19h00</p>
           </div>
         </div>
-        <p className="mt-8 text-center text-xs text-slate-400">
-          © {new Date().getFullYear()} {COMPANY.fullName} — Tous droits réservés.
-        </p>
+        <div className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-slate-400 sm:flex-row sm:justify-between">
+          <p>
+            © {new Date().getFullYear()} {COMPANY.fullName} — Tous droits réservés.
+          </p>
+          <Link href="/politique-remboursement" className="underline hover:text-brand-gold">
+            Politique de remboursement
+          </Link>
+        </div>
       </div>
     </footer>
   );
