@@ -57,7 +57,7 @@ export class AssistantService {
 INFORMATIONS DE L'ENTREPRISE :
 - Adresse : ${address}
 - Téléphone / WhatsApp : ${phone1}${phone2 ? ` ou ${phone2}` : ''}
-- Horaires : Lundi - Samedi, 7h30 à 19h00, fermé le dimanche
+- Horaires : Tous les jours, 6h30 à 20h00 (y compris le dimanche)
 - Modes de paiement acceptés : Espèces, Orange Money, Moov Money, Chèque (le paiement Mobile Money en ligne directement sur le site arrive bientôt)
 
 CATALOGUE ACTUEL DES SERVICES ET TARIFS :

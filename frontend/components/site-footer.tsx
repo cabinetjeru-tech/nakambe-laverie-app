@@ -58,7 +58,7 @@ export function SiteFooter() {
 
           <div>
             <div className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-300">Horaires</div>
-            <p className="text-sm text-slate-200">Lundi - Samedi : 7h30 - 19h00</p>
+            <p className="text-sm text-slate-200">Tous les jours : 6h30 - 20h00</p>
           </div>
         </div>
 
@@ -68,8 +68,11 @@ export function SiteFooter() {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-2">
             {EXPANSION_COUNTRIES.map((country) => (
-              <span key={country} className="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200">
-                {country}
+              <span
+                key={country.name}
+                className="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200"
+              >
+                {country.flag} {country.name}
               </span>
             ))}
           </div>

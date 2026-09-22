@@ -452,7 +452,7 @@ async function main() {
     company_address: 'Cité du 11 Décembre, Tenkodogo, Burkina Faso',
     company_phone_1: '+226 73 12 26 12',
     company_phone_2: '+226 54 54 28 18',
-    opening_hours: 'Lundi - Samedi : 7h30 - 19h00',
+    opening_hours: 'Tous les jours : 6h30 - 20h00',
   };
   for (const [key, value] of Object.entries(settings)) {
     await prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });

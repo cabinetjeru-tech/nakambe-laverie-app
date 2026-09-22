@@ -19,7 +19,15 @@ export const BRANCHES = [
 ];
 
 /** Pays d'expansion visés — pas encore d'agences opérationnelles, adresses à venir. */
-export const EXPANSION_COUNTRIES = ['Bénin', 'Togo', 'Mali', 'Sénégal', "Côte d'Ivoire", 'Ghana'];
+export const EXPANSION_COUNTRIES = [
+  { name: 'Bénin', flag: '🇧🇯' },
+  { name: "Côte d'Ivoire", flag: '🇨🇮' },
+  { name: 'Ghana', flag: '🇬🇭' },
+  { name: 'Mali', flag: '🇲🇱' },
+  { name: 'Niger', flag: '🇳🇪' },
+  { name: 'Sénégal', flag: '🇸🇳' },
+  { name: 'Togo', flag: '🇹🇬' },
+];
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   DEMANDE_RECUE: 'Demande reçue',
