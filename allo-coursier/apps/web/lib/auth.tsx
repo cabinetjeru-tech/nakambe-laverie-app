@@ -110,5 +110,6 @@ export const isStaff = (u: User | null) => !!u && u.permissions.length > 0;
 export function homeFor(u: User): string {
   if (u.permissions.length > 0) return '/admin';
   if (u.roles.includes('DRIVER')) return '/livreur';
+  if (u.roles.includes('MERCHANT')) return '/commercant';
   return '/accueil';
 }

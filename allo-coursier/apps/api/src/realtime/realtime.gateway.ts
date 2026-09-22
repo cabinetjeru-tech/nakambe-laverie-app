@@ -25,7 +25,8 @@ interface SocketData {
  * Socket.IO bascule automatiquement en « long polling » quand le WebSocket passe mal (réseaux faibles).
  * Les applications envoient leurs actions par l'API REST ; ce canal ne sert qu'à recevoir.
  */
-@WebSocketGateway({ path: '/api/v1/socket.io', cors: { origin: true, credentials: true } })
+// Sans « / » final : l'adresse passe telle quelle par le relais /api/v1 de l'application web.
+@WebSocketGateway({ path: '/api/v1/socket.io', addTrailingSlash: false, cors: { origin: true, credentials: true } })
 export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer() server: Server;
 

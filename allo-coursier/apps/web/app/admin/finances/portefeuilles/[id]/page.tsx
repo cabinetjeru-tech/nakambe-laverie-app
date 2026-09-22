@@ -11,7 +11,7 @@ import { dateTime, fcfa } from '@/lib/format';
 import { useApi } from '@/lib/use-api';
 
 interface Entries {
-  wallet: { id: string; kind: string; balance: number; user: { firstName: string; lastName: string; phone: string } | null };
+  wallet: { id: string; kind: string; balance: number; user: { firstName: string; lastName: string; phone: string } | null; merchant: { name: string } | null };
   items: { id: string; amount: number; balanceAfter: number; createdAt: string; transaction: { type: string; description: string; orderId: string | null } }[];
   total: number;
   page: number;
@@ -30,7 +30,7 @@ export default function WalletEntriesPage() {
   const system = data.wallet.kind === 'PLATFORM_REVENUE' || data.wallet.kind === 'CASH_CLEARING';
   return (
     <div className="space-y-4">
-      <PageHeader back="/admin/finances" title={data.wallet.user ? `${data.wallet.user.firstName} ${data.wallet.user.lastName}` : 'Compte système'} subtitle={`Solde : ${fcfa(data.wallet.balance)}`} />
+      <PageHeader back="/admin/finances" title={data.wallet.merchant ? data.wallet.merchant.name : data.wallet.user ? `${data.wallet.user.firstName} ${data.wallet.user.lastName}` : 'Compte système'} subtitle={`Solde : ${fcfa(data.wallet.balance)}`} />
       {!system && can('wallets.manage') && can('payments.validate') && (
         <Card className="space-y-2">
           <h2 className="font-semibold text-brand">Correction exceptionnelle</h2>

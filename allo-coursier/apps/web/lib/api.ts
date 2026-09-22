@@ -55,7 +55,8 @@ export const tokens = {
 
 let refreshing: Promise<boolean> | null = null;
 
-async function refreshTokens(): Promise<boolean> {
+/** Renouvelle la session (nouveaux rôles pris en compte, ex. après une demande de partenariat). */
+export async function refreshTokens(): Promise<boolean> {
   const refreshToken = tokens.refresh;
   if (!refreshToken) return false;
   refreshing ??= (async () => {

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { ChatPanel } from '@/components/chat';
+import { MerchantLogo } from '@/components/food';
 import { Map, MapMarker } from '@/components/map';
 import { PhoneInput } from '@/components/phone-input';
 import { Timeline } from '@/components/timeline';
@@ -16,7 +17,7 @@ import { getSocket } from '@/lib/socket';
 import type { OrderDetail } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 
-const CANCELLABLE = ['PENDING_PAYMENT', 'SCHEDULED', 'SEARCHING_DRIVER', 'DRIVER_ASSIGNED'];
+const CANCELLABLE = ['CREATED', 'PENDING_PAYMENT', 'SCHEDULED', 'SEARCHING_DRIVER', 'DRIVER_ASSIGNED'];
 const LIVE = ['DRIVER_ASSIGNED', 'DRIVER_AT_PICKUP', 'PURCHASING', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_DROPOFF'];
 
 function RatingForm({ orderId, onDone }: { orderId: string; onDone: () => void }) {
@@ -157,10 +158,13 @@ function OrderTracking() {
   const live = LIVE.includes(order.status);
   const driverLocation = driverPos ?? order.driver?.location ?? null;
   const markers: MapMarker[] = [
-    { kind: 'pickup', lat: pickup.lat, lng: pickup.lng, label: 'Départ' },
+    { kind: 'pickup', lat: pickup.lat, lng: pickup.lng, label: order.merchant?.name ?? 'Départ' },
     { kind: 'dropoff', lat: dropoff.lat, lng: dropoff.lng, label: 'Arrivée' },
     ...(live && driverLocation ? [{ kind: 'driver' as const, lat: driverLocation.lat, lng: driverLocation.lng, label: order.driver?.firstName }] : []),
   ];
+  const food = order.serviceType === 'FOOD';
+  // Repas : annulable seulement tant que le commerçant n'a pas commencé la préparation.
+  const cancellable = CANCELLABLE.includes(order.status) && (!food || order.merchantStatus === 'PENDING');
   const trackingUrl = typeof window !== 'undefined' && order.trackingToken ? `${window.location.origin}/suivi/${order.trackingToken}` : '';
   const shareText = `Allô-Coursier : votre colis ${order.reference} arrive. Code de livraison à donner au livreur : ${order.deliveryCode}. Suivi : ${trackingUrl}`;
 
@@ -173,8 +177,26 @@ function OrderTracking() {
         action={<StatusBadge status={order.status} label={order.statusLabel} />}
       />
       {params.get('nouvelle') && order.status === 'SEARCHING_DRIVER' && <Alert tone="green">Commande envoyée ! Nous cherchons le livreur le plus proche.</Alert>}
+      {params.get('nouvelle') && order.status === 'CREATED' && <Alert tone="green">Commande envoyée à {order.merchant?.name} ! Vous serez prévenu dès qu’elle est acceptée.</Alert>}
 
       <Map center={pickup} markers={markers} fit={markers} className="h-64 w-full" line={[pickup, dropoff]} />
+
+      {food && order.merchant && !['DELIVERED', 'COMPLETED', 'CANCELLED', 'FAILED', 'RETURNED'].includes(order.status) && (
+        <Card className="flex items-center gap-3">
+          <MerchantLogo name={order.merchant.name} url={order.merchant.logoUrl} className="h-11 w-11 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-brand">{order.merchant.name}</p>
+            <p className="text-sm text-slate-600">
+              {order.merchantStatus === 'PENDING' && 'Attend la confirmation du commerçant…'}
+              {order.merchantStatus === 'ACCEPTED' && `En préparation${order.prepMinutes ? ` (environ ${order.prepMinutes} min)` : ''} 👨‍🍳`}
+              {order.merchantStatus === 'READY' && (['IN_TRANSIT', 'ARRIVED_AT_DROPOFF'].includes(order.status) ? 'Récupérée par le livreur' : 'Prête, le livreur vient la chercher')}
+            </p>
+          </div>
+          <a href={`tel:${order.merchant.phone}`} className="rounded-xl bg-brand-sky p-2.5 text-brand" aria-label="Appeler le commerce">
+            <Phone className="h-4 w-4" />
+          </a>
+        </Card>
+      )}
 
       {order.status === 'SEARCHING_DRIVER' && (
         <Card className="flex items-center gap-3">
@@ -246,7 +268,7 @@ function OrderTracking() {
           {order.scheduledAt && ` · programmée le ${dateTime(order.scheduledAt)}`}
         </p>
         {order.packageDescription && <p className="text-slate-600">Colis : {order.packageDescription}{order.isFragile && ' (fragile)'}</p>}
-        {order.items.length > 0 && (
+        {order.items.length > 0 && !food && (
           <ul className="list-inside list-disc text-slate-600">
             {order.items.map((i) => (
               <li key={i.id}>
@@ -255,6 +277,24 @@ function OrderTracking() {
               </li>
             ))}
           </ul>
+        )}
+        {food && (
+          <div className="space-y-1 border-t border-slate-100 pt-2">
+            {order.items.map((i) => (
+              <div key={i.id} className="flex justify-between gap-2 text-slate-700">
+                <span>
+                  {i.quantity} × {i.label}
+                  {!!i.options?.length && <span className="block text-xs text-slate-500">{i.options.map((o) => o.name).join(', ')}</span>}
+                  {i.note && <span className="block text-xs italic text-slate-500">« {i.note} »</span>}
+                </span>
+                <span className="shrink-0 tabular-nums">{fcfa((i.unitPrice ?? 0) * i.quantity)}</span>
+              </div>
+            ))}
+            <div className="flex justify-between font-semibold text-slate-700">
+              <span>Articles</span>
+              <span>{fcfa(order.itemsSubtotal)}</span>
+            </div>
+          </div>
         )}
         <div className="border-t border-slate-100 pt-2">
           {order.priceBreakdown?.lines.map((l) => (
@@ -302,7 +342,7 @@ function OrderTracking() {
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        {CANCELLABLE.includes(order.status) && (
+        {cancellable && (
           <Button variant="outline" onClick={() => setCancelOpen(true)}>
             Annuler la commande
           </Button>

@@ -47,6 +47,7 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
 };
 
 export const STATUS_LABELS: Record<string, string> = {
+  CREATED: 'Chez le commerçant',
   PENDING_PAYMENT: 'Paiement à vérifier',
   SCHEDULED: 'Programmée',
   SEARCHING_DRIVER: 'Recherche d’un livreur',
@@ -67,7 +68,7 @@ export type Tone = 'blue' | 'green' | 'amber' | 'red' | 'gray';
 export function statusTone(status: string): Tone {
   if (['DELIVERED', 'COMPLETED', 'SUCCEEDED', 'APPROVED', 'RESOLVED', 'PAID'].includes(status)) return 'green';
   if (['CANCELLED', 'FAILED', 'RETURNED', 'REJECTED', 'SUSPENDED', 'EXPIRED'].includes(status)) return 'red';
-  if (['PENDING_PAYMENT', 'SEARCHING_DRIVER', 'PENDING', 'OPEN', 'SCHEDULED'].includes(status)) return 'amber';
+  if (['PENDING_PAYMENT', 'SEARCHING_DRIVER', 'PENDING', 'OPEN', 'SCHEDULED', 'CREATED'].includes(status)) return 'amber';
   if (['REFUNDED'].includes(status)) return 'gray';
   return 'blue';
 }

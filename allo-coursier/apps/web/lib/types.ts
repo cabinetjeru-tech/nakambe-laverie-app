@@ -82,7 +82,12 @@ export interface OrderDetail {
   packageSize: string | null;
   isFragile: boolean;
   note: string | null;
-  items: { id: string; label: string; quantity: number; note: string | null }[];
+  items: { id: string; label: string; quantity: number; note: string | null; unitPrice?: number | null; options?: { groupName: string; name: string; extraPrice: number }[] | null }[];
+  merchant?: { id: string; name: string; slug: string; phone: string; logoUrl: string | null } | null;
+  merchantStatus?: 'PENDING' | 'ACCEPTED' | 'READY' | 'REJECTED' | null;
+  prepMinutes?: number | null;
+  readyAt?: string | null;
+  itemsSubtotal?: number;
   distanceKm: number;
   createdAt: string;
   deliveredAt: string | null;

@@ -16,6 +16,7 @@ interface Summary {
   clientsCredit: number;
   owedToDrivers: number;
   cashHeldByDrivers: number;
+  owedToMerchants: number;
   pendingPayouts: number;
 }
 interface Payout {
@@ -25,13 +26,14 @@ interface Payout {
   destinationPhone: string;
   reference: string | null;
   createdAt: string;
-  wallet: { balance: number; user: { id: string; firstName: string; lastName: string; phone: string } | null };
+  wallet: { balance: number; user: { id: string; firstName: string; lastName: string; phone: string } | null; merchant: { id: string; name: string } | null };
 }
 interface WalletRow {
   id: string;
   kind: string;
   balance: number;
   user: { id: string; firstName: string; lastName: string; phone: string } | null;
+  merchant: { id: string; name: string } | null;
 }
 interface Settlement {
   id: string;
@@ -44,11 +46,11 @@ interface Settlement {
 }
 
 const TABS = [
-  ['retraits', 'Retraits livreurs'],
+  ['retraits', 'Retraits et reversements'],
   ['especes', 'Versements d’espèces'],
   ['portefeuilles', 'Portefeuilles'],
 ] as const;
-const KINDS: Record<string, string> = { DRIVER: 'Livreurs', CLIENT: 'Clients', PLATFORM_REVENUE: 'Plateforme', CASH_CLEARING: 'Flux externes' };
+const KINDS: Record<string, string> = { DRIVER: 'Livreurs', MERCHANT: 'Commerçants', CLIENT: 'Clients', PLATFORM_REVENUE: 'Plateforme', CASH_CLEARING: 'Flux externes' };
 
 export default function FinancePage() {
   const [tab, setTab] = useState<(typeof TABS)[number][0]>('retraits');
@@ -78,10 +80,11 @@ export default function FinancePage() {
     <div className="space-y-4">
       <PageHeader title="Finances" />
       {s && (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
           <Stat label="Compte plateforme" value={fcfa(s.platformBalance)} hint="commissions + prépaiements en cours" />
           <Stat label="Espèces chez les livreurs" value={fcfa(s.cashHeldByDrivers)} tone={s.cashHeldByDrivers > 0 ? 'amber' : undefined} hint="à reverser à l’agence" />
           <Stat label="Dû aux livreurs" value={fcfa(s.owedToDrivers)} hint={`${s.pendingPayouts} retrait(s) en attente`} />
+          <Stat label="Dû aux commerçants" value={fcfa(s.owedToMerchants)} hint="ventes livrées à reverser" />
           <Stat label="Crédit des clients" value={fcfa(s.clientsCredit)} hint="soldes des portefeuilles" />
           <Stat label="Flux externes" value={fcfa(-s.externalFlows)} hint="net reçu − versé (Mobile Money, espèces)" />
         </div>
@@ -102,7 +105,17 @@ export default function FinancePage() {
           empty="Aucune demande de retrait"
           columns={[
             { header: 'Date', cell: (r) => dateTime(r.createdAt) },
-            { header: 'Livreur', cell: (r) => (r.wallet.user ? <Link className="text-brand-light" href={`/admin/livreurs/${r.wallet.user.id}`}>{r.wallet.user.firstName} {r.wallet.user.lastName}</Link> : '—') },
+            {
+              header: 'Bénéficiaire',
+              cell: (r) =>
+                r.wallet.merchant ? (
+                  <Link className="text-brand-light" href={`/admin/commercants/${r.wallet.merchant.id}`}>🏪 {r.wallet.merchant.name}</Link>
+                ) : r.wallet.user ? (
+                  <Link className="text-brand-light" href={`/admin/livreurs/${r.wallet.user.id}`}>{r.wallet.user.firstName} {r.wallet.user.lastName}</Link>
+                ) : (
+                  '—'
+                ),
+            },
             { header: 'Montant', cell: (r) => <strong>{fcfa(r.amount)}</strong> },
             { header: 'Vers', cell: (r) => phoneDisplay(r.destinationPhone) },
             { header: 'Solde actuel', cell: (r) => fcfa(r.wallet.balance) },
@@ -150,7 +163,7 @@ export default function FinancePage() {
             rowKey={(r) => r.id}
             empty="Aucun portefeuille"
             columns={[
-              { header: 'Titulaire', cell: (r) => (r.user ? `${r.user.firstName} ${r.user.lastName}` : KINDS[r.kind]) },
+              { header: 'Titulaire', cell: (r) => (r.merchant ? r.merchant.name : r.user ? `${r.user.firstName} ${r.user.lastName}` : KINDS[r.kind]) },
               { header: 'Téléphone', cell: (r) => (r.user ? phoneDisplay(r.user.phone) : '—') },
               { header: 'Solde', cell: (r) => <span className={clsx('font-semibold', r.balance < 0 ? 'text-amber-700' : 'text-slate-800')}>{fcfa(r.balance)}</span> },
               { header: '', cell: (r) => <Link className="text-brand-light" href={`/admin/finances/portefeuilles/${r.id}`}>Mouvements →</Link> },

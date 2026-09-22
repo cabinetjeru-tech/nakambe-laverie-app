@@ -15,6 +15,7 @@ import { fcfa, phoneDisplay, SERVICE_LABELS, STATUS_LABELS } from '@/lib/format'
 import { googleMapsDirections } from '@/lib/geo';
 import { offlineQueue } from '@/lib/offline-queue';
 import { isPurchaseService } from '@/lib/services';
+import { getSocket } from '@/lib/socket';
 import type { OrderDetail, Stop } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 
@@ -80,11 +81,23 @@ export default function MissionPage() {
     return () => navigator.geolocation.clearWatch(w);
   }, []);
 
+  // Mise à jour immédiate quand le commerçant déclare la commande prête (ou toute autre modification).
+  useEffect(() => {
+    const socket = getSocket();
+    const onUpdate = (e: { id: string }) => e.id === id && void reload();
+    socket.on('order.updated', onUpdate);
+    return () => {
+      socket.off('order.updated', onUpdate);
+    };
+  }, [id, reload]);
+
   if (!mission) return error ? <Alert>{error.message}</Alert> : <Spinner />;
 
   const pickup = mission.stops.find((s) => s.kind === 'PICKUP')!;
   const dropoff = mission.stops.find((s) => s.kind === 'DROPOFF')!;
   const purchase = isPurchaseService(mission.serviceType);
+  const food = mission.serviceType === 'FOOD';
+  const foodReady = mission.merchantStatus === 'READY';
   const markers: MapMarker[] = [
     { kind: 'pickup', lat: pickup.lat, lng: pickup.lng, label: 'Ramassage' },
     { kind: 'dropoff', lat: dropoff.lat, lng: dropoff.lng, label: 'Livraison' },
@@ -154,7 +167,12 @@ export default function MissionPage() {
       <Alert>{actionError}</Alert>
 
       {status === 'DRIVER_ASSIGNED' && (
-        <StopCard stop={pickup} title={purchase ? '1. Allez au lieu des achats' : '1. Allez au point de ramassage'}>
+        <StopCard stop={pickup} title={food ? `1. Allez chez ${mission.merchant?.name ?? 'le commerçant'}` : purchase ? '1. Allez au lieu des achats' : '1. Allez au point de ramassage'}>
+          {food && (
+            <p className={`rounded-xl px-3 py-2 text-sm font-semibold ${foodReady ? 'bg-green-50 text-brand-greenDark' : 'bg-amber-50 text-amber-800'}`}>
+              {foodReady ? 'Commande prête ✅' : `En préparation${mission.prepMinutes ? ` (≈ ${mission.prepMinutes} min annoncées)` : ''}`}
+            </p>
+          )}
           <Button variant="success" size="lg" block loading={busy} onClick={() => act('ARRIVED_PICKUP')}>
             Je suis arrivé
           </Button>
@@ -162,8 +180,24 @@ export default function MissionPage() {
       )}
 
       {status === 'DRIVER_AT_PICKUP' && (
-        <StopCard stop={pickup} title={purchase ? '2. Faites les achats' : '2. Récupérez le colis'}>
-          {purchase ? (
+        <StopCard stop={pickup} title={food ? '2. Récupérez la commande' : purchase ? '2. Faites les achats' : '2. Récupérez le colis'}>
+          {food ? (
+            <>
+              <ul className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm">
+                {mission.items.map((i) => (
+                  <li key={i.id}>
+                    <strong>{i.quantity} ×</strong> {i.label}
+                    {!!i.options?.length && <span className="text-slate-500"> ({i.options.map((o) => o.name).join(', ')})</span>}
+                  </li>
+                ))}
+              </ul>
+              <p className="text-sm text-slate-600">Vérifiez que tous les articles sont dans le sac. {mission.paymentMethod === 'CASH' ? 'Ne payez rien au commerçant : le client paie à la livraison.' : 'Commande déjà payée.'}</p>
+              {!foodReady && <Alert tone="amber">Le commerçant n’a pas encore indiqué que la commande est prête. Patientez sur place : l’écran se met à jour.</Alert>}
+              <Button variant="success" size="lg" block loading={busy} disabled={!foodReady} onClick={() => act('PICKED_UP')}>
+                Commande récupérée, je pars
+              </Button>
+            </>
+          ) : purchase ? (
             <>
               <ul className="list-inside list-disc rounded-xl bg-slate-50 p-3 text-sm">
                 {mission.items.map((i) => (

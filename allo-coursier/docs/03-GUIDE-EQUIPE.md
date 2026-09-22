@@ -49,7 +49,7 @@ déclaré. Ce délai se règle dans les Paramètres.
 Quand des clients ont payé par portefeuille ou Mobile Money, la plateforme doit leurs gains aux livreurs.
 Ceux-ci demandent un retrait depuis leur application.
 
-1. Menu **Finances** → **Retraits livreurs**.
+1. Menu **Finances** → **Retraits et reversements**.
 2. Envoyez l'argent par Mobile Money au numéro indiqué.
 3. Saisissez la référence du transfert, puis cliquez sur **Payé**.
 
@@ -61,6 +61,35 @@ Ceux-ci demandent un retrait depuis leur application.
 - **Salarié** : bouton **Ajouter un livreur**. Un code secret provisoire s'affiche une seule fois :
   communiquez-le au livreur.
 - **Suspendre** met le livreur immédiatement hors ligne.
+
+## Commerçants et restaurants
+
+- **Inscription** : le commerçant s'inscrit depuis `/partenaires/inscription` (lien en bas de la liste
+  des restaurants). Il apparaît dans **Commerçants** avec le statut « En attente de validation ».
+  Appelez-le, vérifiez l'adresse, puis cliquez sur **Valider et mettre en ligne**. Il peut préparer son
+  menu et ses horaires avant la validation.
+- **Ajouter un commerce vous-même** : bouton **Ajouter un commerce** (mis en ligne directement). Si le
+  responsable n'a pas de compte, un code secret provisoire s'affiche une seule fois.
+- **Commission** : taux par défaut dans **Paramètres** (`merchants.defaultCommissionPercent`), ou taux
+  propre à un commerce depuis sa fiche.
+- **Suspendre** retire immédiatement le commerce de l'application client.
+- **Espace du commerçant** (`/commercant`, installable sur son téléphone) : commandes en direct avec
+  sonnerie, menu et photos, plats épuisés, horaires et fermetures exceptionnelles, ventes, reversements,
+  équipe (propriétaire, gérant, employé).
+- Conseillez au commerçant de garder l'écran des commandes ouvert et d'activer les notifications : une
+  commande sans réponse est annulée au bout de 10 minutes (réglable : `merchants.acceptTimeoutMinutes`).
+
+## Reversements aux commerçants
+
+Le portefeuille d'un commerce est crédité à chaque livraison (prix des articles − commission). Le
+propriétaire demande un reversement depuis son espace (**Ventes**).
+
+1. Menu **Finances** → **Retraits et reversements** (les commerces sont signalés par 🏪).
+2. Envoyez l'argent par Mobile Money au numéro indiqué.
+3. Saisissez la référence du transfert, puis cliquez sur **Payé**.
+
+Pour une commande de repas payée en **espèces**, le livreur encaisse aussi le prix des articles : ce
+montant s'ajoute aux espèces qu'il doit verser à l'agence (voir « Espèces des livreurs »).
 
 ## Clients
 

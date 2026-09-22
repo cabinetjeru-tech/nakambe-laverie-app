@@ -385,7 +385,7 @@ describe('API ALLÔ-COURSIER — commandes et argent (e2e)', () => {
       const port = (app.getHttpServer().address() as AddressInfo).port;
       const connect = (token: string) =>
         new Promise<Socket>((resolve, reject) => {
-          const socket = io(`http://127.0.0.1:${port}`, { path: '/api/v1/socket.io', auth: { token }, transports: ['websocket'] });
+          const socket = io(`http://127.0.0.1:${port}`, { path: '/api/v1/socket.io', addTrailingSlash: false, auth: { token }, transports: ['websocket'] });
           socket.on('connect', () => resolve(socket));
           socket.on('connect_error', reject);
         });

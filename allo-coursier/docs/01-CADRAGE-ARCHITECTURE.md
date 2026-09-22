@@ -356,10 +356,22 @@ promotions ; réclamations ; notifications ; rôles et permissions ; statistique
 **Public** : site de présentation, bouton d'installation, page « Devenir livreur », suivi d'une commande
 par lien partagé au destinataire.
 
-### Phase 2 — Restaurants & commerçants
+### Phase 2 — Restaurants & commerçants (✅ livrée)
 Espace commerçant complet (catalogue/menu, horaires, commandes en direct, suivi, statistiques),
-**livraison de repas** dans l'application client, reversements aux commerçants, APK livreur
-téléchargeable (GPS écran éteint), SMS/OTP et Mobile Money automatique dès que les contrats existent.
+**livraison de repas** dans l'application client, reversements aux commerçants, gestion des commerçants
+dans l'administration. Restent à faire quand les conditions seront réunies : APK livreur (GPS écran
+éteint), SMS/OTP et Mobile Money automatique dès que les contrats existent.
+
+**Circuit d'une commande de repas** : le client compose son panier (prix recalculé par le serveur à
+partir du menu) → la commande part chez le commerçant (sonnerie + notification) → le commerçant
+**accepte** en annonçant son temps de préparation, ou **refuse** (client remboursé s'il a payé) ; sans
+réponse au bout de `merchants.acceptTimeoutMinutes` (10 min), elle est annulée automatiquement → le
+livreur est cherché pour arriver `merchants.driverLeadMinutes` (10 min) avant la fin de la préparation,
+ou tout de suite si le commerçant déclare la commande **prête** plus tôt → le livreur ne peut partir
+qu'une fois la commande prête → à la livraison, le commerçant est crédité du prix des articles moins
+sa commission (`merchants.defaultCommissionPercent`, 15 % par défaut, ou taux propre au commerce).
+Payé en espèces, le livreur encaisse articles + livraison : les articles s'ajoutent à ce qu'il doit
+reverser à l'agence. L'entreprise reverse ensuite au commerçant par Mobile Money, à sa demande.
 
 ### Phase 3 — Entreprises & croissance
 Comptes entreprises avec facturation mensuelle, envoi de livraisons en lot, nouvelles villes, tarifs

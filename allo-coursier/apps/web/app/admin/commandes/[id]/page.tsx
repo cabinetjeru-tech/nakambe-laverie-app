@@ -1,8 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ChatPanel } from '@/components/chat';
+import { MERCHANT_STATUS } from '@/components/food';
 import { Map, MapMarker } from '@/components/map';
 import { Timeline } from '@/components/timeline';
 import { Alert, Badge, Button, Card, Field, PageHeader, Select, Sheet, Spinner, StatusBadge, Textarea } from '@/components/ui';
@@ -17,6 +19,8 @@ interface AdminOrder extends OrderDetail {
   client: { id: string; firstName: string; lastName: string; phone: string };
   commissionAmount: number;
   driverEarning: number;
+  merchantCommissionAmount: number;
+  merchantEarning: number;
   dispatchAttempts: number;
   offers: { id: string; attempt: number; status: string; driver: { firstName: string; lastName: string; phone: string }; distanceMeters: number | null; offeredAt: string; rejectReason: string | null }[];
   payments: { id: string; provider: string; operator: string | null; amount: number; status: string; providerReference: string | null; failureReason: string | null; createdAt: string }[];
@@ -168,9 +172,16 @@ export default function AdminOrderPage() {
             {order.waitingFee > 0 && <div className="flex justify-between text-slate-600"><span>Attente</span><span>{fcfa(order.waitingFee)}</span></div>}
             {order.discountAmount > 0 && <div className="flex justify-between text-brand-greenDark"><span>Remise</span><span>−{fcfa(order.discountAmount)}</span></div>}
             {order.purchaseActualAmount != null && <div className="flex justify-between text-slate-600"><span>Achats</span><span>{fcfa(order.purchaseActualAmount)}</span></div>}
+            {!!order.itemsSubtotal && <div className="flex justify-between text-slate-600"><span>Articles du commerçant</span><span>{fcfa(order.itemsSubtotal)}</span></div>}
             <div className="flex justify-between border-t border-slate-100 pt-1 font-bold text-brand"><span>Total client</span><span>{fcfa(order.totalAmount)}</span></div>
             <div className="flex justify-between text-slate-600"><span>Commission</span><span>{fcfa(order.commissionAmount)}</span></div>
             <div className="flex justify-between text-slate-600"><span>Gain livreur</span><span>{fcfa(order.driverEarning)}</span></div>
+            {order.merchant && (
+              <>
+                <div className="flex justify-between text-slate-600"><span>Commission commerçant</span><span>{fcfa(order.merchantCommissionAmount)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Part du commerçant</span><span>{fcfa(order.itemsSubtotal! - order.merchantCommissionAmount)}</span></div>
+              </>
+            )}
             <p className="pt-1 text-xs text-slate-500">
               {PAYMENT_LABELS[order.paymentMethod]} · {PAYMENT_STATUS_LABELS[order.paymentStatus]}
               {order.cashCollectAt && ` · espèces ${order.cashCollectAt === 'PICKUP' ? 'au départ' : 'à l’arrivée'}`}
@@ -184,8 +195,20 @@ export default function AdminOrderPage() {
           {(order.items.length > 0 || order.packageDescription || order.note) && (
             <Card className="text-sm">
               <h2 className="mb-1 font-semibold text-brand">Contenu</h2>
+              {order.merchant && (
+                <p className="mb-1">
+                  <Link href={`/admin/commercants/${order.merchant.id}`} className="font-semibold text-brand-light">🏪 {order.merchant.name}</Link>
+                  {order.merchantStatus && <span className="text-slate-500"> · {MERCHANT_STATUS[order.merchantStatus].label}{order.prepMinutes ? ` (${order.prepMinutes} min)` : ''}</span>}
+                </p>
+              )}
               {order.packageDescription && <p>{order.packageDescription}{order.isFragile && ' — fragile'}</p>}
-              {order.items.map((i) => <p key={i.id}>• {i.quantity > 1 && `${i.quantity} × `}{i.label}</p>)}
+              {order.items.map((i) => (
+                <p key={i.id}>
+                  • {i.quantity > 1 && `${i.quantity} × `}{i.label}
+                  {!!i.options?.length && <span className="text-slate-500"> ({i.options.map((o) => o.name).join(', ')})</span>}
+                  {i.unitPrice != null && <span className="text-slate-500"> — {fcfa(i.unitPrice * i.quantity)}</span>}
+                </p>
+              ))}
               {order.note && <p className="mt-1 text-slate-500">Note : {order.note}</p>}
             </Card>
           )}

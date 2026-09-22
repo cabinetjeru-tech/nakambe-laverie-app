@@ -1,5 +1,6 @@
 'use client';
 
+import { UtensilsCrossed } from 'lucide-react';
 import Link from 'next/link';
 import { OrderCard, OrderSummary } from '@/components/order-card';
 import { InstallButton, PushToggle } from '@/components/pwa';
@@ -10,7 +11,7 @@ import { SERVICES } from '@/lib/services';
 import type { Paginated } from '@/lib/types';
 import { useApi } from '@/lib/use-api';
 
-const ACTIVE = ['PENDING_PAYMENT', 'SCHEDULED', 'SEARCHING_DRIVER', 'DRIVER_ASSIGNED', 'DRIVER_AT_PICKUP', 'PURCHASING', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_DROPOFF'];
+const ACTIVE = ['CREATED', 'PENDING_PAYMENT', 'SCHEDULED', 'SEARCHING_DRIVER', 'DRIVER_ASSIGNED', 'DRIVER_AT_PICKUP', 'PURCHASING', 'PICKED_UP', 'IN_TRANSIT', 'ARRIVED_AT_DROPOFF'];
 
 export default function ClientHome() {
   const { user } = useAuth();
@@ -23,6 +24,17 @@ export default function ClientHome() {
         <p className="text-sm text-slate-500">Bonjour {user?.firstName} 👋</p>
         <h1 className="text-2xl font-bold text-brand">Que doit-on livrer aujourd’hui ?</h1>
       </div>
+
+      <Link href="/restaurants" className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand-green to-emerald-500 p-4 text-white shadow-card transition active:scale-[0.98]">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
+          <UtensilsCrossed className="h-6 w-6" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold leading-tight">Repas & commerces</span>
+          <span className="block text-xs text-green-50">Restaurants, maquis et boutiques livrés chez vous.</span>
+        </span>
+        <span className="rounded-xl bg-white/20 px-3 py-1.5 text-sm font-semibold">Commander</span>
+      </Link>
 
       <div className="grid grid-cols-2 gap-3">
         {SERVICES.map((s) => (

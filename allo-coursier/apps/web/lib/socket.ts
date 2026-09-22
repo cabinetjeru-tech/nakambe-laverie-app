@@ -6,7 +6,10 @@ import { tokens } from './api';
 let socket: Socket | null = null;
 let currentToken: string | null = null;
 
-/** Connexion temps réel unique (reconnexion automatique, repli en « polling » sur réseau faible). */
+/**
+ * Connexion temps réel unique, avec reconnexion automatique. Elle démarre en « long polling » (passe partout,
+ * même derrière un proxy sans WebSocket) puis passe en WebSocket dès que possible.
+ */
 export function getSocket(): Socket {
   const token = tokens.access;
   if (socket && currentToken === token) return socket;
@@ -14,8 +17,9 @@ export function getSocket(): Socket {
   currentToken = token;
   socket = io(process.env.NEXT_PUBLIC_SOCKET_URL ?? undefined, {
     path: '/api/v1/socket.io',
+    addTrailingSlash: false,
     auth: token ? { token } : {},
-    transports: ['websocket', 'polling'],
+    transports: ['polling', 'websocket'],
     reconnectionDelay: 2000,
     reconnectionDelayMax: 30000,
   });

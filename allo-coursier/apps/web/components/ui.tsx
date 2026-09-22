@@ -98,6 +98,17 @@ export function Field({ label, hint, error, children, className }: { label: stri
   );
 }
 
+/** Comme Field, mais sans <label> : pour une carte, des photos ou plusieurs boutons (un label transmettrait les clics). */
+export function FieldGroup({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+  return (
+    <div className={className}>
+      <p className="mb-1.5 text-sm font-medium text-slate-700">{label}</p>
+      {children}
+      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+    </div>
+  );
+}
+
 export function Card({ children, className, as: Tag = 'div' }: { children: ReactNode; className?: string; as?: 'div' | 'section' }) {
   return <Tag className={clsx('rounded-2xl bg-white p-4 shadow-card', className)}>{children}</Tag>;
 }
