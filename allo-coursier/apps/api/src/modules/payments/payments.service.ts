@@ -5,6 +5,7 @@ import { paginate } from '../../common/dto/pagination.dto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { DispatchService } from '../orders/dispatch.service';
+import { FoodService } from '../orders/food.service';
 import { OrderLifecycleService } from '../orders/order-lifecycle.service';
 import { OrdersService } from '../orders/orders.service';
 import { LedgerService } from '../wallet/ledger.service';
@@ -22,6 +23,7 @@ export class PaymentsService {
     private dispatch: DispatchService,
     private notifications: NotificationsService,
     private audit: AuditService,
+    private food: FoodService,
   ) {}
 
   methods() {
@@ -125,6 +127,8 @@ export class PaymentsService {
     if (order) {
       await this.lifecycle.announce(order);
       if (order.status === OrderStatus.SEARCHING_DRIVER) await this.dispatch.trigger(order.id);
+      // Repas : la commande payée part maintenant chez le commerçant.
+      if (order.status === OrderStatus.CREATED && order.merchantId) await this.food.notifyMerchantNewOrder(order.id);
     } else {
       await this.notifications.notify(payment.userId, {
         type: 'PAYMENT',

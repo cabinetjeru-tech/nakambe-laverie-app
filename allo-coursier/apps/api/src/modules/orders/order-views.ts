@@ -31,6 +31,7 @@ export const orderDetailInclude = {
     },
   },
   ratings: true,
+  merchant: { select: { id: true, name: true, slug: true, phone: true, logoUrl: true } },
 } satisfies Prisma.OrderInclude;
 
 export type OrderDetail = Prisma.OrderGetPayload<{ include: typeof orderDetailInclude }>;
@@ -67,7 +68,11 @@ function common(order: OrderDetail) {
     packageSize: order.packageSize,
     isFragile: order.isFragile,
     note: order.note,
-    items: order.items.map((i) => ({ id: i.id, label: i.label, quantity: i.quantity, note: i.note })),
+    items: order.items.map((i) => ({ id: i.id, label: i.label, quantity: i.quantity, note: i.note, unitPrice: i.unitPrice, options: i.options })),
+    merchant: order.merchant ? { id: order.merchant.id, name: order.merchant.name, slug: order.merchant.slug, phone: order.merchant.phone, logoUrl: order.merchant.logoUrl } : null,
+    merchantStatus: order.merchantStatus,
+    prepMinutes: order.prepMinutes,
+    readyAt: order.readyAt,
     distanceKm: Math.round(order.distanceMeters / 10) / 100,
     createdAt: order.createdAt,
     acceptedAt: order.acceptedAt,
@@ -85,6 +90,7 @@ function money(order: OrderDetail) {
     discountAmount: order.discountAmount,
     purchaseBudget: order.purchaseBudget,
     purchaseActualAmount: order.purchaseActualAmount,
+    itemsSubtotal: order.itemsSubtotal,
     totalAmount: order.totalAmount,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
@@ -113,10 +119,11 @@ function history(order: OrderDetail) {
 }
 
 /** Montant que le livreur doit encaisser à un arrêt (espèces). */
-export function amountToCollectAt(order: Pick<OrderDetail, 'paymentMethod' | 'cashCollectAt' | 'deliveryFee' | 'waitingFee' | 'discountAmount' | 'purchaseActualAmount'>, kind: StopKind): number {
+export function amountToCollectAt(order: Pick<OrderDetail, 'paymentMethod' | 'cashCollectAt' | 'deliveryFee' | 'waitingFee' | 'discountAmount' | 'purchaseActualAmount' | 'itemsSubtotal'>, kind: StopKind): number {
   if (order.paymentMethod !== 'CASH') return 0;
   const deliveryNet = Math.max(0, order.deliveryFee + order.waitingFee - order.discountAmount);
-  const purchases = kind === StopKind.DROPOFF ? order.purchaseActualAmount ?? 0 : 0;
+  // Achats avancés par le livreur et articles d'un commerçant : toujours payés à la livraison.
+  const purchases = kind === StopKind.DROPOFF ? (order.purchaseActualAmount ?? 0) + order.itemsSubtotal : 0;
   const fee = (order.cashCollectAt ?? StopKind.DROPOFF) === kind ? deliveryNet : 0;
   return fee + purchases;
 }
@@ -158,6 +165,8 @@ export function adminView(order: OrderDetail, sign: SignUrl) {
     priceBreakdown: order.priceBreakdown,
     commissionAmount: order.commissionAmount,
     driverEarning: order.driverEarning,
+    merchantCommissionAmount: order.merchantCommissionAmount,
+    merchantEarning: order.merchantEarning,
     dispatchAttempts: order.dispatchAttempts,
     stops: order.stops.map((s) => ({ ...stopView(s, true), waitingSeconds: s.waitingSeconds })),
     client: order.client,

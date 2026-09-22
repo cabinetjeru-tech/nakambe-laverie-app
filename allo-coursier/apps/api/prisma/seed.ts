@@ -6,10 +6,10 @@
  *  - villes de lancement : Ouagadougou et Tenkodogo ;
  *  - tarifs de DÉMONSTRATION (à ajuster dans l'administration avant le lancement) ;
  *  - compte super-administrateur (SEED_ADMIN_PHONE / SEED_ADMIN_PASSWORD) ;
- *  - hors production : un client et un livreur de démonstration.
+ *  - hors production : un client, un livreur et un restaurant (avec son gérant) de démonstration.
  */
 import 'dotenv/config';
-import { DriverStatus, EmploymentType, PrismaClient, SecretKind, ServiceType, VehicleType } from '@prisma/client';
+import { DriverStatus, EmploymentType, MerchantMemberRole, MerchantStatus, MerchantType, PrismaClient, SecretKind, ServiceType, VehicleType } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { ALL_PERMISSIONS_WILDCARD, DEFAULT_ROLES, PERMISSIONS, ROLE } from '../src/common/permissions';
 import { normalizeBurkinaPhone } from '../src/common/utils/phone';
@@ -196,12 +196,76 @@ async function seedDemoAccounts() {
   console.log('✔ Comptes de démonstration : client +22676000001 / livreur +22676000002 (code 482913)');
 }
 
+/** Restaurant de démonstration avec menu, options et horaires (hors production). */
+async function seedDemoRestaurant() {
+  if (process.env.NODE_ENV === 'production' || process.env.SEED_DEMO === 'false') return;
+  if (await prisma.merchant.findUnique({ where: { slug: 'maquis-le-baobab-demo' } })) return;
+  const ouaga = await prisma.city.findUniqueOrThrow({ where: { slug: 'ouagadougou' } });
+  const merchantRole = await prisma.role.findUniqueOrThrow({ where: { code: ROLE.MERCHANT } });
+  const owner =
+    (await prisma.user.findUnique({ where: { phone: '+22676000003' } })) ??
+    (await prisma.user.create({
+      data: {
+        phone: '+22676000003', firstName: 'Mariam', lastName: 'Kaboré (démo)',
+        secretHash: await bcrypt.hash('482913', BCRYPT_COST), roles: { create: { roleId: merchantRole.id } },
+      },
+    }));
+  const merchant = await prisma.merchant.create({
+    data: {
+      name: 'Maquis Le Baobab (démo)', slug: 'maquis-le-baobab-demo', type: MerchantType.RESTAURANT,
+      phone: '+22676000003', lat: 12.3657, lng: -1.5339, cityId: ouaga.id,
+      addressText: 'Avenue Kwame Nkrumah', landmark: 'En face de la station, enseigne verte',
+      description: 'Cuisine burkinabè : riz gras, poulet braisé, tô et jus locaux.',
+      avgPrepMinutes: 20, minOrderAmount: 1000, status: MerchantStatus.ACTIVE,
+      members: { create: { userId: owner.id, role: MerchantMemberRole.OWNER } },
+      // Ouvert tous les jours de 07:00 à 23:00 pour faciliter les essais.
+      openingHours: { create: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({ weekday, opensAt: '07:00', closesAt: '23:00' })) },
+    },
+  });
+  const menu: { category: string; products: { name: string; description?: string; price: number; options?: { name: string; min: number; max: number; choices: [string, number][] }[] }[] }[] = [
+    {
+      category: 'Plats',
+      products: [
+        { name: 'Riz gras', description: 'Riz cuisiné à la tomate et à la viande', price: 1500, options: [{ name: 'Viande', min: 1, max: 1, choices: [['Bœuf', 0], ['Poulet', 500], ['Poisson', 500]] }, { name: 'Suppléments', min: 0, max: 2, choices: [['Œuf', 200], ['Alloco', 300]] }] },
+        { name: 'Poulet braisé', description: 'Poulet bicyclette entier, piment à part', price: 4500, options: [{ name: 'Accompagnement', min: 1, max: 1, choices: [['Frites', 0], ['Attiéké', 0], ['Alloco', 300]] }] },
+        { name: 'Tô sauce gombo', price: 1000 },
+      ],
+    },
+    {
+      category: 'Boissons',
+      products: [
+        { name: 'Jus de bissap (50 cl)', price: 500 },
+        { name: 'Jus de gingembre (50 cl)', price: 500 },
+        { name: 'Eau minérale (1,5 L)', price: 600 },
+      ],
+    },
+  ];
+  for (const [position, section] of menu.entries()) {
+    const category = await prisma.catalogCategory.create({ data: { merchantId: merchant.id, name: section.category, position } });
+    for (const [index, product] of section.products.entries()) {
+      await prisma.product.create({
+        data: {
+          merchantId: merchant.id, categoryId: category.id, name: product.name, description: product.description, price: product.price, position: index,
+          optionGroups: {
+            create: (product.options ?? []).map((g) => ({
+              name: g.name, minChoices: g.min, maxChoices: g.max,
+              options: { create: g.choices.map(([name, extraPrice]) => ({ name, extraPrice })) },
+            })),
+          },
+        },
+      });
+    }
+  }
+  console.log('✔ Restaurant de démonstration : Maquis Le Baobab, gérante +22676000003 (code 482913)');
+}
+
 async function main() {
   await seedPermissionsAndRoles();
   await seedCities();
   await seedDemoPricing();
   await seedSuperAdmin();
   await seedDemoAccounts();
+  await seedDemoRestaurant();
 }
 
 main()

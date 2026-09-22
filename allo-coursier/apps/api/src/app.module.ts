@@ -16,6 +16,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { UsersModule } from './modules/users/users.module';
 import { ComplaintsModule } from './modules/complaints/complaints.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { MerchantsModule } from './modules/merchants/merchants.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
 import { PromotionsModule } from './modules/promotions/promotions.module';
@@ -48,6 +49,7 @@ import { RolesGuard } from './common/guards/roles.guard';
     StorageModule,
     WalletModule,
     PromotionsModule,
+    MerchantsModule,
     OrdersModule,
     PaymentsModule,
     ComplaintsModule,

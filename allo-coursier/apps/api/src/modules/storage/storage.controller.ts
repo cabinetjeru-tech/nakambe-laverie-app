@@ -42,6 +42,16 @@ export class StorageController {
   }
 
   @Public()
+  @Get('files/public/:key')
+  async servePublic(@Param('key') key: string, @Res() res: Response) {
+    const file = await this.storage.readPublic(key);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Cache-Control', 'public, max-age=2592000, immutable');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.sendFile(file.path);
+  }
+
+  @Public()
   @Get('files/:key')
   async serve(@Param('key') key: string, @Query('exp') exp: string, @Query('sig') sig: string, @Res() res: Response) {
     const file = await this.storage.read(key, Number(exp), sig);

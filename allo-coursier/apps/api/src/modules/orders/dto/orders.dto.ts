@@ -261,3 +261,77 @@ export class OnlineDto {
 export class RejectOfferDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(200) reason?: string;
 }
+
+// ---------------------------------------------------------------------------- repas et commerces
+
+export class CartItemDto {
+  @ApiProperty() @IsUUID()
+  productId: string;
+
+  @ApiProperty({ minimum: 1, maximum: 50 }) @IsInt() @Min(1) @Max(50)
+  quantity: number;
+
+  @ApiPropertyOptional({ type: [String], description: 'Choix retenus (identifiants des options)' })
+  @IsOptional() @IsArray() @ArrayMaxSize(30) @IsUUID('4', { each: true })
+  optionIds?: string[];
+
+  @ApiPropertyOptional({ example: 'Sans oignons' }) @IsOptional() @IsString() @MaxLength(200)
+  note?: string;
+}
+
+export class FoodQuoteDto {
+  @ApiProperty() @IsUUID()
+  merchantId: string;
+
+  @ApiProperty({ type: [CartItemDto] })
+  @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => CartItemDto)
+  items: CartItemDto[];
+
+  @ApiProperty({ type: GeoPointDto }) @ValidateNested() @Type(() => GeoPointDto)
+  dropoff: GeoPointDto;
+}
+
+export class CreateFoodOrderDto {
+  @ApiProperty() @IsUUID()
+  merchantId: string;
+
+  @ApiProperty({ type: [CartItemDto] })
+  @IsArray() @ArrayMaxSize(50) @ValidateNested({ each: true }) @Type(() => CartItemDto)
+  items: CartItemDto[];
+
+  @ApiProperty({ type: StopInputDto }) @ValidateNested() @Type(() => StopInputDto)
+  dropoff: StopInputDto;
+
+  @ApiPropertyOptional({ enum: DeliverySpeed, default: DeliverySpeed.STANDARD }) @IsOptional() @IsEnum(DeliverySpeed)
+  speed: DeliverySpeed = DeliverySpeed.STANDARD;
+
+  @ApiProperty({ enum: ['CASH', 'WALLET', 'MANUAL_MOBILE_MONEY'] }) @IsIn(['CASH', 'WALLET', 'MANUAL_MOBILE_MONEY'])
+  paymentMethod: 'CASH' | 'WALLET' | 'MANUAL_MOBILE_MONEY';
+
+  @ApiPropertyOptional({ type: ManualMobileMoneyDto }) @IsOptional() @ValidateNested() @Type(() => ManualMobileMoneyDto)
+  mobileMoney?: ManualMobileMoneyDto;
+
+  @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(20)
+  promoCode?: string;
+
+  @ApiPropertyOptional({ description: 'Message pour le commerçant et le livreur' }) @IsOptional() @IsString() @MaxLength(500)
+  note?: string;
+}
+
+export class MerchantAcceptDto {
+  @ApiProperty({ description: 'Temps de préparation annoncé (minutes)', example: 20 }) @IsInt() @Min(1) @Max(180)
+  prepMinutes: number;
+}
+
+export class MerchantOrdersQueryDto extends PaginationQueryDto {
+  @ApiPropertyOptional({ enum: ['PENDING', 'ACTIVE', 'DONE'] }) @IsOptional() @IsIn(['PENDING', 'ACTIVE', 'DONE'])
+  view?: 'PENDING' | 'ACTIVE' | 'DONE';
+}
+
+export class MerchantPayoutDto {
+  @ApiProperty({ example: 25000 }) @IsInt() @Min(1) @Max(10_000_000)
+  amount: number;
+
+  @ApiProperty({ description: 'Numéro Mobile Money qui recevra le reversement' }) @IsString() @IsNotEmpty()
+  destinationPhone: string;
+}

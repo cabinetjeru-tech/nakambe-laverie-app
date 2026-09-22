@@ -34,7 +34,10 @@ export interface TransitionOptions {
 
 /** Messages envoyés au client à chaque étape importante. */
 const CLIENT_MESSAGES: Partial<Record<OrderStatus, (o: Order) => { title: string; body: string }>> = {
-  SEARCHING_DRIVER: (o) => ({ title: 'Recherche d’un livreur', body: `Commande ${o.reference} : nous cherchons un livreur disponible.` }),
+  SEARCHING_DRIVER: (o) =>
+    o.serviceType === 'FOOD'
+      ? { title: 'Commande acceptée 👨‍🍳', body: `${o.reference} est en préparation${o.prepMinutes ? ` (environ ${o.prepMinutes} min)` : ''}. Un livreur viendra la chercher.` }
+      : { title: 'Recherche d’un livreur', body: `Commande ${o.reference} : nous cherchons un livreur disponible.` },
   DRIVER_ASSIGNED: (o) => ({ title: 'Livreur trouvé 🛵', body: `Un livreur a accepté la commande ${o.reference} et se rend au ramassage.` }),
   DRIVER_AT_PICKUP: (o) => ({ title: 'Livreur au ramassage', body: `Le livreur est arrivé au point de ramassage (${o.reference}).` }),
   IN_TRANSIT: (o) => ({ title: 'En route 🚀', body: `Commande ${o.reference} récupérée, en route vers la livraison.` }),
@@ -124,6 +127,7 @@ export class OrderLifecycleService {
     this.realtime.toUser(order.clientId, 'order.updated', summary);
     if (order.driverId) this.realtime.toUser(order.driverId, 'order.updated', summary);
     this.realtime.toStaff('order.updated', { ...summary, cityId: order.cityId });
+    if (order.merchantId) this.realtime.toMerchant(order.merchantId, 'merchant.order', { ...summary, merchantStatus: order.merchantStatus });
 
     try {
       const message = CLIENT_MESSAGES[order.status];
@@ -156,7 +160,9 @@ export class OrderLifecycleService {
   }
 
   /** Statut à atteindre une fois la commande payée (ou payable à la livraison). */
-  async readyStatus(order: Pick<Order, 'scheduledAt'>): Promise<OrderStatus> {
+  async readyStatus(order: Pick<Order, 'scheduledAt'> & { serviceType?: Order['serviceType'] }): Promise<OrderStatus> {
+    // Repas : la commande part d'abord chez le commerçant, qui doit l'accepter.
+    if (order.serviceType === 'FOOD') return OrderStatus.CREATED;
     if (!order.scheduledAt) return OrderStatus.SEARCHING_DRIVER;
     const leadMinutes = await this.settings.get('orders.scheduleLeadMinutes');
     return order.scheduledAt.getTime() - leadMinutes * 60_000 > Date.now()

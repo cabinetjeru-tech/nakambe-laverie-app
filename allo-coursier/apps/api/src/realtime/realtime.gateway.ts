@@ -14,7 +14,7 @@ import { AuthUser } from '../common/auth-user';
 import { hasPermissions } from '../common/guards/permissions.guard';
 import { PERMISSIONS } from '../common/permissions';
 import { PrismaService } from '../prisma/prisma.service';
-import { chatRoom, orderRoom, RealtimeService, STAFF_ROOM, userRoom } from './realtime.service';
+import { chatRoom, merchantRoom, orderRoom, RealtimeService, STAFF_ROOM, userRoom } from './realtime.service';
 
 interface SocketData {
   user?: AuthUser;
@@ -53,11 +53,15 @@ export class RealtimeGateway implements OnGatewayInit, OnGatewayConnection {
     });
   }
 
-  handleConnection(socket: Socket) {
+  async handleConnection(socket: Socket) {
     const user = (socket.data as SocketData).user;
     if (!user) return;
     socket.join(userRoom(user.id));
-    if (hasPermissions(user, [PERMISSIONS.ORDERS_READ.code])) socket.join(STAFF_ROOM);
+    if (hasPermissions(user, [PERMISSIONS.ORDERS_READ.code]) && !user.cityIds) socket.join(STAFF_ROOM);
+    if (user.roles.includes('MERCHANT')) {
+      const memberships = await this.prisma.merchantMember.findMany({ where: { userId: user.id }, select: { merchantId: true } });
+      socket.join(memberships.map((m) => merchantRoom(m.merchantId)));
+    }
   }
 
   /** Suivre une commande : le client, le livreur affecté ou l'équipe. */

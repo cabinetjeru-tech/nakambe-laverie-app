@@ -65,7 +65,7 @@ export class WalletService {
         where,
         orderBy: { createdAt: 'desc' },
         ...paginate(query),
-        include: { wallet: { select: { balance: true, user: { select: { id: true, firstName: true, lastName: true, phone: true } } } } },
+        include: { wallet: { select: { balance: true, kind: true, user: { select: { id: true, firstName: true, lastName: true, phone: true } }, merchant: { select: { id: true, name: true, phone: true } } } } },
       }),
       this.prisma.payoutRequest.count({ where }),
     ]);
@@ -82,7 +82,7 @@ export class WalletService {
       await this.ledger.post(
         {
           type: LedgerTransactionType.WITHDRAWAL,
-          description: `Retrait livreur vers ${p.destinationPhone} (réf. ${reference})`,
+          description: `${p.wallet.merchantId ? 'Reversement commerçant' : 'Retrait livreur'} vers ${p.destinationPhone} (réf. ${reference})`,
           createdById: actorId,
           lines: [
             { walletId: p.walletId, amount: -p.amount, mustStayPositive: true },
@@ -98,14 +98,10 @@ export class WalletService {
       });
     });
     await this.audit.log({ actorId, action: 'payout.pay', entityType: 'PayoutRequest', entityId: id, after: payout });
-    if (payout.wallet.userId) {
-      await this.notifications.notify(payout.wallet.userId, {
-        type: 'PAYMENT',
-        title: 'Retrait envoyé 💸',
-        body: `${payout.amount} FCFA ont été envoyés sur votre Mobile Money (réf. ${reference}).`,
-        url: '/livreur/gains',
-      });
-    }
+    await this.notifyPayoutOwner(payout.wallet, {
+      title: 'Retrait envoyé 💸',
+      body: `${payout.amount} FCFA ont été envoyés sur votre Mobile Money (réf. ${reference}).`,
+    });
     return payout;
   }
 
@@ -117,10 +113,18 @@ export class WalletService {
     if (updated.count === 0) throw new BadRequestException('Demande introuvable ou déjà traitée.');
     const payout = await this.prisma.payoutRequest.findUniqueOrThrow({ where: { id }, include: { wallet: true } });
     await this.audit.log({ actorId, action: 'payout.reject', entityType: 'PayoutRequest', entityId: id, after: { reason } });
-    if (payout.wallet.userId) {
-      await this.notifications.notify(payout.wallet.userId, { type: 'PAYMENT', title: 'Retrait refusé', body: reason, url: '/livreur/gains' });
-    }
+    await this.notifyPayoutOwner(payout.wallet, { title: 'Retrait refusé', body: reason });
     return payout;
+  }
+
+  /** Prévient le livreur, ou le propriétaire du commerce, du traitement de sa demande. */
+  private async notifyPayoutOwner(wallet: { userId: string | null; merchantId: string | null }, message: { title: string; body: string }) {
+    if (wallet.userId) {
+      await this.notifications.notify(wallet.userId, { type: 'PAYMENT', ...message, url: '/livreur/gains' });
+    } else if (wallet.merchantId) {
+      const owners = await this.prisma.merchantMember.findMany({ where: { merchantId: wallet.merchantId, role: 'OWNER' }, select: { userId: true } });
+      if (owners.length) await this.notifications.notify(owners.map((o) => o.userId), { type: 'PAYMENT', ...message, url: '/commercant/finances' });
+    }
   }
 
   // ------------------------------------------------------------------ espèces des livreurs
@@ -185,7 +189,7 @@ export class WalletService {
         where,
         orderBy: { balance: 'asc' },
         ...paginate(query),
-        include: { user: { select: { id: true, firstName: true, lastName: true, phone: true } } },
+        include: { user: { select: { id: true, firstName: true, lastName: true, phone: true } }, merchant: { select: { id: true, name: true, phone: true } } },
       }),
       this.prisma.wallet.count({ where }),
     ]);
@@ -195,7 +199,7 @@ export class WalletService {
   async walletEntries(id: string, page = 1, pageSize = 50) {
     const wallet = await this.prisma.wallet.findUnique({
       where: { id },
-      include: { user: { select: { id: true, firstName: true, lastName: true, phone: true } } },
+      include: { user: { select: { id: true, firstName: true, lastName: true, phone: true } }, merchant: { select: { id: true, name: true, phone: true } } },
     });
     if (!wallet) throw new NotFoundException('Portefeuille introuvable.');
     const entries = await this.ledger.entries(id, pageSize, (page - 1) * pageSize);
@@ -207,10 +211,11 @@ export class WalletService {
       this.ledger.systemWallet('PLATFORM_REVENUE'),
       this.ledger.systemWallet('CASH_CLEARING'),
     ]);
-    const [clientsCredit, driversOwed, driversDebt] = await Promise.all([
+    const [clientsCredit, driversOwed, driversDebt, merchantsOwed] = await Promise.all([
       this.prisma.wallet.aggregate({ where: { kind: WalletKind.CLIENT }, _sum: { balance: true } }),
       this.prisma.wallet.aggregate({ where: { kind: WalletKind.DRIVER, balance: { gt: 0 } }, _sum: { balance: true } }),
       this.prisma.wallet.aggregate({ where: { kind: WalletKind.DRIVER, balance: { lt: 0 } }, _sum: { balance: true } }),
+      this.prisma.wallet.aggregate({ where: { kind: WalletKind.MERCHANT }, _sum: { balance: true } }),
     ]);
     return {
       platformBalance: platform.balance,
@@ -218,6 +223,7 @@ export class WalletService {
       clientsCredit: clientsCredit._sum.balance ?? 0,
       owedToDrivers: driversOwed._sum.balance ?? 0,
       cashHeldByDrivers: -(driversDebt._sum.balance ?? 0),
+      owedToMerchants: merchantsOwed._sum.balance ?? 0,
       pendingPayouts: await this.prisma.payoutRequest.count({ where: { status: { in: [PayoutStatus.PENDING, PayoutStatus.APPROVED] } } }),
     };
   }

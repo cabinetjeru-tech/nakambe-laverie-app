@@ -68,6 +68,21 @@ export const SETTING_DEFINITIONS = {
     description: 'Montant minimum d’une demande de retrait des livreurs indépendants (FCFA)',
     validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0,
   },
+  'merchants.defaultCommissionPercent': {
+    default: 15,
+    description: 'Commission de la plateforme sur les articles vendus par les commerçants (%)',
+    validate: (v: unknown) => typeof v === 'number' && v >= 0 && v <= 100,
+  },
+  'merchants.acceptTimeoutMinutes': {
+    default: 10,
+    description: "Annulation d'une commande de repas si le commerçant ne l'accepte pas dans ce délai (minutes)",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 2 && (v as number) <= 120,
+  },
+  'merchants.driverLeadMinutes': {
+    default: 10,
+    description: "Recherche du livreur X minutes avant la fin de préparation annoncée par le commerçant",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 120,
+  },
   'drivers.defaultCashDebtLimit': {
     default: 25000,
     description: "Montant maximal d'espèces qu'un livreur peut détenir avant de devoir les reverser (FCFA)",

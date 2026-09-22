@@ -76,6 +76,8 @@ export class DispatchService {
       include: { stops: { orderBy: { sequence: 'asc' } }, offers: { select: { driverId: true, status: true } } },
     });
     if (!order || order.status !== OrderStatus.SEARCHING_DRIVER) return 'SKIPPED';
+    // Repas en préparation : le livreur est cherché pour arriver quand la commande sera prête.
+    if (order.dispatchAfter && order.dispatchAfter > new Date()) return 'SKIPPED';
     if (order.offers.some((o) => o.status === OfferStatus.OFFERED)) return 'SKIPPED';
     const maxAttempts = await this.settings.get('dispatch.maxAttempts');
     if (order.dispatchAttempts >= maxAttempts) return 'SKIPPED';

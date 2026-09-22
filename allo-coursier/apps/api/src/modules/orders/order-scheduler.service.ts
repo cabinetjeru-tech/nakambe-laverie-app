@@ -3,6 +3,7 @@ import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
 import { DispatchService } from './dispatch.service';
+import { FoodService } from './food.service';
 import { OrderLifecycleService, SYSTEM_ACTOR } from './order-lifecycle.service';
 import { OrdersService } from './orders.service';
 
@@ -28,6 +29,7 @@ export class OrderSchedulerService implements OnModuleInit, OnModuleDestroy {
     private orders: OrdersService,
     private lifecycle: OrderLifecycleService,
     private settings: SettingsService,
+    private food: FoodService,
   ) {}
 
   onModuleInit() {
@@ -47,6 +49,7 @@ export class OrderSchedulerService implements OnModuleInit, OnModuleDestroy {
       await this.step('livraisons programmées', () => this.dispatch.releaseScheduledOrders());
       await this.step('relance de la recherche', () => this.retrySearches());
       await this.step('alertes', () => this.dispatch.alertStuckOrders());
+      await this.step('commandes repas sans réponse', () => this.food.cancelUnansweredOrders());
       await this.step('paiements non validés', () => this.cancelUnpaidOrders());
       await this.step('clôture', () => this.completeDeliveredOrders());
     } finally {
@@ -66,7 +69,10 @@ export class OrderSchedulerService implements OnModuleInit, OnModuleDestroy {
     const orders = await this.prisma.order.findMany({
       where: {
         status: OrderStatus.SEARCHING_DRIVER,
-        OR: [{ lastDispatchAt: null }, { lastDispatchAt: { lt: new Date(Date.now() - RETRY_SEARCH_AFTER_MS) } }],
+        AND: [
+          { OR: [{ lastDispatchAt: null }, { lastDispatchAt: { lt: new Date(Date.now() - RETRY_SEARCH_AFTER_MS) } }] },
+          { OR: [{ dispatchAfter: null }, { dispatchAfter: { lte: new Date() } }] },
+        ],
         offers: { none: { status: 'OFFERED' } },
       },
       select: { id: true },

@@ -193,6 +193,9 @@ export class CourierService {
     const result = resolveDriverAction(dto.action, current.status, current.serviceType);
     if ('error' in result) throw new BadRequestException(result.error);
     if (dto.action === 'FAIL' && !dto.note?.trim()) throw new BadRequestException('Expliquez la raison de l’échec.');
+    if (dto.action === 'PICKED_UP' && current.serviceType === 'FOOD' && current.merchantStatus !== 'READY') {
+      throw new BadRequestException('Le commerçant n’a pas encore indiqué que la commande est prête.');
+    }
     if (dto.action === 'PICKED_UP' && PURCHASE_SERVICES.includes(current.serviceType) && current.purchaseActualAmount == null) {
       throw new BadRequestException('Indiquez d’abord le montant des achats et la photo du ticket.');
     }
@@ -343,7 +346,7 @@ export class CourierService {
         waitingFee,
         commissionAmount: settlement.commissionAmount,
         driverEarning: settlement.driverEarning,
-        totalAmount: settlement.clientDeliveryTotal + (order.purchaseActualAmount ?? 0),
+        totalAmount: settlement.clientDeliveryTotal + (order.purchaseActualAmount ?? 0) + order.itemsSubtotal,
         paymentStatus: order.paymentMethod === PaymentProvider.CASH ? PaymentStatus.SUCCEEDED : undefined,
       },
     });
@@ -356,10 +359,10 @@ export class CourierService {
           userId: order.clientId,
           purpose: PaymentPurpose.ORDER,
           provider: PaymentProvider.CASH,
-          amount: settlement.clientDeliveryTotal + (order.purchaseActualAmount ?? 0),
+          amount: settlement.clientDeliveryTotal + (order.purchaseActualAmount ?? 0) + order.itemsSubtotal,
           status: PaymentStatus.SUCCEEDED,
           confirmedAt: at,
-          metadata: { collectedBy: order.driverId, deliveryPart: settlement.clientDeliveryTotal, purchases: order.purchaseActualAmount ?? 0 },
+          metadata: { collectedBy: order.driverId, deliveryPart: settlement.clientDeliveryTotal, purchases: order.purchaseActualAmount ?? 0, items: order.itemsSubtotal },
         },
       });
     }
@@ -382,7 +385,41 @@ export class CourierService {
         tx,
       );
     }
+    if (order.merchantId && order.itemsSubtotal > 0) {
+      await this.settleMerchant(tx, order);
+    }
     return delivered;
+  }
+
+  /**
+   * Part du commerçant : il reçoit le montant des articles moins la commission de la plateforme.
+   * Espèces : le livreur a encaissé les articles et les doit à la plateforme ; prépayé : la plateforme les détient.
+   */
+  private async settleMerchant(tx: Prisma.TransactionClient, order: { id: string; reference: string; merchantId: string | null; driverId: string | null; paymentMethod: PaymentProvider; itemsSubtotal: number; merchantCommissionAmount: number }) {
+    const merchantWallet = await this.ledger.merchantWallet(order.merchantId!, tx);
+    const platform = await this.ledger.systemWallet('PLATFORM_REVENUE', tx);
+    const earning = order.itemsSubtotal - order.merchantCommissionAmount;
+    const lines =
+      order.paymentMethod === PaymentProvider.CASH
+        ? [
+            { walletId: (await this.ledger.userWallet('DRIVER', order.driverId!, tx)).id, amount: -order.itemsSubtotal },
+            { walletId: merchantWallet.id, amount: earning },
+            { walletId: platform.id, amount: order.merchantCommissionAmount },
+          ]
+        : [
+            { walletId: platform.id, amount: -earning },
+            { walletId: merchantWallet.id, amount: earning },
+          ];
+    await this.ledger.post(
+      {
+        type: LedgerTransactionType.MERCHANT_EARNING,
+        description: `Vente du commerçant — commande ${order.reference}${order.paymentMethod === PaymentProvider.CASH ? ' (articles encaissés par le livreur)' : ''}`,
+        orderId: order.id,
+        lines,
+      },
+      tx,
+    );
+    await tx.order.update({ where: { id: order.id }, data: { merchantEarning: earning } });
   }
 
   // ------------------------------------------------------------------ gains

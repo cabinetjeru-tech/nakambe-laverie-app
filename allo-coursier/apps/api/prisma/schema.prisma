@@ -417,7 +417,11 @@ model Merchant {
   cityId            String
   zoneId            String?
   commissionPercent Float?
+  description       String?
   avgPrepMinutes    Int            @default(20)
+  minOrderAmount    Int? // montant minimum des articles
+  ratingAvg         Float          @default(0)
+  ratingCount       Int            @default(0)
   status            MerchantStatus @default(PENDING)
   // Forçage manuel ouvert/fermé ; null = selon les horaires.
   isOpenOverride    Boolean?
@@ -578,6 +582,13 @@ enum OrderStatus {
   RETURNED
 }
 
+enum MerchantOrderStatus {
+  PENDING // en attente d'acceptation
+  ACCEPTED // en préparation
+  READY // prête à être récupérée
+  REJECTED
+}
+
 enum StopKind {
   PICKUP
   DROPOFF
@@ -599,56 +610,65 @@ enum ProofType {
 }
 
 model Order {
-  id                   String          @id @default(uuid())
-  reference            String          @unique // AC-250922-0042
-  clientId             String
-  merchantId           String?
-  cityId               String
-  serviceType          ServiceType
-  speed                DeliverySpeed   @default(STANDARD)
-  vehicleType          VehicleType     @default(MOTO)
-  status               OrderStatus     @default(CREATED)
-  scheduledAt          DateTime?
-  packageDescription   String?
-  packageSize          PackageSize?
-  isFragile            Boolean         @default(false)
-  purchaseBudget       Int? // budget annoncé pour les courses/achats
-  purchaseActualAmount Int? // montant réellement avancé par le livreur
-  distanceMeters       Int
-  pricingRuleId        String?
-  priceBreakdown       Json // détail du prix figé au moment de la commande
-  itemsSubtotal        Int             @default(0)
-  deliveryFee          Int
-  discountAmount       Int             @default(0)
-  waitingFee           Int             @default(0)
-  totalAmount          Int
-  commissionAmount     Int
-  driverEarning        Int
-  paymentMethod        PaymentProvider
-  paymentStatus        PaymentStatus   @default(PENDING)
-  promotionId          String?
+  id                       String               @id @default(uuid())
+  reference                String               @unique // AC-250922-0042
+  clientId                 String
+  merchantId               String?
+  cityId                   String
+  serviceType              ServiceType
+  speed                    DeliverySpeed        @default(STANDARD)
+  vehicleType              VehicleType          @default(MOTO)
+  status                   OrderStatus          @default(CREATED)
+  scheduledAt              DateTime?
+  packageDescription       String?
+  packageSize              PackageSize?
+  isFragile                Boolean              @default(false)
+  purchaseBudget           Int? // budget annoncé pour les courses/achats
+  purchaseActualAmount     Int? // montant réellement avancé par le livreur
+  distanceMeters           Int
+  pricingRuleId            String?
+  priceBreakdown           Json // détail du prix figé au moment de la commande
+  itemsSubtotal            Int                  @default(0)
+  deliveryFee              Int
+  discountAmount           Int                  @default(0)
+  waitingFee               Int                  @default(0)
+  totalAmount              Int
+  commissionAmount         Int
+  driverEarning            Int
+  paymentMethod            PaymentProvider
+  paymentStatus            PaymentStatus        @default(PENDING)
+  promotionId              String?
   // Code à 4 chiffres remis par le client au destinataire, demandé par le livreur à la remise.
-  deliveryCode         String?
+  deliveryCode             String?
   // Jeton du lien de suivi public partageable au destinataire.
-  trackingToken        String        @unique
+  trackingToken            String               @unique
   // Clé fournie par l'application : une commande renvoyée après une coupure réseau n'est pas dupliquée.
-  idempotencyKey       String?       @unique
+  idempotencyKey           String?              @unique
   // Paiement en espèces : encaissé au ramassage (expéditeur) ou à la livraison (destinataire).
-  cashCollectAt        StopKind?
-  dispatchAttempts     Int           @default(0)
-  lastDispatchAt       DateTime?
-  dispatchAlertedAt    DateTime?
-  driverId             String?
-  note                 String?
-  cancelledById        String?
-  cancelReason         String?
-  acceptedAt           DateTime?
-  pickedUpAt           DateTime?
-  deliveredAt          DateTime?
-  completedAt          DateTime?
-  cancelledAt          DateTime?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  cashCollectAt            StopKind?
+  dispatchAttempts         Int                  @default(0)
+  lastDispatchAt           DateTime?
+  dispatchAlertedAt        DateTime?
+  driverId                 String?
+  note                     String?
+  cancelledById            String?
+  cancelReason             String?
+  acceptedAt               DateTime?
+  pickedUpAt               DateTime?
+  deliveredAt              DateTime?
+  // Repas / commerces : suivi côté commerçant (en parallèle de la livraison).
+  merchantStatus           MerchantOrderStatus?
+  prepMinutes              Int?
+  merchantAcceptedAt       DateTime?
+  readyAt                  DateTime?
+  merchantCommissionAmount Int                  @default(0)
+  merchantEarning          Int                  @default(0)
+  // Recherche du livreur différée pour qu'il arrive quand la commande est prête.
+  dispatchAfter            DateTime?
+  completedAt              DateTime?
+  cancelledAt              DateTime?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
 
   client        User                 @relation("ClientOrders", fields: [clientId], references: [id])
   driver        User?                @relation("DriverOrders", fields: [driverId], references: [id])
@@ -1226,6 +1246,7 @@ enum FilePurpose {
   CHAT
   COMPLAINT
   AVATAR
+  MERCHANT_MEDIA // logos, photos des plats : publics
 }
 
 model StoredFile {

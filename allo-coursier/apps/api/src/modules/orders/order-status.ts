@@ -36,7 +36,7 @@ export const ACTIVE_DRIVER_STATUSES: OrderStatus[] = [
 export const FINAL_STATUSES: OrderStatus[] = [S.DELIVERED, S.COMPLETED, S.CANCELLED, S.FAILED, S.RETURNED];
 
 /** Le client peut annuler tant que le livreur n'est pas arrivé au ramassage. */
-export const CLIENT_CANCELLABLE: OrderStatus[] = [S.PENDING_PAYMENT, S.SCHEDULED, S.SEARCHING_DRIVER, S.DRIVER_ASSIGNED];
+export const CLIENT_CANCELLABLE: OrderStatus[] = [S.CREATED, S.PENDING_PAYMENT, S.SCHEDULED, S.SEARCHING_DRIVER, S.DRIVER_ASSIGNED];
 
 export const PURCHASE_SERVICES: ServiceType[] = [ServiceType.ERRAND, ServiceType.PURCHASE];
 

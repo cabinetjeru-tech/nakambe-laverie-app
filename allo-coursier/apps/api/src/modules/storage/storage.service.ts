@@ -55,7 +55,7 @@ export class StorageService {
     await fs.mkdir(this.dir, { recursive: true });
     await fs.writeFile(path.join(this.dir, key), buffer);
     await this.prisma.storedFile.create({ data: { key, ownerId, purpose, mimeType, size: buffer.length } });
-    return { key, mimeType, size: buffer.length, url: this.signedUrl(key) };
+    return { key, mimeType, size: buffer.length, url: purpose === FilePurpose.MERCHANT_MEDIA ? this.publicUrl(key) : this.signedUrl(key) };
   }
 
   /** Vérifie qu'un fichier envoyé appartient bien à l'utilisateur et correspond à l'usage attendu. */
@@ -71,6 +71,18 @@ export class StorageService {
     if (!key) return null;
     const exp = Math.floor(Date.now() / 1000) + URL_TTL_SECONDS;
     return `/api/v1/files/${encodeURIComponent(key)}?exp=${exp}&sig=${this.sign(key, exp)}`;
+  }
+
+  /** Lien permanent des médias publics des commerçants (logos, photos des plats), mis en cache par les téléphones. */
+  publicUrl(key: string | null | undefined): string | null {
+    return key ? `/api/v1/files/public/${encodeURIComponent(key)}` : null;
+  }
+
+  async readPublic(key: string) {
+    if (!/^[A-Za-z0-9_-]+\.(jpg|png|webp)$/.test(key)) throw new NotFoundException();
+    const file = await this.prisma.storedFile.findUnique({ where: { key } });
+    if (!file || file.purpose !== FilePurpose.MERCHANT_MEDIA) throw new NotFoundException();
+    return { path: path.join(this.dir, key), mimeType: file.mimeType };
   }
 
   async read(key: string, exp: number, sig: string) {

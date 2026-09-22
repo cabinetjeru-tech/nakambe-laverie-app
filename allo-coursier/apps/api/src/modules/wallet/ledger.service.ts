@@ -52,6 +52,14 @@ export class LedgerService {
     });
   }
 
+  async merchantWallet(merchantId: string, tx: Tx = this.prisma) {
+    return tx.wallet.upsert({
+      where: { kind_merchantId: { kind: 'MERCHANT', merchantId } },
+      create: { kind: 'MERCHANT', merchantId },
+      update: {},
+    });
+  }
+
   async post(posting: LedgerPosting, tx: Tx) {
     const lines = posting.lines.filter((l) => l.amount !== 0);
     const total = lines.reduce((sum, l) => sum + l.amount, 0);

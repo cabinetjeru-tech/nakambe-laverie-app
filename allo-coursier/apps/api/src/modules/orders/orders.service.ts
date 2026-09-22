@@ -333,6 +333,9 @@ export class OrdersService {
     if (!CLIENT_CANCELLABLE.includes(order.status)) {
       throw new BadRequestException('Le livreur est déjà sur place : contactez le service client pour annuler.');
     }
+    if (order.serviceType === 'FOOD' && order.merchantStatus && order.merchantStatus !== 'PENDING') {
+      throw new BadRequestException('Le commerçant prépare déjà votre repas : contactez le service client pour annuler.');
+    }
     return this.cancel(orderId, CLIENT_CANCELLABLE, { id: clientId, role: 'CLIENT' }, dto.reason);
   }
 

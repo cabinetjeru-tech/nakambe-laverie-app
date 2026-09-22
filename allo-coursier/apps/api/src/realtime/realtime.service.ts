@@ -7,6 +7,7 @@ export const orderRoom = (orderId: string) => `order:${orderId}`;
 /** Messages du chat : réservés aux participants et à l'équipe. */
 export const chatRoom = (orderId: string) => `chat:${orderId}`;
 export const STAFF_ROOM = 'staff';
+export const merchantRoom = (merchantId: string) => `merchant:${merchantId}`;
 
 /** Événements émis vers les applications. */
 export type RealtimeEvent =
@@ -15,7 +16,8 @@ export type RealtimeEvent =
   | 'offer.new'
   | 'offer.closed'
   | 'chat.message'
-  | 'notification';
+  | 'notification'
+  | 'merchant.order';
 
 @Injectable()
 export class RealtimeService {
@@ -35,6 +37,10 @@ export class RealtimeService {
 
   toChat(orderId: string, event: RealtimeEvent, payload: unknown) {
     this.server?.to(chatRoom(orderId)).emit(event, payload);
+  }
+
+  toMerchant(merchantId: string, event: RealtimeEvent, payload: unknown) {
+    this.server?.to(merchantRoom(merchantId)).emit(event, payload);
   }
 
   toStaff(event: RealtimeEvent, payload: unknown) {
