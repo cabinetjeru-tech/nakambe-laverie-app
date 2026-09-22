@@ -18,6 +18,9 @@ export const BRANCHES = [
   { city: 'Koudougou', detail: 'Centre universitaire' },
 ];
 
+/** Pays d'expansion visés — pas encore d'agences opérationnelles, adresses à venir. */
+export const EXPANSION_COUNTRIES = ['Bénin', 'Togo', 'Mali', 'Sénégal', "Côte d'Ivoire", 'Ghana'];
+
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   DEMANDE_RECUE: 'Demande reçue',
   RDV_CONFIRME: 'Rendez-vous confirmé',

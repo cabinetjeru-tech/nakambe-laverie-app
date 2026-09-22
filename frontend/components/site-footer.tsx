@@ -1,11 +1,11 @@
 import Link from 'next/link';
-import { COMPANY, BRANCHES } from '@/lib/constants';
+import { COMPANY, BRANCHES, EXPANSION_COUNTRIES } from '@/lib/constants';
 import { whatsappLink } from '@/lib/format';
 
 export function SiteFooter() {
   return (
     <footer id="contact" className="mt-16 border-t border-slate-200 bg-brand-blue-dark text-white">
-      <div className="mx-auto max-w-6xl px-4 py-10">
+      <div className="mx-auto max-w-6xl px-4 pt-10 pb-28 sm:pb-10">
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="text-xl font-extrabold">{COMPANY.name}</div>
@@ -61,13 +61,32 @@ export function SiteFooter() {
             <p className="text-sm text-slate-200">Lundi - Samedi : 7h30 - 19h00</p>
           </div>
         </div>
+
+        <div className="mt-8 border-t border-white/10 pt-6 text-center">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            Notre expansion en Afrique — bientôt disponible
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {EXPANSION_COUNTRIES.map((country) => (
+              <span key={country} className="rounded-full border border-white/20 px-3 py-1 text-xs text-slate-200">
+                {country}
+              </span>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-8 flex flex-col items-center gap-2 text-center text-xs text-slate-400 sm:flex-row sm:justify-between">
           <p>
             © {new Date().getFullYear()} {COMPANY.fullName} — Tous droits réservés.
           </p>
-          <Link href="/politique-remboursement" className="underline hover:text-brand-gold">
-            Politique de remboursement
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/politique-remboursement" className="underline hover:text-brand-gold">
+              Politique de remboursement
+            </Link>
+            <Link href="/politique-confidentialite" className="underline hover:text-brand-gold">
+              Politique de confidentialité
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
