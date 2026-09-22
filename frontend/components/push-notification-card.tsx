@@ -41,13 +41,22 @@ export function PushNotificationCard() {
       const result = await enablePushNotifications();
       if (result.ok) {
         setStatus('on');
-      } else if (result.reason === 'denied') {
-        setStatus('denied');
-      } else {
-        setError("Impossible d'activer les notifications pour le moment. Réessayez plus tard.");
+        return;
       }
-    } catch {
-      setError("Impossible d'activer les notifications pour le moment. Réessayez plus tard.");
+      if (result.reason === 'denied') {
+        setStatus('denied');
+        return;
+      }
+      const messages: Record<string, string> = {
+        'server-not-configured':
+          "Le serveur n'est pas encore configuré pour les notifications (clés manquantes côté Railway). Contactez le développeur.",
+        'server-unreachable': "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+        'subscribe-failed': `Échec de l'abonnement auprès de votre navigateur${result.detail ? ` (${result.detail})` : ''}.`,
+        'save-failed': `Abonnement créé mais non enregistré côté serveur${result.detail ? ` (${result.detail})` : ''}.`,
+      };
+      setError(messages[result.reason ?? ''] ?? "Impossible d'activer les notifications pour le moment.");
+    } catch (err: any) {
+      setError(`Erreur inattendue : ${err?.message ?? 'inconnue'}.`);
     } finally {
       setBusy(false);
     }

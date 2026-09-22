@@ -17,26 +17,40 @@ export async function getPushSubscriptionStatus(): Promise<{ subscribed: boolean
 }
 
 /** Demande la permission puis abonne cet appareil aux notifications push. */
-export async function enablePushNotifications(): Promise<{ ok: boolean; reason?: string }> {
+export async function enablePushNotifications(): Promise<{ ok: boolean; reason?: string; detail?: string }> {
   if (!isPushSupported()) return { ok: false, reason: 'unsupported' };
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return { ok: false, reason: 'denied' };
 
-  const { data } = await api.get('/push/vapid-public-key');
-  if (!data?.publicKey) return { ok: false, reason: 'server-not-configured' };
+  let publicKey: string | undefined;
+  try {
+    const { data } = await api.get('/push/vapid-public-key');
+    publicKey = data?.publicKey;
+  } catch (err: any) {
+    return { ok: false, reason: 'server-unreachable', detail: err?.message };
+  }
+  if (!publicKey) return { ok: false, reason: 'server-not-configured' };
 
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   if (!subscription) {
-    subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(data.publicKey) as unknown as BufferSource,
-    });
+    try {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as unknown as BufferSource,
+      });
+    } catch (err: any) {
+      return { ok: false, reason: 'subscribe-failed', detail: err?.message };
+    }
   }
 
   const json = subscription.toJSON();
-  await api.post('/push/subscribe', { endpoint: json.endpoint, keys: json.keys });
+  try {
+    await api.post('/push/subscribe', { endpoint: json.endpoint, keys: json.keys });
+  } catch (err: any) {
+    return { ok: false, reason: 'save-failed', detail: err?.response?.data?.message ?? err?.message };
+  }
   return { ok: true };
 }
 
