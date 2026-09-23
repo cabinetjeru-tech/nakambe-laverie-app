@@ -1,0 +1,505 @@
+<title>Chaîne Nouvelle Laverie Africaine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ground: #F3F5F4;
+    --surface: #FFFFFF;
+    --ink: #141A2E;
+    --muted: #586177;
+    --line: #DCE1E5;
+    --accent: #243B8A;
+    --accent-ink: #FFFFFF;
+    --chip: #E7EBF4;
+    --indigo: #243B8A;
+    --plum: #6A2C70;
+    --laterite: #B24A22;
+    --leaf: #1D7350;
+    --sun: #E9A21A;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0E1220; --surface: #171C2C; --ink: #EDF0F7; --muted: #A2AABD;
+      --line: #2A3149; --accent: #93A8FF; --accent-ink: #0E1220; --chip: #232A40;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0E1220; --surface: #171C2C; --ink: #EDF0F7; --muted: #A2AABD;
+    --line: #2A3149; --accent: #93A8FF; --accent-ink: #0E1220; --chip: #232A40;
+  }
+
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding-inline: 16px; padding-block: 16px 64px; }
+  h1, h2, h3 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+  h2 { font-size: clamp(20px, 3vw, 26px); font-weight: 700; }
+  h3 { font-size: 15px; font-weight: 700; }
+  p { margin: 0; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .note { font-size: 13px; color: var(--muted); }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+  /* ---------- Bandeau façon Faso Dan Fani ---------- */
+  .banner {
+    position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 6 / 1; min-height: 110px; max-width: 100%;
+    background:
+      repeating-linear-gradient(90deg,
+        #243B8A 0 38px, #F4F1E8 38px 42px, #243B8A 42px 60px, #E9A21A 60px 66px,
+        #B24A22 66px 96px, #141A2E 96px 100px, #B24A22 100px 112px, #F4F1E8 112px 116px,
+        #1D7350 116px 140px, #E9A21A 140px 146px, #1D7350 146px 156px, #F4F1E8 156px 160px);
+  }
+  .banner::after {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.10) 0 2px, transparent 2px 6px);
+  }
+  .banner-text {
+    position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    background: #141A2E; color: #F4F1E8; padding: 10px 18px; border-radius: 8px;
+    font-family: var(--display); font-weight: 700; font-size: clamp(11px, 1.8vw, 17px); letter-spacing: .04em; white-space: nowrap;
+  }
+
+  .channel { display: flex; gap: 22px; align-items: center; padding-block: 20px 8px; flex-wrap: wrap; }
+  .logo {
+    width: 120px; height: 120px; border-radius: 50%; flex: none; display: grid; place-items: center;
+    background: #243B8A; color: #F4F1E8; font-family: var(--display); font-weight: 800; font-size: 34px;
+    box-shadow: 0 0 0 5px var(--ground), 0 0 0 8px #E9A21A;
+  }
+  .logo small { display: block; font-size: 9px; font-weight: 500; letter-spacing: .14em; text-align: center; margin-top: -4px; }
+  .channel-info { flex: 1 1 320px; display: grid; gap: 6px; }
+  .channel-info h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; }
+  .meta { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .meta b { color: var(--ink); font-weight: 600; }
+  .desc { max-width: 64ch; }
+  .actions { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; }
+  .btn {
+    font: 600 14px var(--body); border-radius: 999px; padding: 9px 18px; cursor: pointer;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .btn.primary { background: var(--ink); color: var(--ground); border-color: var(--ink); }
+  .btn.primary[aria-pressed="true"] { background: var(--chip); color: var(--ink); border-color: var(--line); }
+
+  .tabs {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--ground);
+    display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; margin-bottom: 28px;
+  }
+  .tabs a {
+    color: var(--muted); text-decoration: none; font-weight: 600; padding: 12px 14px; white-space: nowrap;
+    border-bottom: 3px solid transparent;
+  }
+  .tabs a:hover, .tabs a.on { color: var(--ink); border-bottom-color: var(--ink); }
+
+  section { scroll-margin-top: 60px; display: grid; gap: 18px; margin-bottom: 52px; }
+  .section-head { display: grid; gap: 6px; }
+  .section-head p { color: var(--muted); max-width: 70ch; }
+
+  /* ---------- Miniatures ---------- */
+  .thumb {
+    position: relative; aspect-ratio: 16 / 9; max-width: 100%; border-radius: 12px; overflow: hidden;
+    color: #fff; isolation: isolate;
+  }
+  .thumb::before {
+    content: ""; position: absolute; inset: 0; z-index: -1; opacity: .16;
+    background: radial-gradient(circle at 20% 30%, #fff 0 3px, transparent 4px) 0 0 / 22px 22px,
+                radial-gradient(circle at 70% 70%, #fff 0 2px, transparent 3px) 0 0 / 22px 22px;
+  }
+  .thumb .t-text {
+    position: absolute; left: 6%; top: 10%; width: 58%;
+    font-family: var(--display); font-weight: 800; text-transform: uppercase; line-height: 1.05;
+    font-size: clamp(13px, 2.1vw, 21px); text-shadow: 0 2px 0 rgba(0,0,0,.25);
+  }
+  .thumb .t-text em { font-style: normal; background: #F4F1E8; color: #141A2E; padding: 0 .2em; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .thumb svg.av { position: absolute; right: -2%; bottom: 0; height: 96%; width: auto; }
+  .badge {
+    position: absolute; right: 8px; bottom: 8px; background: rgba(10,12,20,.85); color: #fff;
+    font: 600 12px var(--body); padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums;
+  }
+  .badge.short { right: 8px; top: 8px; bottom: auto; z-index: 1; background: #E9A21A; color: #141A2E; }
+  .brandmark {
+    position: absolute; left: 6%; bottom: 9%; font: 700 10px var(--display); letter-spacing: .08em;
+    background: rgba(0,0,0,.35); padding: 3px 7px; border-radius: 4px;
+  }
+  .laverie { background: var(--indigo); }
+  .pressing { background: var(--plum); }
+  .auto { background: var(--laterite); }
+  .formation { background: var(--leaf); }
+  .pub { background: var(--sun); color: #141A2E; }
+  .pub .t-text { text-shadow: none; }
+  .pub .t-text em { background: #141A2E; color: #F4F1E8; }
+  .pub .brandmark { background: rgba(20,26,46,.85); color: #F4F1E8; }
+
+  /* ---------- Vidéo à la une ---------- */
+  .featured { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 26px; align-items: center; }
+  .featured .thumb .t-text { font-size: clamp(16px, 3vw, 30px); }
+  .featured-info { display: grid; gap: 10px; }
+  .featured-info h2 { font-size: clamp(18px, 2.4vw, 22px); }
+  .promise { display: grid; gap: 8px; padding: 0; margin: 4px 0 0; list-style: none; }
+  .promise li { display: flex; gap: 10px; align-items: baseline; }
+  .promise li::before { content: ""; width: 9px; height: 9px; border-radius: 2px; background: var(--sun); flex: none; transform: translateY(-1px); }
+
+  /* ---------- Grille ---------- */
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .filters button {
+    font: 600 13px var(--body); border: 0; border-radius: 8px; padding: 7px 12px; cursor: pointer;
+    background: var(--chip); color: var(--ink);
+  }
+  .filters button[aria-pressed="true"] { background: var(--ink); color: var(--ground); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 26px 18px; }
+  .card { display: grid; gap: 10px; align-content: start; }
+  .card-body { display: grid; grid-template-columns: 36px 1fr; gap: 10px; }
+  .card-body .mini { width: 36px; height: 36px; border-radius: 50%; overflow: hidden; background: var(--chip); }
+  .card-body .mini svg { width: 100%; height: 100%; display: block; }
+  .card h3 { font-family: var(--body); font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .card .sub { font-size: 13px; color: var(--muted); }
+
+  /* ---------- Personnages ---------- */
+  .cast { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .person { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; }
+  .person .portrait { height: 170px; display: flex; justify-content: center; align-items: flex-end; }
+  .person .portrait svg { height: 160px; width: auto; }
+  .person .txt { padding: 16px; display: grid; gap: 8px; align-content: start; }
+  .person .role { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+  .person blockquote { margin: 4px 0 0; padding: 10px 12px; background: var(--chip); border-radius: 8px; font-style: italic; font-size: 14px; }
+
+  /* ---------- Calendrier ---------- */
+  .rhythm { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; }
+  .rhythm div { border-top: 3px solid var(--ink); padding-top: 10px; display: grid; gap: 4px; }
+  .rhythm .day { font-family: var(--display); font-weight: 700; font-size: 17px; }
+  .table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 720px; }
+  th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  td.week { font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .slot { display: grid; gap: 4px; }
+  .slot .date { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slot .ttl { font-weight: 600; font-size: 14px; line-height: 1.3; }
+  .pill { justify-self: start; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: #fff; }
+  .pill.pub { color: #141A2E; }
+
+  /* ---------- Production ---------- */
+  .steps { display: grid; gap: 0; counter-reset: s; list-style: none; padding: 0; margin: 0; }
+  .steps li {
+    counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 14px; padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .steps li:last-child { border-bottom: 0; }
+  .steps li::before {
+    content: counter(s); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ink); color: var(--ground); font: 700 15px var(--display);
+  }
+  .steps .step-body { display: grid; gap: 4px; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .script { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+  .script dl { margin: 0; display: grid; grid-template-columns: 64px 1fr; gap: 10px 12px; }
+  .script dt { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; padding-top: 1px; }
+  .script dd { margin: 0; font-size: 14px; }
+  .script dd i { color: var(--muted); }
+  .callout { border-left: 4px solid var(--sun); background: var(--surface); padding: 14px 16px; border-radius: 0 10px 10px 0; display: grid; gap: 6px; }
+
+  @media (max-width: 780px) {
+    .featured, .two { grid-template-columns: 1fr; }
+    .logo { width: 84px; height: 84px; font-size: 24px; }
+    .banner { aspect-ratio: 3 / 1; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .thumb svg.av { transition: transform .25s ease; }
+    .card:hover .thumb svg.av { transform: translateY(-4px); }
+  }
+</style>
+
+<div class="wrap">
+
+  <div class="banner" role="img" aria-label="Bandeau aux rayures tissées indigo, ocre, latérite et vert">
+    <div class="banner-text">LAVERIE · PRESSING · LAVAGE AUTO-MOTO</div>
+  </div>
+
+  <header class="channel">
+    <div class="logo" aria-hidden="true"><div>NLA<small>TENKODOGO</small></div></div>
+    <div class="channel-info">
+      <h1>Nouvelle Laverie Africaine</h1>
+      <div class="meta"><b>@NouvelleLaverieAfricaine</b><span>Chaîne en lancement</span><span>12 vidéos prévues en octobre</span></div>
+      <p class="desc">Astuces de linge, de pressing et de lavage auto-moto, petites formations et nouvelles de nos services, avec Maman Awa, Tonton Issouf, Kader et Fati. Depuis Tenkodogo, pour tout le Burkina.</p>
+      <div class="actions">
+        <button class="btn primary" id="sub" aria-pressed="false">S'abonner</button>
+        <button class="btn" id="bell" aria-pressed="false">Activer les notifications</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Sections">
+    <a href="#accueil" class="on">Accueil</a>
+    <a href="#videos">Vidéos</a>
+    <a href="#personnages">Personnages</a>
+    <a href="#calendrier">Calendrier</a>
+    <a href="#production">Production</a>
+  </nav>
+
+  <section id="accueil">
+    <div class="featured">
+      <div id="featured-thumb"></div>
+      <div class="featured-info">
+        <span class="eyebrow">Bande-annonce de la chaîne · 0:30</span>
+        <h2>Votre linge, notre fierté : bienvenue chez la Nouvelle Laverie Africaine</h2>
+        <p>Fati présente l'équipe et ce que la chaîne apporte chaque semaine :</p>
+        <ul class="promise">
+          <li>Le lundi, une astuce en moins d'une minute</li>
+          <li>Le mercredi, un tuto complet : laverie, pressing ou lavage auto-moto</li>
+          <li>Le samedi, une formation de l'Académie NLA ou une nouvelle de nos services</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section id="videos">
+    <div class="section-head">
+      <h2>Vidéos</h2>
+      <p>Les 12 premières vidéos, en 5 séries. Chaque série a sa couleur, son personnage et son style de miniature, pour qu'on la reconnaisse d'un coup d'œil.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Filtrer par série" id="filters"></div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section id="personnages">
+    <div class="section-head">
+      <h2>Les personnages</h2>
+      <p>Quatre visages récurrents, chacun responsable d'une série. On les retrouve d'une vidéo à l'autre, ce qui crée l'habitude et la confiance.</p>
+    </div>
+    <div class="cast" id="cast"></div>
+  </section>
+
+  <section id="calendrier">
+    <div class="section-head">
+      <h2>Calendrier de publication</h2>
+      <p>Trois vidéos par semaine, toujours les mêmes jours. La régularité compte plus que la quantité.</p>
+    </div>
+    <div class="rhythm">
+      <div><span class="day">Lundi</span><span class="note">Short de 30 à 60 s : une astuce, un geste.</span></div>
+      <div><span class="day">Mercredi</span><span class="note">Tuto de 5 à 8 min : laverie, pressing ou auto-moto, à tour de rôle.</span></div>
+      <div><span class="day">Samedi</span><span class="note">En alternance : Académie NLA (formation) ou spot de nos services.</span></div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Semaine</th><th>Lundi · Short</th><th>Mercredi · Tuto</th><th>Samedi · Académie ou spot</th></tr></thead>
+        <tbody id="cal"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="production">
+    <div class="section-head">
+      <h2>Produire une vidéo avec les avatars</h2>
+      <p>De l'idée à la mise en ligne, en une demi-journée une fois la routine prise.</p>
+    </div>
+    <div class="two">
+      <ol class="steps">
+        <li><div class="step-body"><h3>Écrire le script</h3><p class="note">Une accroche dans les 3 premières secondes, un seul message par vidéo, et une fin qui invite à venir à la laverie. Un assistant IA peut proposer un premier jet à relire.</p></div></li>
+        <li><div class="step-body"><h3>Générer l'avatar qui parle</h3><p class="note">Outils d'avatars IA (par ex. HeyGen, Synthesia, D-ID) : choisir des avatars africains et une voix française, puis des versions en mooré ou en dioula si l'outil le permet. Autre option : un avatar créé à partir d'un employé volontaire, avec son accord écrit.</p></div></li>
+        <li><div class="step-body"><h3>Filmer les gestes réels</h3><p class="note">Au téléphone, en format vertical pour les Shorts : les mains qui détachent, le fer, la moto qu'on rince. L'avatar explique, les images montrent.</p></div></li>
+        <li><div class="step-body"><h3>Monter</h3><p class="note">CapCut ou équivalent : sous-titres en gros caractères (beaucoup regardent sans le son), logo NLA, musique libre de droits.</p></div></li>
+        <li><div class="step-body"><h3>Faire la miniature</h3><p class="note">Canva : couleur de la série, 3 à 5 mots, le personnage à droite. Toujours la même mise en page.</p></div></li>
+        <li><div class="step-body"><h3>Publier et partager</h3><p class="note">Mettre en ligne à heure fixe, puis partager le lien sur le statut WhatsApp de la laverie, Facebook et TikTok. Indiquer dans la description que les personnages sont des avatars virtuels.</p></div></li>
+      </ol>
+      <div class="script">
+        <span class="eyebrow">Exemple de script · Short du lundi 5 octobre</span>
+        <h3>Tache d'huile sur un pagne : 3 gestes avant de laver</h3>
+        <dl>
+          <dt>0:00</dt><dd><b>Maman Awa :</b> « Huile de friture sur ton pagne ? Ne frotte surtout pas ! »</dd>
+          <dt>0:05</dt><dd><b>Geste 1.</b> « Tamponne avec du papier pour enlever le surplus. » <i>(gros plan des mains)</i></dd>
+          <dt>0:15</dt><dd><b>Geste 2.</b> « Couvre la tache de talc ou d'amidon et laisse boire 15 minutes. »</dd>
+          <dt>0:28</dt><dd><b>Geste 3.</b> « Brosse, puis une goutte de liquide vaisselle, et lave à l'eau tiède. »</dd>
+          <dt>0:40</dt><dd>« Si la tache résiste, amène le pagne à la Nouvelle Laverie Africaine : on s'en occupe ! » <i>(logo + adresse)</i></dd>
+        </dl>
+        <div class="callout">
+          <b>Pour les spots publicitaires</b>
+          <p class="note">Même format, mais le message porte sur un service : ce qu'il règle pour le client, où nous trouver, comment déposer son linge. Les tarifs et promotions sont à ajouter selon vos offres du moment.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">Maquette de travail : les titres, les dates et les personnages sont des propositions à ajuster avant le lancement.</p>
+</div>
+
+<script>
+(function () {
+  // ---------- Avatars ----------
+  const PEOPLE = {
+    awa:    { name: "Maman Awa",    skin: "#6B3E26", shade: "#55301D", style: "wrap",   cloth: "#243B8A", cloth2: "#E9A21A", wrap: "#E9A21A", wrap2: "#B24A22" },
+    issouf: { name: "Tonton Issouf", skin: "#4E2C1B", shade: "#3C2114", style: "kufi",   cloth: "#F4F1E8", cloth2: "#6A2C70", wrap: "#6A2C70", wrap2: "#F4F1E8" },
+    kader:  { name: "Kader",        skin: "#8A5634", shade: "#6E4228", style: "cap",    cloth: "#1D7350", cloth2: "#F4F1E8", wrap: "#B24A22", wrap2: "#141A2E" },
+    fati:   { name: "Fati",         skin: "#5C3520", shade: "#472817", style: "braids", cloth: "#B24A22", cloth2: "#E9A21A", wrap: "#1A1210", wrap2: "#E9A21A" }
+  };
+
+  function avatar(id, cls) {
+    const p = PEOPLE[id];
+    const hair = {
+      wrap: `<path d="M28 54 C22 22 48 8 62 14 C82 6 102 26 92 54 C84 38 40 36 28 54Z" fill="${p.wrap}"/>
+             <path d="M34 40 C50 30 74 30 88 40" stroke="${p.wrap2}" stroke-width="4" fill="none"/>
+             <path d="M32 48 C50 36 74 36 90 48" stroke="${p.wrap2}" stroke-width="3" fill="none" opacity=".7"/>
+             <ellipse cx="86" cy="18" rx="12" ry="9" fill="${p.wrap}"/><circle cx="86" cy="18" r="4" fill="${p.wrap2}"/>`,
+      kufi: `<path d="M37 42 C37 20 83 20 83 42Z" fill="${p.wrap}"/>
+             <path d="M40 34 H80" stroke="${p.wrap2}" stroke-width="2" stroke-dasharray="3 3"/>`,
+      cap:  `<path d="M36 44 C35 20 85 20 84 44Z" fill="${p.wrap}"/>
+             <path d="M60 40 L104 43 C104 48 100 50 96 50 L60 46Z" fill="${p.wrap2}"/>
+             <circle cx="60" cy="24" r="3" fill="${p.wrap2}"/>`,
+      braids: `<path d="M34 50 C30 20 90 20 86 50 L90 96 L82 96 L80 58 L40 58 L38 96 L30 96Z" fill="${p.wrap}"/>
+             <circle cx="60" cy="18" r="11" fill="${p.wrap}"/><path d="M50 22 H70" stroke="${p.wrap2}" stroke-width="3"/>`
+    }[p.style];
+    const extra = {
+      wrap: `<circle cx="36" cy="66" r="3" fill="#E9A21A"/><circle cx="84" cy="66" r="3" fill="#E9A21A"/>`,
+      kufi: `<g stroke="#141A2E" stroke-width="2" fill="rgba(255,255,255,.15)"><circle cx="50" cy="58" r="7"/><circle cx="70" cy="58" r="7"/><path d="M57 58 H63"/></g>
+             <path d="M42 70 C44 86 52 90 60 90 C68 90 76 86 78 70 C72 78 48 78 42 70Z" fill="#9A9A9A"/>`,
+      cap:  ``,
+      braids: `<circle cx="37" cy="67" r="3.5" fill="#E9A21A"/><circle cx="83" cy="67" r="3.5" fill="#E9A21A"/>`
+    }[p.style];
+    const mouth = p.style === "kufi"
+      ? `<path d="M53 74 Q60 79 67 74" stroke="#2A140B" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M51 72 Q60 81 69 72 Z" fill="#fff" stroke="#2A140B" stroke-width="2" stroke-linejoin="round"/>`;
+    return `<svg class="${cls || ""}" viewBox="0 0 120 120" role="img" aria-label="${p.name}" xmlns="http://www.w3.org/2000/svg">
+      ${p.style === "braids" ? hair : ""}
+      <path d="M12 120 C16 94 40 86 60 86 C80 86 104 94 108 120Z" fill="${p.cloth}"/>
+      <path d="M44 88 L60 104 L76 88" stroke="${p.cloth2}" stroke-width="4" fill="none"/>
+      <circle cx="30" cy="108" r="3" fill="${p.cloth2}"/><circle cx="90" cy="108" r="3" fill="${p.cloth2}"/><circle cx="60" cy="115" r="3" fill="${p.cloth2}"/>
+      <rect x="51" y="72" width="18" height="18" rx="6" fill="${p.shade}"/>
+      <circle cx="36" cy="60" r="6" fill="${p.shade}"/><circle cx="84" cy="60" r="6" fill="${p.shade}"/>
+      <ellipse cx="60" cy="57" rx="24" ry="27" fill="${p.skin}"/>
+      <path d="M45 50 Q50 47 55 50 M65 50 Q70 47 75 50" stroke="#1A0D07" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="50" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/><ellipse cx="70" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/>
+      <circle cx="51" cy="57" r="1" fill="#fff"/><circle cx="71" cy="57" r="1" fill="#fff"/>
+      <path d="M58 60 Q60 67 62 60" stroke="${p.shade}" stroke-width="2" fill="none"/>
+      ${mouth}
+      ${p.style !== "braids" ? hair : ""}
+      ${extra}
+    </svg>`;
+  }
+
+  // ---------- Données ----------
+  const SERIES = {
+    laverie:   { label: "Astuces laverie", color: "var(--indigo)" },
+    pressing:  { label: "Pressing pro",    color: "var(--plum)" },
+    auto:      { label: "Auto-Moto Clean", color: "var(--laterite)" },
+    formation: { label: "Académie NLA",    color: "var(--leaf)" },
+    pub:       { label: "Nos services",    color: "var(--sun)" }
+  };
+
+  const VIDEOS = [
+    { d: "2026-10-05", s: "laverie",   who: "awa",    short: true, dur: "0:45", title: "Tache d'huile sur un pagne : 3 gestes avant de laver", thumb: "Tache d'huile ? <em>3 gestes</em>" },
+    { d: "2026-10-07", s: "laverie",   who: "awa",    dur: "6:10", title: "Trier son linge comme un pro : blancs, couleurs, délicats", thumb: "Trier son linge <em>comme un pro</em>" },
+    { d: "2026-10-10", s: "pub",       who: "fati",   dur: "0:30", title: "Nouvelle Laverie Africaine : votre linge, notre fierté (spot)", thumb: "Votre linge, <em>notre fierté</em>" },
+    { d: "2026-10-12", s: "pressing",  who: "issouf", short: true, dur: "0:55", title: "Lire une étiquette d'entretien en moins d'une minute", thumb: "L'étiquette <em>en 1 minute</em>" },
+    { d: "2026-10-14", s: "auto",      who: "kader",  dur: "6:40", title: "Laver sa moto après la pluie : boue et latérite sans abîmer", thumb: "Moto pleine de <em>latérite</em> ?" },
+    { d: "2026-10-17", s: "formation", who: "fati",   dur: "12:30", title: "Académie NLA n°1 : bien accueillir un client au comptoir", thumb: "Accueillir <em>le client</em>" },
+    { d: "2026-10-19", s: "auto",      who: "kader",  short: true, dur: "0:50", title: "4 erreurs qui rayent votre voiture au lavage", thumb: "<em>4 erreurs</em> qui rayent" },
+    { d: "2026-10-21", s: "pressing",  who: "issouf", dur: "7:05", title: "Repasser un boubou en bazin sans le faire briller", thumb: "Bazin : <em>zéro brillance</em>" },
+    { d: "2026-10-24", s: "pub",       who: "fati",   dur: "1:00", title: "Laverie, pressing, lavage auto-moto : nos services en 1 minute", thumb: "Tout en <em>1 minute</em>" },
+    { d: "2026-10-26", s: "laverie",   who: "awa",    short: true, dur: "0:40", title: "Pagne wax : garder ses couleurs lavage après lavage", thumb: "Wax : <em>couleurs intactes</em>" },
+    { d: "2026-10-28", s: "auto",      who: "kader",  dur: "5:15", title: "Harmattan : protéger la carrosserie de la poussière", thumb: "Poussière <em>d'harmattan</em>" },
+    { d: "2026-10-31", s: "formation", who: "awa",    dur: "10:05", title: "Académie NLA n°2 : doser la lessive en machine professionnelle", thumb: "Bien doser <em>la lessive</em>" }
+  ];
+
+  const fmt = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const dateLabel = (iso) => fmt.format(new Date(iso + "T12:00:00"));
+
+  function thumb(v, big) {
+    return `<div class="thumb ${v.s}">
+      <div class="t-text">${v.thumb}</div>
+      ${avatar(v.who, "av")}
+      <span class="brandmark">NLA · ${SERIES[v.s].label.toUpperCase()}</span>
+      ${v.short ? `<span class="badge short">SHORT</span>` : ""}
+      <span class="badge">${v.dur}</span>
+    </div>`;
+  }
+
+  // À la une
+  document.getElementById("featured-thumb").innerHTML = thumb(VIDEOS[2], true);
+
+  // Filtres + grille
+  const filters = document.getElementById("filters");
+  const grid = document.getElementById("grid");
+  const keys = ["tout", ...Object.keys(SERIES)];
+  filters.innerHTML = keys.map(k =>
+    `<button type="button" data-k="${k}" aria-pressed="${k === "tout"}">${k === "tout" ? "Tout" : SERIES[k].label}</button>`
+  ).join("");
+
+  function renderGrid(k) {
+    grid.innerHTML = VIDEOS.filter(v => k === "tout" || v.s === k).map(v => `
+      <article class="card">
+        ${thumb(v)}
+        <div class="card-body">
+          <div class="mini">${avatar(v.who)}</div>
+          <div>
+            <h3>${v.title}</h3>
+            <div class="sub">${PEOPLE[v.who].name} · ${SERIES[v.s].label}</div>
+            <div class="sub">Prévue le ${dateLabel(v.d)}</div>
+          </div>
+        </div>
+      </article>`).join("");
+  }
+  filters.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    filters.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b));
+    renderGrid(b.dataset.k);
+  });
+  renderGrid("tout");
+
+  // Personnages
+  const CAST = [
+    { id: "awa", bg: "var(--indigo)", role: "Astuces laverie", text: "La maman du quartier qui a tout vu : taches, pagnes délavés, blancs devenus gris. Chaleureuse, directe, toujours une solution simple.", line: "Ne frotte pas, ma fille, tamponne !" },
+    { id: "issouf", bg: "var(--plum)", role: "Pressing pro", text: "Le maître du fer et du bazin. Élégant, précis, il explique pourquoi un vêtement va au pressing et comment le garder impeccable.", line: "Un boubou bien repassé, c'est un homme respecté." },
+    { id: "kader", bg: "var(--laterite)", role: "Auto-Moto Clean", text: "Jeune laveur passionné de motos. Il parle latérite, harmattan et saison des pluies, et montre les bons gestes pour ne rien rayer.", line: "Ta moto brille ? Alors toi aussi !" },
+    { id: "fati", bg: "var(--sun)", role: "Présentatrice · Académie NLA", text: "Visage des spots et des formations internes. Elle présente les services, les nouveautés, et anime l'Académie pour l'équipe.", line: "À la Nouvelle Laverie Africaine, votre linge est entre de bonnes mains." }
+  ];
+  document.getElementById("cast").innerHTML = CAST.map(c => `
+    <article class="person">
+      <div class="portrait" style="background:${c.bg}">${avatar(c.id)}</div>
+      <div class="txt">
+        <span class="role">${c.role}</span>
+        <h3>${PEOPLE[c.id].name}</h3>
+        <p class="note">${c.text}</p>
+        <blockquote>« ${c.line} »</blockquote>
+      </div>
+    </article>`).join("");
+
+  // Calendrier
+  const weeks = {};
+  VIDEOS.forEach(v => {
+    const dt = new Date(v.d + "T12:00:00");
+    const monday = new Date(dt); monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const key = monday.toISOString().slice(0, 10);
+    (weeks[key] = weeks[key] || {})[dt.getDay()] = v;
+  });
+  const wfmt = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" });
+  const slot = v => v ? `<div class="slot"><span class="date">${dateLabel(v.d)}</span><span class="ttl">${v.title}</span>
+      <span class="pill ${v.s}">${SERIES[v.s].label}</span></div>` : "";
+  document.getElementById("cal").innerHTML = Object.keys(weeks).sort().map((k, i) => `
+    <tr><td class="week">S${i + 1}<br><span class="note">${wfmt.format(new Date(k + "T12:00:00"))}</span></td>
+    <td>${slot(weeks[k][1])}</td><td>${slot(weeks[k][3])}</td><td>${slot(weeks[k][6])}</td></tr>`).join("");
+
+  // Boutons
+  const sub = document.getElementById("sub");
+  sub.addEventListener("click", () => {
+    const on = sub.getAttribute("aria-pressed") !== "true";
+    sub.setAttribute("aria-pressed", on); sub.textContent = on ? "Abonné" : "S'abonner";
+  });
+  const bell = document.getElementById("bell");
+  bell.addEventListener("click", () => {
+    const on = bell.getAttribute("aria-pressed") !== "true";
+    bell.setAttribute("aria-pressed", on); bell.textContent = on ? "Notifications activées" : "Activer les notifications";
+  });
+
+  // Onglet actif au défilement
+  const links = [...document.querySelectorAll(".tabs a")];
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === "#" + en.target.id));
+    });
+  }, { rootMargin: "-40% 0px -55% 0px" });
+  document.querySelectorAll("section[id]").forEach(s => obs.observe(s));
+})();
+</script>
