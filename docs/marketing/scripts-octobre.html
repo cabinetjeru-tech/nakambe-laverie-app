@@ -1,0 +1,533 @@
+<title>Scripts NLA d'octobre</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --ground: #F4F7FB; --surface: #FFFFFF; --ink: #141A2E; --muted: #586177; --line: #DCE1E8;
+    --chip: #E8F0FB; --accent: #0F4A9C; --row: #F8FAFD;
+    --laverie: #0F4A9C; --pressing: #6A2C70; --auto: #B24A22; --formation: #2E7D3F; --pub: #B7861A;
+    --display: "Unbounded", "Arial Black", system-ui, sans-serif;
+    --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #0E1220; --surface: #171C2C; --ink: #EDF0F7; --muted: #A2AABD; --line: #2A3149;
+      --chip: #232A40; --accent: #93A8FF; --row: #1B2133;
+      --laverie: #6F9BE8; --pressing: #C58ACB; --auto: #E58A62; --formation: #6CC486; --pub: #E6BE55;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #0E1220; --surface: #171C2C; --ink: #EDF0F7; --muted: #A2AABD; --line: #2A3149;
+    --chip: #232A40; --accent: #93A8FF; --row: #1B2133;
+    --laverie: #6F9BE8; --pressing: #C58ACB; --auto: #E58A62; --formation: #6CC486; --pub: #E6BE55;
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--ground); color: var(--ink); font: 15px/1.6 var(--body); }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 80px; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 36px; align-items: start; }
+  h1, h2 { font-family: var(--display); line-height: 1.15; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(24px, 3.6vw, 34px); font-weight: 800; }
+  h2 { font-size: clamp(18px, 2.4vw, 22px); font-weight: 600; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  :focus-visible { outline: 3px solid #D9A521; outline-offset: 2px; }
+
+  nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); display: grid; gap: 2px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .toc .label { font-size: 12px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .toc a { display: grid; grid-template-columns: 10px 1fr auto; gap: 10px; align-items: baseline; text-decoration: none; color: var(--ink); padding: 7px 8px; border-radius: 8px; font-size: 14px; line-height: 1.3; }
+  .toc a:hover { background: var(--chip); }
+  .toc .dot { width: 10px; height: 10px; border-radius: 50%; transform: translateY(1px); }
+  .toc .d { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  main { display: grid; gap: 56px; min-width: 0; }
+  .intro { display: grid; gap: 14px; }
+  .intro p { color: var(--muted); max-width: 70ch; }
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+  .rules div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 4px; align-content: start; }
+  .rules b { font-size: 14px; }
+  .rules span { font-size: 13px; color: var(--muted); }
+
+  article { display: grid; gap: 16px; scroll-margin-top: 20px; }
+  .head { display: grid; gap: 8px; border-top: 4px solid var(--c); padding-top: 14px; }
+  .kicker { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); align-items: center; }
+  .kicker .num { font: 800 13px var(--display); color: var(--c); letter-spacing: .04em; }
+  .kicker .pill { background: var(--c); color: #fff; font-weight: 700; font-size: 12px; padding: 1px 9px; border-radius: 999px; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; }
+  .facts b { font-weight: 700; }
+  .facts .est { font-variant-numeric: tabular-nums; }
+  .goal { font-size: 14px; color: var(--muted); max-width: 75ch; }
+
+  .tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; }
+  th { text-align: left; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--row); }
+  td { vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+  tr:last-child td { border-bottom: 0; }
+  td.t { width: 58px; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  td.v { width: 55%; }
+  td.i { font-size: 13.5px; color: var(--muted); }
+  td.i .ecran { display: inline-block; margin-top: 4px; background: var(--chip); color: var(--ink); font-weight: 700; font-size: 12.5px; padding: 1px 8px; border-radius: 5px; }
+  tr.chap td { background: var(--row); font: 600 12px var(--display); letter-spacing: .03em; color: var(--c); padding-block: 8px; }
+  .who { font-weight: 700; }
+
+  .yt { display: grid; gap: 8px; background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 14px 16px; }
+  .yt .lbl { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .yt pre { margin: 0; white-space: pre-wrap; font: 14px/1.55 var(--body); }
+  .copy { font: 600 12px var(--body); border: 1px solid var(--line); background: var(--chip); color: var(--ink); border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+
+  .laverie { --c: var(--laverie); } .pressing { --c: var(--pressing); } .auto { --c: var(--auto); }
+  .formation { --c: var(--formation); } .pub { --c: var(--pub); }
+  .dot.laverie { background: var(--laverie); } .dot.pressing { background: var(--pressing); } .dot.auto { background: var(--auto); }
+  .dot.formation { background: var(--formation); } .dot.pub { background: var(--pub); }
+
+  @media (max-width: 860px) {
+    .wrap { grid-template-columns: 1fr; }
+    nav.toc { position: static; max-height: none; }
+  }
+</style>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Les 12 vidéos">
+    <span class="label">Octobre 2026</span>
+    <div id="toc"></div>
+  </nav>
+
+  <main>
+    <header class="intro">
+      <h1>Scripts des 12 vidéos d'octobre</h1>
+      <p>Chaque script se lit de gauche à droite : ce que dit l'avatar, puis ce qu'on filme et le texte à afficher. Les temps sont calculés à partir du nombre de mots (environ 150 mots par minute, le débit d'une voix posée). Ce sont des durées de voix : si le montage ajoute des démonstrations sans parole, la vidéo sera un peu plus longue. Collez la colonne « Ce qu'on entend » dans l'outil d'avatar, sans les noms en gras.</p>
+      <div class="rules">
+        <div><b>Shorts (lundi)</b><span>Format vertical 9:16, moins de 60 secondes. L'accroche arrive dans les 3 premières secondes, sans générique.</span></div>
+        <div><b>Tutos et Académie</b><span>Format horizontal 16:9. Générique de 4 s au début (logo + « Un simple coup de fil, nous voici ! »), fin commune de 15 s.</span></div>
+        <div><b>Sous-titres</b><span>Toujours incrustés, en gros caractères : beaucoup regardent sans le son.</span></div>
+        <div><b>Avatars</b><span>Ajouter dans chaque description : « Les personnages de cette vidéo sont des avatars virtuels. »</span></div>
+      </div>
+    </header>
+
+    <!-- ===================================================== 1 -->
+    <article class="laverie" id="v01">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 1</span><span>Lundi 5 octobre</span><span class="pill">Astuces laverie</span></div>
+        <h2>Tache d'huile sur un pagne : 3 gestes avant de laver</h2>
+        <div class="facts"><span><b>Format :</b> Short vertical</span><span><b>Avec :</b> Maman Awa</span><span class="est"></span></div>
+        <p class="goal">Objectif : un geste utile que tout le monde peut faire à la maison, et un réflexe « si ça résiste, la laverie s'en occupe ».</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Maman Awa :</span> Huile de friture sur ton pagne ? Stop ! Surtout, ne frotte pas.</td><td class="i">Gros plan : goutte d'huile qui tombe sur un pagne wax. Avatar en incrustation.<br><span class="ecran">NE FROTTE PAS !</span></td></tr>
+        <tr><td class="t"></td><td class="v">Geste numéro un : tamponne avec du papier absorbant pour retirer le surplus. On tamponne, on ne frotte pas, sinon l'huile rentre dans le tissu.</td><td class="i">Mains qui tamponnent avec du papier.<br><span class="ecran">1. TAMPONNER</span></td></tr>
+        <tr><td class="t"></td><td class="v">Geste numéro deux : couvre la tache de talc ou d'amidon, et laisse boire un quart d'heure.</td><td class="i">Talc versé en petit tas sur la tache.<br><span class="ecran">2. TALC · 15 MIN</span></td></tr>
+        <tr><td class="t"></td><td class="v">Geste numéro trois : brosse la poudre, mets une goutte de liquide vaisselle, masse doucement du bout des doigts, puis lave à l'eau tiède.</td><td class="i">Brossage, goutte de liquide vaisselle, lavage dans une bassine.<br><span class="ecran">3. LIQUIDE VAISSELLE + EAU TIÈDE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Et si la tache résiste, amène le pagne à la Nouvelle Laverie Africaine. On s'en occupe !</td><td class="i">Pagne propre plié. Logo + numéros.<br><span class="ecran">73 12 26 12 · 54 54 28 18</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Une tache d'huile sur ton pagne ? 3 gestes avant de laver, avec Maman Awa.
+Si la tache résiste, la Nouvelle Laverie Africaine s'en occupe : +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#astuce #pagne #tache #laverie #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 2 -->
+    <article class="laverie" id="v02">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 2</span><span>Mercredi 7 octobre</span><span class="pill">Astuces laverie</span></div>
+        <h2>Trier son linge comme un pro : blancs, couleurs, délicats</h2>
+        <div class="facts"><span><b>Format :</b> Tuto horizontal</span><span><b>Avec :</b> Maman Awa</span><span class="est"></span></div>
+        <p class="goal">Objectif : éviter les trois accidents les plus fréquents (blanc devenu gris, vêtement qui déteint, tissu abîmé) grâce à un tri simple en quatre tas.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique)</i></td><td class="i">Logo NLA animé, jingle.</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Maman Awa :</span> Ta chemise blanche est devenue grise ? Ton pagne neuf a déteint sur tout le reste ? Ce n'est pas la machine, ma fille, ce n'est pas la lessive non plus. C'est le tri. Aujourd'hui, je te montre comment trier ton linge comme on le fait chez nous, à la laverie. Cinq minutes, et tu ne rates plus jamais une lessive.</td><td class="i">Avatar face caméra. Inserts : chemise grisâtre, t-shirt blanc taché de rose.</td></tr>
+        <tr class="chap"><td colspan="3">Étape 1 · Vider les poches et préparer</td></tr>
+        <tr><td class="t"></td><td class="v">Avant de trier, on prépare. On vide toutes les poches : un stylo oublié, c'est de l'encre partout. Un mouchoir en papier, ce sont des peluches sur tous les vêtements. On ferme les fermetures éclair, pour qu'elles n'accrochent pas les autres tissus. Et on retourne les jeans et les pagnes imprimés sur l'envers : les couleurs resteront belles plus longtemps.</td><td class="i">Mains qui vident une poche (stylo, pièces), ferment une fermeture éclair, retournent un jean.<br><span class="ecran">POCHES VIDES · FERMETURES FERMÉES · SUR L'ENVERS</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 2 · Les quatre tas</td></tr>
+        <tr><td class="t"></td><td class="v">Maintenant, on fait quatre tas. Premier tas : le blanc. Chemises blanches, draps, serviettes blanches. Uniquement du blanc, sinon il grisaille.</td><td class="i">Quatre bassines alignées avec étiquettes. On remplit la première.<br><span class="ecran">TAS 1 · BLANCS</span></td></tr>
+        <tr><td class="t"></td><td class="v">Deuxième tas : les couleurs claires. Le beige, le bleu ciel, le rose pâle, le gris clair.</td><td class="i"><span class="ecran">TAS 2 · CLAIRS</span></td></tr>
+        <tr><td class="t"></td><td class="v">Troisième tas : les couleurs foncées et vives. Le noir, le bleu marine, le rouge, les jeans, et la plupart des pagnes.</td><td class="i"><span class="ecran">TAS 3 · FONCÉS ET VIFS</span></td></tr>
+        <tr><td class="t"></td><td class="v">Quatrième tas : les délicats. La soie, la dentelle, les vêtements brodés, les tissus qui se déforment facilement. Eux, on les lave à part, doucement, ou on les confie au pressing.</td><td class="i">Tissu brodé, dentelle posés dans la quatrième bassine.<br><span class="ecran">TAS 4 · DÉLICATS</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 3 · Le test du vêtement neuf</td></tr>
+        <tr><td class="t"></td><td class="v">Attention au vêtement neuf, surtout un pagne ou un bazin teint : il peut encore perdre sa couleur. Voici le test. Mouille un petit coin caché, puis presse dessus un chiffon blanc. Si le chiffon se colore, le vêtement déteint. Tu le laves seul, à l'eau froide, les deux ou trois premières fois.</td><td class="i">Démonstration : coin humide d'un pagne neuf pressé sur un chiffon blanc, qui se colore.<br><span class="ecran">CHIFFON COLORÉ = LAVER SEUL</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 4 · Regarder l'étiquette et la saleté</td></tr>
+        <tr><td class="t"></td><td class="v">Dernier réflexe : on regarde l'étiquette. Le chiffre dans la petite bassine, c'est la température maximale. Une main dans la bassine, c'est lavage à la main. Et on met de côté le linge très sale, comme les tenues de travail ou de chantier : on ne le mélange pas avec le linge du quotidien, sinon la saleté passe sur tout le reste.</td><td class="i">Gros plan étiquette (symbole bassine 30). Tenue de travail boueuse mise à part.<br><span class="ecran">TRÈS SALE = À PART</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 5 · Ne pas trop remplir</td></tr>
+        <tr><td class="t"></td><td class="v">Et quand tu remplis la machine, laisse une main de place en haut du tambour. Le linge a besoin de bouger pour être bien lavé. Une machine trop pleine, c'est du linge qui ressort sale et froissé.</td><td class="i">Main posée à plat dans le tambour au-dessus du linge.<br><span class="ecran">UNE MAIN DE PLACE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Récapitulons : poches vides, quatre tas, test du vêtement neuf, étiquette, et une main de place dans la machine. Avec ça, ton blanc reste blanc et tes couleurs restent belles.</td><td class="i">Récapitulatif en 5 lignes à l'écran.</td></tr>
+        <tr><td class="t"></td><td class="v">Pas le temps de trier ni de laver ? Notre tricycle solaire vient chez toi avec sa machine à laver. Tu donnes l'eau, on lave sur place : quarante habits pour deux mille francs. Abonne-toi à la chaîne, et à mercredi prochain !</td><td class="i">Plan du tricycle + logo. Bouton « S'abonner ».<br><span class="ecran">40 HABITS = 2 000 FCFA · 73 12 26 12</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Blanc qui grisaille, pagne qui déteint ? Maman Awa vous montre comment trier votre linge comme à la laverie : 4 tas, le test du vêtement neuf et les bons réflexes.
+
+Chapitres
+0:00 Pourquoi le tri change tout
+Préparer le linge
+Les 4 tas
+Le test du vêtement neuf
+Étiquette et linge très sale
+Bien remplir la machine
+(ajouter les temps après le montage)
+
+Lavage mobile à domicile : 40 habits pour 2 000 FCFA, vous fournissez seulement l'eau.
++226 73 12 26 12 · +226 54 54 28 18 · Tous les jours de 6h30 à 20h
+Les personnages de cette vidéo sont des avatars virtuels.
+#laverie #lessive #astuces #BurkinaFaso #Tenkodogo</pre></div>
+    </article>
+
+    <!-- ===================================================== 3 -->
+    <article class="pub" id="v03">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 3</span><span>Samedi 10 octobre</span><span class="pill">Nos services</span></div>
+        <h2>La laverie vient laver chez vous : 40 habits pour 2 000 FCFA</h2>
+        <div class="facts"><span><b>Format :</b> Spot, en vertical et en horizontal</span><span><b>Avec :</b> Fati + le conducteur du tricycle</span><span class="est"></span></div>
+        <p class="goal">Objectif : faire comprendre en 30 secondes que le lavage se fait sur place, que le client fournit seulement l'eau, et retenir le prix.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Fati :</span> Une montagne de linge et pas le temps ?</td><td class="i">Une mère de famille devant un grand panier de linge, découragée. Sonnette de tricycle.</td></tr>
+        <tr><td class="t"></td><td class="v">Un simple coup de fil, nous voici ! Notre tricycle solaire a sa machine à laver à bord.</td><td class="i">Le tricycle entre dans la cour. Gros plan sur les panneaux solaires, puis la machine.<br><span class="ecran">LAVAGE SUR PLACE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Vous donnez seulement l'eau. Nous lavons sur place, devant vous, en quelques minutes.</td><td class="i">La cliente apporte un seau, le conducteur remplit la machine. Le tambour tourne.<br><span class="ecran">VOUS FOURNISSEZ SEULEMENT L'EAU</span></td></tr>
+        <tr><td class="t"></td><td class="v">Quarante habits pour deux mille francs. Oui : cinquante francs l'habit !</td><td class="i">Linge propre qui sort de la machine, cliente souriante.<br><span class="ecran">40 HABITS = 2 000 FCFA</span></td></tr>
+        <tr><td class="t"></td><td class="v">Nouvelle Laverie Africaine, tous les jours de six heures et demie à vingt heures. Appelez le soixante-treize, douze, vingt-six, douze.</td><td class="i">Logo, slogan « Propreté · Confiance · Notre priorité ».<br><span class="ecran">73 12 26 12 · 54 54 28 18</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>La Nouvelle Laverie Africaine vient laver chez vous ! Notre tricycle solaire a sa machine à laver à bord : votre linge est lavé sur place, en quelques minutes. Vous fournissez seulement l'eau.
+40 habits pour 2 000 FCFA, soit 50 F l'habit.
+Appelez ou écrivez sur WhatsApp : +226 73 12 26 12 · +226 54 54 28 18
+Tous les jours de 6h30 à 20h.
+Les personnages de cette vidéo sont des avatars virtuels.
+#lavageadomicile #laverie #BurkinaFaso #Tenkodogo</pre></div>
+    </article>
+
+    <!-- ===================================================== 4 -->
+    <article class="pressing" id="v04">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 4</span><span>Lundi 12 octobre</span><span class="pill">Pressing pro</span></div>
+        <h2>Lire une étiquette d'entretien en moins d'une minute</h2>
+        <div class="facts"><span><b>Format :</b> Short vertical</span><span><b>Avec :</b> Tonton Issouf</span><span class="est"></span></div>
+        <p class="goal">Objectif : les cinq symboles à connaître, un par forme, et l'idée que le cercle veut dire « pressing ».</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Tonton Issouf :</span> Cette petite étiquette, tu la coupes ? Erreur ! Elle te dit tout. Cinq formes, c'est tout.</td><td class="i">Ciseaux prêts à couper une étiquette. Arrêt sur image.<br><span class="ecran">NE LA COUPE PAS !</span></td></tr>
+        <tr><td class="t"></td><td class="v">La bassine, c'est le lavage. Le chiffre, c'est la température maximale. Une main dedans : lavage à la main.</td><td class="i">Symbole bassine 30, puis bassine avec main.<br><span class="ecran">BASSINE = LAVAGE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Le triangle, c'est l'eau de javel. Barré : pas de javel.</td><td class="i"><span class="ecran">TRIANGLE = JAVEL</span></td></tr>
+        <tr><td class="t"></td><td class="v">Le carré, c'est le séchage. Avec un rond dedans : sèche-linge.</td><td class="i"><span class="ecran">CARRÉ = SÉCHAGE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Le fer, c'est le repassage. Un point : doux. Deux points : moyen. Trois points : chaud.</td><td class="i">Fer avec 1, 2, 3 points.<br><span class="ecran">FER = REPASSAGE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Et le cercle, c'est le nettoyage professionnel. Ça, c'est pour nous, au pressing ! Nouvelle Laverie Africaine.</td><td class="i">Cercle avec lettre P. Puis costume sur cintre, logo.<br><span class="ecran">CERCLE = PRESSING</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Bassine, triangle, carré, fer, cercle : Tonton Issouf vous apprend à lire une étiquette d'entretien en moins d'une minute.
+Pour le pressing : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#pressing #étiquette #astuce #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 5 -->
+    <article class="auto" id="v05">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 5</span><span>Mercredi 14 octobre</span><span class="pill">Auto-Moto Clean</span></div>
+        <h2>Laver sa moto après la pluie : boue et latérite sans abîmer</h2>
+        <div class="facts"><span><b>Format :</b> Tuto horizontal</span><span><b>Avec :</b> Kader</span><span class="est"></span></div>
+        <p class="goal">Objectif : un lavage dans le bon ordre, qui ne raye pas, n'envoie pas d'eau dans l'électrique et se termine par la chaîne graissée.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique)</i></td><td class="i">Logo NLA animé, jingle.</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Kader :</span> Saison des pluies, routes en latérite… Ta moto est rouge du garde-boue jusqu'au réservoir ? Laisser sécher cette boue, c'est la pire idée : elle devient dure comme du ciment et elle raye tout quand tu frottes. Je te montre comment je lave une moto à la station, étape par étape, sans rien abîmer.</td><td class="i">Moto couverte de boue rouge. Kader en incrustation, casquette NLA.</td></tr>
+        <tr class="chap"><td colspan="3">Le matériel</td></tr>
+        <tr><td class="t"></td><td class="v">Le matériel d'abord. Deux seaux : un avec de l'eau savonneuse, un avec de l'eau claire pour rincer ton éponge. Un shampooing spécial auto ou moto. Une éponge ou un gant en microfibre. Une petite brosse pour les roues. Et des chiffons microfibre bien propres pour sécher. Pas de lessive en poudre, pas de savon de ménage : ça ternit la peinture et ça dessèche les caoutchoucs.</td><td class="i">Matériel posé au sol, chaque objet s'allume quand il est cité.<br><span class="ecran">PAS DE LESSIVE EN POUDRE</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 1 · Moteur froid, protéger l'électrique</td></tr>
+        <tr><td class="t"></td><td class="v">Étape un : on attend que le moteur soit froid. De l'eau froide sur un moteur ou un pot d'échappement brûlant, ça peut les abîmer. Pendant ce temps, on protège ce qui craint l'eau : on couvre la sortie du pot avec un sachet, et on fait attention aux contacts électriques et au boîtier de la clé.</td><td class="i">Main près du moteur (sans toucher). Sachet plastique sur le pot d'échappement.<br><span class="ecran">MOTEUR FROID</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 2 · Ramollir la boue</td></tr>
+        <tr><td class="t"></td><td class="v">Étape deux : on ramollit. On arrose toute la moto doucement, et on laisse l'eau travailler deux ou trois minutes. La latérite se détache toute seule. Si tu as un jet à haute pression, garde-le à bonne distance, et ne vise jamais directement les roulements des roues, le compteur, le guidon ou les connecteurs électriques : la pression fait entrer l'eau là où elle ne doit pas aller.</td><td class="i">Arrosage doux. Puis jet haute pression tenu loin, flèches rouges sur roulements, compteur, connecteurs.<br><span class="ecran">HAUTE PRESSION : GARDER SES DISTANCES</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 3 · Laver de haut en bas</td></tr>
+        <tr><td class="t"></td><td class="v">Étape trois : on lave du haut vers le bas. Réservoir, selle, carénages d'abord, parce que c'est là que c'est le moins sale. On trempe l'éponge dans l'eau savonneuse, on lave une zone, puis on rince l'éponge dans le seau d'eau claire avant de la retremper. Comme ça, les grains de sable restent dans le seau, pas sur ta peinture. Les roues et le bas du moteur, on les fait en dernier, avec la brosse.</td><td class="i">Éponge sur le réservoir, rinçage dans le 2e seau (le fond devient rouge). Brosse sur les jantes.<br><span class="ecran">2 SEAUX = 0 RAYURE</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 4 · Rincer et sécher</td></tr>
+        <tr><td class="t"></td><td class="v">Étape quatre : on rince bien, toujours de haut en bas, pour qu'il ne reste pas de savon. Puis on sèche tout de suite avec les chiffons microfibre. Si tu laisses sécher au soleil, les gouttes laissent des traces blanches.</td><td class="i">Rinçage, séchage au chiffon microfibre.<br><span class="ecran">SÉCHER TOUT DE SUITE</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 5 · La chaîne</td></tr>
+        <tr><td class="t"></td><td class="v">Étape cinq, celle que tout le monde oublie : la chaîne. Le lavage enlève sa graisse. Une fois la moto sèche, on remet un peu de lubrifiant pour chaîne, en faisant tourner la roue. Une chaîne sèche rouille, fait du bruit et s'use beaucoup plus vite.</td><td class="i">Lubrifiant pulvérisé sur la chaîne pendant que la roue tourne.<br><span class="ecran">GRAISSER LA CHAÎNE</span></td></tr>
+        <tr><td class="t"></td><td class="v">On retire le sachet du pot, on démarre, et voilà : une moto propre, sans rayure, prête pour la prochaine pluie. Et si tu préfères qu'on s'en occupe, passe nous voir à la Nouvelle Laverie Africaine. Abonne-toi, et à bientôt !</td><td class="i">Moto brillante, Kader lève le pouce. Logo, numéros, bouton « S'abonner ».</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Boue et latérite après la pluie : Kader vous montre comment laver votre moto sans la rayer et sans abîmer l'électrique, jusqu'au graissage de la chaîne.
+
+Chapitres
+0:00 Pourquoi ne pas laisser sécher la boue
+Le matériel
+Moteur froid et protections
+Ramollir la boue
+Laver de haut en bas
+Rincer et sécher
+Graisser la chaîne
+(ajouter les temps après le montage)
+
+Lavage auto-moto : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#lavagemoto #moto #latérite #BurkinaFaso #Tenkodogo</pre></div>
+    </article>
+
+    <!-- ===================================================== 6 -->
+    <article class="formation" id="v06">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 6</span><span>Samedi 17 octobre</span><span class="pill">Académie NLA</span></div>
+        <h2>Académie NLA n°1 : bien accueillir un client au comptoir</h2>
+        <div class="facts"><span><b>Format :</b> Formation horizontale</span><span><b>Avec :</b> Fati, et Kader qui joue le client</span><span class="est"></span></div>
+        <p class="goal">Objectif : former l'équipe de réception, et montrer au public le sérieux de la maison. Cinq étapes, du bonjour au ticket, plus le client mécontent.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique Académie NLA)</i></td><td class="i">Logo + bandeau vert « Académie NLA ».</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Fati :</span> Bienvenue à l'Académie NLA, les formations de la Nouvelle Laverie Africaine. Aujourd'hui, on parle du moment le plus important pour un client : le comptoir. C'est là qu'il nous confie ses vêtements, parfois son plus beau boubou ou la robe d'un mariage. En deux minutes, il décide s'il a confiance en nous. Voici nos cinq étapes, et à la fin, comment réagir face à un client mécontent.</td><td class="i">Fati au comptoir de la laverie.<br><span class="ecran">5 ÉTAPES AU COMPTOIR</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 1 · Accueillir</td></tr>
+        <tr><td class="t"></td><td class="v">Étape un : accueillir. Dès que le client entre, on lève la tête, on sourit et on salue, même si on est occupé. S'il doit attendre, on le lui dit : « Bonjour, je suis à vous dans une minute. » Un client qu'on ignore, même trente secondes, se sent de trop.</td><td class="i">Scène jouée : Kader entre, Fati lève les yeux de l'ordinateur et sourit.<br><span class="ecran">SOURIRE · SALUER · PRÉVENIR SI ATTENTE</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 2 · Écouter la demande</td></tr>
+        <tr><td class="t"></td><td class="v">Étape deux : écouter. On laisse le client expliquer ce qu'il veut, sans le couper. Puis on pose les bonnes questions : c'est pour un lavage, un pressing, un détachage ? Pour quand en avez-vous besoin ? Y a-t-il une tache particulière ? Et on reformule : « Donc, deux chemises et un boubou en pressing, pour vendredi. » Le client sait qu'on a bien compris.</td><td class="i"><span class="who">Kader (client) :</span> dépose un sac de vêtements. Fati écoute, puis reformule.<br><span class="ecran">ÉCOUTER · QUESTIONNER · REFORMULER</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 3 · Inspecter devant le client</td></tr>
+        <tr><td class="t"></td><td class="v">Étape trois, la plus importante : on inspecte chaque pièce devant le client. On compte les vêtements ensemble. On vérifie les poches. Et on regarde s'il y a déjà une tache, un trou, un bouton manquant ou une couleur passée. Si oui, on le montre au client et on le note sur la commande. Comme ça, personne ne pourra dire plus tard que le défaut vient de la laverie.</td><td class="i">Fati déplie une chemise, montre un bouton manquant à Kader, le note.<br><span class="ecran">COMPTER · POCHES · DÉFAUTS NOTÉS</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 4 · Enregistrer la commande</td></tr>
+        <tr><td class="t"></td><td class="v">Étape quatre : on enregistre tout sur la plateforme. Le client, le nombre de pièces, les services, les défauts constatés et la date de retrait. On annonce le prix clairement, avant de commencer, jamais après. Et on dit comment payer : en espèces, par Orange Money ou par Moov Money.</td><td class="i">Écran de la plateforme : saisie de la commande (flouter les données réelles).<br><span class="ecran">PRIX ANNONCÉ AVANT</span></td></tr>
+        <tr class="chap"><td colspan="3">Étape 5 · Remettre le ticket et conclure</td></tr>
+        <tr><td class="t"></td><td class="v">Étape cinq : on remet le ticket avec le numéro de commande. On explique que ce numéro permet de suivre l'avancement sur le site, depuis l'espace client. On rappelle la date et l'heure de retrait. Et on termine comme on a commencé : avec le sourire. « Merci, à vendredi ! »</td><td class="i">Fati tend le ticket. Gros plan sur le numéro de commande.<br><span class="ecran">NUMÉRO DE COMMANDE = SUIVI</span></td></tr>
+        <tr class="chap"><td colspan="3">Le client mécontent</td></tr>
+        <tr><td class="t"></td><td class="v">Et quand un client revient mécontent ? Ça arrive, même aux meilleurs. Quatre règles. Un : on écoute jusqu'au bout, sans se défendre. Deux : on reconnaît sa gêne : « Je comprends, c'est normal d'être déçu. » Trois : on regarde le vêtement ensemble, et on vérifie ce qui était noté à l'accueil. Quatre : on propose la suite. Selon le cas, on reprend la prestation gratuitement, ou on enregistre une réclamation que l'équipe traite. Le client a quarante-huit heures après la livraison pour la signaler. Ce qu'on ne fait jamais : hausser le ton, ou promettre un remboursement qu'on n'a pas le droit d'accorder.</td><td class="i">Scène jouée : Kader revient avec une chemise, Fati écoute calmement.<br><span class="ecran">ÉCOUTER · RECONNAÎTRE · VÉRIFIER · PROPOSER</span></td></tr>
+        <tr><td class="t"></td><td class="v">On résume : accueillir, écouter, inspecter devant le client, enregistrer avec le prix annoncé, remettre le ticket. Cinq étapes qui transforment un client de passage en client fidèle. Merci d'avoir suivi l'Académie NLA. Dans le prochain épisode, Maman Awa vous apprend à bien doser la lessive. Abonnez-vous pour ne pas le rater !</td><td class="i">Récapitulatif des 5 étapes. Logo Académie NLA, bouton « S'abonner ».</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Académie NLA, épisode 1 : les 5 étapes d'un bon accueil au comptoir, de l'inspection des vêtements devant le client jusqu'au ticket de suivi, et comment réagir face à un client mécontent.
+
+Chapitres
+0:00 Pourquoi le comptoir est décisif
+Accueillir
+Écouter la demande
+Inspecter devant le client
+Enregistrer la commande
+Remettre le ticket
+Le client mécontent
+(ajouter les temps après le montage)
+
+Nouvelle Laverie Africaine : Tenkodogo, Bagré, Fada N'Gourma, Koudougou
+Les personnages de cette vidéo sont des avatars virtuels.
+#formation #serviceclient #laverie #pressing #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 7 -->
+    <article class="auto" id="v07">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 7</span><span>Lundi 19 octobre</span><span class="pill">Auto-Moto Clean</span></div>
+        <h2>4 erreurs qui rayent votre voiture au lavage</h2>
+        <div class="facts"><span><b>Format :</b> Short vertical</span><span><b>Avec :</b> Kader</span><span class="est"></span></div>
+        <p class="goal">Objectif : quatre erreurs courantes, une image forte pour chacune, et l'envie de faire laver sa voiture correctement.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Kader :</span> Tu laves ta voiture et elle est pleine de petites rayures ? Tu fais sûrement une de ces quatre erreurs.</td><td class="i">Gros plan sur des micro-rayures en lumière rasante.<br><span class="ecran">4 ERREURS</span></td></tr>
+        <tr><td class="t"></td><td class="v">Erreur un : essuyer la poussière à sec. La poussière, c'est du sable. À sec, tu frottes du papier de verre sur ta peinture. On rince toujours avant.</td><td class="i">Chiffon sec sur carrosserie poussiéreuse, grosse croix rouge.<br><span class="ecran">1. JAMAIS À SEC</span></td></tr>
+        <tr><td class="t"></td><td class="v">Erreur deux : un seul seau. Le sable retourne sur la voiture. Il en faut deux : un pour le savon, un pour rincer l'éponge.</td><td class="i">Deux seaux côte à côte.<br><span class="ecran">2. DEUX SEAUX</span></td></tr>
+        <tr><td class="t"></td><td class="v">Erreur trois : laver en plein soleil. Le savon sèche trop vite et laisse des traces. Lave à l'ombre, ou tôt le matin.</td><td class="i">Voiture au soleil de midi, traces blanches.<br><span class="ecran">3. À L'OMBRE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Erreur quatre : sécher avec une vieille serviette. Prends une microfibre propre. Et sinon, confie-la à la Nouvelle Laverie Africaine !</td><td class="i">Serviette usée remplacée par une microfibre. Logo + numéros.<br><span class="ecran">4. MICROFIBRE</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Frotter à sec, un seul seau, plein soleil, vieille serviette : les 4 erreurs qui rayent votre voiture, expliquées par Kader.
+Lavage auto-moto : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#lavageauto #voiture #astuce #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 8 -->
+    <article class="pressing" id="v08">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 8</span><span>Mercredi 21 octobre</span><span class="pill">Pressing pro</span></div>
+        <h2>Repasser un boubou en bazin sans le faire briller</h2>
+        <div class="facts"><span><b>Format :</b> Tuto horizontal</span><span><b>Avec :</b> Tonton Issouf</span><span class="est"></span></div>
+        <p class="goal">Objectif : expliquer d'où vient la brillance (le lustrage) et montrer la méthode du pressing : envers, pattemouille, on presse au lieu de frotter.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique)</i></td><td class="i">Logo NLA animé, jingle.</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Tonton Issouf :</span> Un beau bazin, c'est un tissu qui a du caractère. Mais combien de boubous ont été gâchés par un repassage raté, avec ces traces brillantes sur les coutures et sur la poitrine ? Aujourd'hui, je vous montre comment on repasse un bazin au pressing, pour qu'il garde son éclat naturel, sans jamais briller.</td><td class="i">Tonton Issouf, boubou bazin sur cintre. Insert : zone lustrée sur un bazin foncé.</td></tr>
+        <tr class="chap"><td colspan="3">D'où vient la brillance</td></tr>
+        <tr><td class="t"></td><td class="v">D'abord, comprendre. Cette brillance, on l'appelle le lustrage. Quand le fer trop chaud appuie directement sur l'endroit du tissu, il écrase les fibres et les rend lisses comme un miroir. On le voit surtout sur les tissus foncés et là où le tissu est épais : les coutures, les ourlets, les broderies. Et une fois que c'est fait, c'est très difficile à rattraper. Donc on prévient.</td><td class="i">Schéma simple : fibres rondes, puis écrasées sous le fer.<br><span class="ecran">LUSTRAGE = FIBRES ÉCRASÉES</span></td></tr>
+        <tr class="chap"><td colspan="3">Préparer le boubou</td></tr>
+        <tr><td class="t"></td><td class="v">Préparation. Le bazin se repasse légèrement humide. S'il est trop sec, vaporisez un peu d'eau, roulez-le et laissez-le reposer quelques minutes. Réglez le fer selon l'étiquette : pour un bazin en coton, en général deux ou trois points, mais faites toujours un essai sur un coin caché à l'intérieur.</td><td class="i">Vaporisateur, boubou roulé. Réglage du fer, essai sur l'envers d'un ourlet.<br><span class="ecran">LÉGÈREMENT HUMIDE · ESSAI AVANT</span></td></tr>
+        <tr class="chap"><td colspan="3">Règle 1 · Toujours sur l'envers</td></tr>
+        <tr><td class="t"></td><td class="v">Première règle : on repasse sur l'envers. On retourne le boubou, et on commence par les grandes surfaces : le dos, le devant, puis les manches. Le fer ne touche jamais la face que les gens verront.</td><td class="i">Boubou retourné sur la table, fer sur l'envers.<br><span class="ecran">1. SUR L'ENVERS</span></td></tr>
+        <tr class="chap"><td colspan="3">Règle 2 · La pattemouille</td></tr>
+        <tr><td class="t"></td><td class="v">Deuxième règle : la pattemouille. C'est un simple linge en coton blanc, fin et humide, qu'on pose entre le fer et le tissu. Pour les parties qu'on doit repasser sur l'endroit, comme le col ou le devant, on utilise toujours la pattemouille. Elle protège les fibres et fait de la vapeur qui détend le tissu.</td><td class="i">Linge blanc humide posé sur le col, fer par-dessus, vapeur qui s'échappe.<br><span class="ecran">2. LA PATTEMOUILLE</span></td></tr>
+        <tr class="chap"><td colspan="3">Règle 3 · Presser, ne pas frotter</td></tr>
+        <tr><td class="t"></td><td class="v">Troisième règle : on presse, on ne frotte pas. Sur les coutures et les ourlets, on pose le fer, on appuie deux ou trois secondes, on soulève, et on avance. Faire des allers-retours rapides sur une couture épaisse, c'est la meilleure façon de la faire briller.</td><td class="i">Mouvement « poser, appuyer, soulever » sur une couture, au ralenti.<br><span class="ecran">3. POSER · APPUYER · SOULEVER</span></td></tr>
+        <tr class="chap"><td colspan="3">Les broderies</td></tr>
+        <tr><td class="t"></td><td class="v">Et les broderies ? On pose une serviette épaisse et propre sur la table, on met la broderie face contre la serviette, et on repasse par l'envers. La serviette laisse la broderie en relief au lieu de l'écraser.</td><td class="i">Broderie posée face contre une serviette épaisse, repassage par l'envers. Résultat en relief.<br><span class="ecran">BRODERIE : SUR UNE SERVIETTE</span></td></tr>
+        <tr class="chap"><td colspan="3">Finir</td></tr>
+        <tr><td class="t"></td><td class="v">Pour finir, on met le boubou sur un cintre pendant qu'il est encore chaud, et on le laisse refroidir à l'air avant de le plier ou de le porter. C'est là qu'il prend sa tenue.</td><td class="i">Boubou sur cintre, bien droit.</td></tr>
+        <tr><td class="t"></td><td class="v">On résume : sur l'envers, la pattemouille pour l'endroit, presser sans frotter, une serviette pour les broderies, et un cintre pour finir. Et pour vos grandes occasions, confiez vos bazins au pressing de la Nouvelle Laverie Africaine : on les traite avec respect. Abonnez-vous, et à bientôt !</td><td class="i">Récapitulatif. Logo, numéros, bouton « S'abonner ».</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Pourquoi le bazin brille au repassage, et comment l'éviter : Tonton Issouf vous montre la méthode du pressing (envers, pattemouille, presser sans frotter, broderies sur serviette).
+
+Chapitres
+0:00 Un bazin gâché par le fer
+D'où vient la brillance
+Préparer le boubou
+Toujours sur l'envers
+La pattemouille
+Presser, ne pas frotter
+Les broderies
+Finir
+(ajouter les temps après le montage)
+
+Pressing : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#bazin #boubou #repassage #pressing #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 9 -->
+    <article class="pub" id="v09">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 9</span><span>Samedi 24 octobre</span><span class="pill">Nos services</span></div>
+        <h2>Commander en ligne et suivre son linge étape par étape</h2>
+        <div class="facts"><span><b>Format :</b> Spot tutoriel, horizontal</span><span><b>Avec :</b> Fati</span><span class="est"></span></div>
+        <p class="goal">Objectif : montrer que la plateforme est simple : demande, suivi, paiement, réclamation. Filmer l'écran d'un vrai téléphone.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Fati :</span> Vous vous demandez où en est votre linge ? Plus besoin d'appeler : suivez-le sur votre téléphone.</td><td class="i">Fati avec un téléphone en main.<br><span class="ecran">SUIVEZ VOTRE LINGE EN DIRECT</span></td></tr>
+        <tr><td class="t"></td><td class="v">Sur le site de la Nouvelle Laverie Africaine, créez votre compte client avec votre numéro de téléphone.</td><td class="i">Capture d'écran : page d'accueil, bouton « Créer mon compte client ».</td></tr>
+        <tr><td class="t"></td><td class="v">Appuyez sur « Faire une demande ». Choisissez le service, la date et l'adresse. C'est envoyé.</td><td class="i">Capture : formulaire de demande, service, date, adresse.<br><span class="ecran">1. FAIRE UNE DEMANDE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Ensuite, dans « Mes commandes », vous voyez chaque étape du traitement, en temps réel.</td><td class="i">Capture : suivi de commande avec les étapes.<br><span class="ecran">2. SUIVRE CHAQUE ÉTAPE</span></td></tr>
+        <tr><td class="t"></td><td class="v">Vous payez en espèces, par Orange Money ou par Moov Money.</td><td class="i"><span class="ecran">3. ESPÈCES · ORANGE MONEY · MOOV MONEY</span></td></tr>
+        <tr><td class="t"></td><td class="v">Et en cas de souci, signalez-le depuis votre espace client dans les quarante-huit heures. On s'en occupe.</td><td class="i">Capture : rubrique « Réclamations ».<br><span class="ecran">RÉCLAMATION SOUS 48 H</span></td></tr>
+        <tr><td class="t"></td><td class="v">Nouvelle Laverie Africaine : laverie express et digitale. Le lien est dans la description !</td><td class="i">Logo, adresse du site à l'écran, numéros.</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Créez votre compte, faites votre demande et suivez votre linge étape par étape depuis votre téléphone.
+Faire une demande : https://accurate-alignment-production-3128.up.railway.app
+Paiement en espèces, Orange Money ou Moov Money. Réclamation sous 48 h depuis votre espace client.
++226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#laverie #pressing #BurkinaFaso #Tenkodogo</pre></div>
+    </article>
+
+    <!-- ===================================================== 10 -->
+    <article class="laverie" id="v10">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 10</span><span>Lundi 26 octobre</span><span class="pill">Astuces laverie</span></div>
+        <h2>Baskets blanches : lavage et désinfection UV</h2>
+        <div class="facts"><span><b>Format :</b> Short vertical</span><span><b>Avec :</b> Maman Awa</span><span class="est"></span></div>
+        <p class="goal">Objectif : la bonne méthode maison, les deux erreurs qui jaunissent les baskets, et le service lavage + désinfection UV de la laverie.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t"></td><td class="v"><span class="who">Maman Awa :</span> Tes baskets blanches sont devenues jaunes ? Voilà pourquoi, et comment les sauver.</td><td class="i">Basket jaunie à côté d'une basket propre.<br><span class="ecran">BASKETS JAUNIES ?</span></td></tr>
+        <tr><td class="t"></td><td class="v">On enlève les lacets et les semelles intérieures. On brosse à sec pour retirer la poussière.</td><td class="i">Lacets retirés, brossage à sec.</td></tr>
+        <tr><td class="t"></td><td class="v">Puis eau tiède, savon doux, brosse souple. Pour les semelles en caoutchouc, un peu de bicarbonate.</td><td class="i">Brosse souple mousseuse, bicarbonate sur la semelle.</td></tr>
+        <tr><td class="t"></td><td class="v">Les deux erreurs qui jaunissent : la javel pure, et le séchage en plein soleil. On fait sécher à l'ombre, avec du papier dedans.</td><td class="i">Javel barrée, soleil barré. Baskets à l'ombre, bourrées de papier.<br><span class="ecran">PAS DE JAVEL · PAS DE SOLEIL</span></td></tr>
+        <tr><td class="t"></td><td class="v">Et pour des baskets propres et désinfectées, la Nouvelle Laverie Africaine les lave et les passe aux UV.</td><td class="i">Baskets propres en boîte. Logo + numéros.<br><span class="ecran">LAVAGE + DÉSINFECTION UV</span></td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Baskets blanches jaunies ? Maman Awa vous donne la bonne méthode et les 2 erreurs à éviter.
+Lavage et désinfection UV des chaussures : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#baskets #sneakers #astuce #laverie #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 11 -->
+    <article class="auto" id="v11">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 11</span><span>Mercredi 28 octobre</span><span class="pill">Auto-Moto Clean</span></div>
+        <h2>Harmattan : protéger la carrosserie de la poussière</h2>
+        <div class="facts"><span><b>Format :</b> Tuto horizontal</span><span><b>Avec :</b> Kader</span><span class="est"></span></div>
+        <p class="goal">Objectif : préparer la saison sèche. La poussière est abrasive : les bons gestes au quotidien, au lavage, et pour protéger la voiture.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique)</i></td><td class="i">Logo NLA animé, jingle.</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Kader :</span> L'harmattan arrive. Le matin, ta voiture est couverte d'une couche de poussière. Tu passes un coup de chiffon, et quelques semaines plus tard, la peinture est terne et pleine de fines rayures. Aujourd'hui, je te donne les bons réflexes pour traverser la saison sèche sans abîmer ta carrosserie.</td><td class="i">Voiture couverte de poussière fine au lever du soleil. Kader en incrustation.</td></tr>
+        <tr class="chap"><td colspan="3">Pourquoi la poussière abîme</td></tr>
+        <tr><td class="t"></td><td class="v">D'abord, il faut savoir une chose : la poussière de l'harmattan, ce sont de minuscules grains de sable. Chaque fois que tu les frottes sur la peinture, tu fais de petites rayures. Une seule fois, ça ne se voit pas. Tous les jours pendant trois mois, si.</td><td class="i">Macro sur des grains de poussière. Doigt qui glisse, trace fine.<br><span class="ecran">POUSSIÈRE = SABLE FIN</span></td></tr>
+        <tr class="chap"><td colspan="3">Réflexe 1 · Ne jamais essuyer à sec</td></tr>
+        <tr><td class="t"></td><td class="v">Premier réflexe : ne jamais essuyer la poussière à sec. Pas de chiffon, pas de plumeau, pas la main. On rince à grande eau, ou on utilise un nettoyant sans rinçage avec une microfibre propre, en passant doucement dans un seul sens, et en retournant souvent la microfibre.</td><td class="i">Chiffon sec barré. Puis rinçage à grande eau. Microfibre passée dans un seul sens.<br><span class="ecran">1. JAMAIS À SEC</span></td></tr>
+        <tr class="chap"><td colspan="3">Réflexe 2 · Le pare-brise</td></tr>
+        <tr><td class="t"></td><td class="v">Deuxième réflexe : le pare-brise. N'allume jamais les essuie-glaces sur un pare-brise poussiéreux et sec : ils rayent la vitre et s'usent. Utilise d'abord le lave-glace, et garde le réservoir toujours rempli pendant la saison.</td><td class="i">Essuie-glaces sur vitre poussiéreuse, barré. Lave-glace qui gicle, puis essuie-glaces.<br><span class="ecran">2. LAVE-GLACE D'ABORD</span></td></tr>
+        <tr class="chap"><td colspan="3">Réflexe 3 · Garer à l'abri</td></tr>
+        <tr><td class="t"></td><td class="v">Troisième réflexe : garer à l'abri. Un garage, un hangar, ou au moins une housse de voiture. Attention : la housse se pose sur une voiture propre, sinon elle frotte la poussière sur la peinture à chaque coup de vent.</td><td class="i">Voiture sous abri. Housse posée sur voiture propre.<br><span class="ecran">3. ABRI OU HOUSSE SUR VOITURE PROPRE</span></td></tr>
+        <tr class="chap"><td colspan="3">Réflexe 4 · Protéger la peinture</td></tr>
+        <tr><td class="t"></td><td class="v">Quatrième réflexe : protéger la peinture avant la saison. Après un lavage complet, on applique une cire de protection. Elle fait une couche lisse : la poussière accroche moins, et elle part plus facilement au rinçage.</td><td class="i">Application de cire en mouvements circulaires, puis gouttes d'eau qui perlent.<br><span class="ecran">4. CIRE DE PROTECTION</span></td></tr>
+        <tr class="chap"><td colspan="3">Réflexe 5 · Sous le capot</td></tr>
+        <tr><td class="t"></td><td class="v">Et n'oublie pas ce qu'on ne voit pas. La poussière bouche le filtre à air du moteur et le filtre de la climatisation. Pendant l'harmattan, fais-les contrôler plus souvent par ton mécanicien.</td><td class="i">Filtre à air encrassé à côté d'un filtre neuf.<br><span class="ecran">5. FILTRES CONTRÔLÉS</span></td></tr>
+        <tr><td class="t"></td><td class="v">On résume : jamais à sec, lave-glace avant les essuie-glaces, un abri, une cire de protection, et les filtres contrôlés. Et pour un lavage qui ne raye pas, passe à la Nouvelle Laverie Africaine. Abonne-toi, et bonne saison sèche !</td><td class="i">Récapitulatif. Logo, numéros, bouton « S'abonner ».</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Harmattan : la poussière est du sable fin qui raye la peinture. Kader vous donne 5 réflexes pour protéger votre voiture pendant la saison sèche.
+
+Chapitres
+0:00 La poussière du matin
+Pourquoi la poussière abîme
+Ne jamais essuyer à sec
+Le pare-brise
+Garer à l'abri
+Protéger la peinture
+Sous le capot
+(ajouter les temps après le montage)
+
+Lavage auto-moto : Nouvelle Laverie Africaine, +226 73 12 26 12 · +226 54 54 28 18
+Les personnages de cette vidéo sont des avatars virtuels.
+#harmattan #voiture #lavageauto #BurkinaFaso</pre></div>
+    </article>
+
+    <!-- ===================================================== 12 -->
+    <article class="formation" id="v12">
+      <div class="head">
+        <div class="kicker"><span class="num">VIDÉO 12</span><span>Samedi 31 octobre</span><span class="pill">Académie NLA</span></div>
+        <h2>Académie NLA n°2 : doser la lessive en machine professionnelle</h2>
+        <div class="facts"><span><b>Format :</b> Formation horizontale</span><span><b>Avec :</b> Maman Awa</span><span class="est"></span></div>
+        <p class="goal">Objectif : que chaque agent dose selon trois critères (poids, saleté, eau), connaisse les signes du surdosage et du sous-dosage, et utilise le tableau affiché.</p>
+      </div>
+      <div class="tbl"><table><thead><tr><th>Temps</th><th>Ce qu'on entend</th><th>Ce qu'on voit</th></tr></thead><tbody>
+        <tr><td class="t" data-s="4"></td><td class="v"><i>(générique Académie NLA)</i></td><td class="i">Logo + bandeau vert « Académie NLA ».</td></tr>
+        <tr><td class="t"></td><td class="v"><span class="who">Maman Awa :</span> Bienvenue à l'Académie NLA. Aujourd'hui, un geste qu'on fait des dizaines de fois par jour à la laverie, et qu'on fait souvent mal : doser la lessive. Beaucoup pensent que plus on en met, plus c'est propre. C'est faux. Trop de lessive, c'est du linge moins propre, de l'argent jeté et des machines qui s'abîment. Pas assez, c'est du linge gris. Voyons comment trouver la bonne dose.</td><td class="i">Maman Awa devant les machines de la laverie. Gobelet de lessive qui déborde.<br><span class="ecran">PLUS DE LESSIVE ≠ PLUS PROPRE</span></td></tr>
+        <tr class="chap"><td colspan="3">Les signes d'un mauvais dosage</td></tr>
+        <tr><td class="t"></td><td class="v">Commençons par reconnaître un mauvais dosage. Trop de lessive : beaucoup de mousse au rinçage, un linge raide ou collant, parfois une odeur de lessive trop forte, et des clients qui se plaignent de démangeaisons. La lessive en trop reste dans les fibres. Pas assez de lessive : le blanc devient gris, les odeurs restent, et les cols et les poignets ne sont pas propres.</td><td class="i">Deux colonnes à l'écran : TROP / PAS ASSEZ, avec images (mousse dans le hublot, col gris).<br><span class="ecran">TROP : MOUSSE, RAIDEUR · PAS ASSEZ : GRIS, ODEURS</span></td></tr>
+        <tr class="chap"><td colspan="3">Critère 1 · Le poids du linge</td></tr>
+        <tr><td class="t"></td><td class="v">Pour bien doser, on regarde trois choses. La première : le poids du linge. Une machine à moitié pleine ne demande pas la même dose qu'une machine pleine. À la laverie, on pèse. Pas au hasard, pas « à l'œil ». La balance est là pour ça.</td><td class="i">Sac de linge posé sur la balance, affichage du poids.<br><span class="ecran">1. PESER LE LINGE</span></td></tr>
+        <tr class="chap"><td colspan="3">Critère 2 · Le degré de saleté</td></tr>
+        <tr><td class="t"></td><td class="v">La deuxième : le degré de saleté. Du linge du quotidien, peu sale, c'est la dose normale. Du linge très sale, comme les tenues de travail, les nappes de restaurant ou le linge de chantier, demande la dose « très sale » du fabricant. Et une tache particulière se traite avant, avec un détachant, pas en rajoutant de la lessive dans toute la machine.</td><td class="i">Trois piles : peu sale, normal, très sale (nappes de restaurant, tenue de chantier).<br><span class="ecran">2. DEGRÉ DE SALETÉ</span></td></tr>
+        <tr class="chap"><td colspan="3">Critère 3 · L'eau</td></tr>
+        <tr><td class="t"></td><td class="v">La troisième : l'eau. Une eau calcaire, qu'on dit « dure », laisse des traces blanches dans les bouilloires. Elle demande un peu plus de lessive, parce que le calcaire en neutralise une partie. Si vous changez de source d'eau, parlez-en au responsable : le dosage doit peut-être être revu.</td><td class="i">Bouilloire entartrée. Robinet, puis forage.<br><span class="ecran">3. EAU CALCAIRE = UN PEU PLUS</span></td></tr>
+        <tr class="chap"><td colspan="3">La méthode à la laverie</td></tr>
+        <tr><td class="t"></td><td class="v">En pratique, voici notre méthode. Un : on lit la dose recommandée par le fabricant, sur le bidon. Deux : on utilise le tableau de dosage affiché au-dessus des machines, qui donne la dose selon le poids et la saleté. Trois : on mesure toujours avec le gobelet gradué, jamais en versant directement du bidon. Quatre : on note chaque machine lancée, pour que le responsable suive la consommation.</td><td class="i">Étiquette du bidon, tableau affiché au mur, gobelet gradué rempli jusqu'au trait, cahier ou plateforme.<br><span class="ecran">BIDON · TABLEAU · GOBELET · NOTER</span></td></tr>
+        <tr class="chap"><td colspan="3">Adoucissant et produits spéciaux</td></tr>
+        <tr><td class="t"></td><td class="v">Un mot sur l'adoucissant et le désinfectant textile : même règle. On suit la dose indiquée, et on les met dans le bon compartiment. Jamais d'adoucissant sur les serviettes en grande quantité : elles absorbent moins bien. Et on ne mélange jamais deux produits dans le même gobelet.</td><td class="i">Tiroir de la machine avec ses compartiments, chacun légendé.<br><span class="ecran">BON COMPARTIMENT · PAS DE MÉLANGE</span></td></tr>
+        <tr class="chap"><td colspan="3">Le test du rinçage</td></tr>
+        <tr><td class="t"></td><td class="v">Et voici un contrôle simple. Pendant le dernier rinçage, regardez par le hublot. S'il y a encore beaucoup de mousse, la dose était trop forte : on la réduit la prochaine fois. Un peu de mousse, ça va. Une machine pleine de mousse, non.</td><td class="i">Hublot pendant le rinçage : peu de mousse (bon) puis beaucoup (trop).<br><span class="ecran">MOUSSE AU RINÇAGE = DOSE TROP FORTE</span></td></tr>
+        <tr><td class="t"></td><td class="v">On résume : peser, regarder la saleté, tenir compte de l'eau, suivre le tableau, mesurer au gobelet, et vérifier au rinçage. Bien doser, c'est un linge plus propre, des clients contents, des machines qui durent et des économies pour toute l'équipe. Merci d'avoir suivi l'Académie NLA. Abonnez-vous, et à la prochaine formation !</td><td class="i">Récapitulatif en 6 lignes. Logo Académie NLA, bouton « S'abonner ».</td></tr>
+      </tbody></table></div>
+      <div class="yt"><div class="lbl">Description YouTube <button class="copy" type="button">Copier</button></div><pre>Académie NLA, épisode 2 : doser la lessive en machine professionnelle. Les signes du surdosage et du sous-dosage, les 3 critères (poids, saleté, eau) et la méthode de la laverie.
+
+Chapitres
+0:00 Plus de lessive, ce n'est pas plus propre
+Les signes d'un mauvais dosage
+Le poids du linge
+Le degré de saleté
+L'eau
+La méthode à la laverie
+Adoucissant et produits spéciaux
+Le test du rinçage
+(ajouter les temps après le montage)
+
+Nouvelle Laverie Africaine : Tenkodogo, Bagré, Fada N'Gourma, Koudougou
+Les personnages de cette vidéo sont des avatars virtuels.
+#formation #laverie #lessive #BurkinaFaso</pre></div>
+    </article>
+
+    <p style="font-size:13px;color:var(--muted)">Fin commune des tutos et formations (15 s) : logo, « Un simple coup de fil, nous voici ! », +226 73 12 26 12 · +226 54 54 28 18, bouton « S'abonner » et deux vidéos suggérées.</p>
+  </main>
+</div>
+
+<script>
+(function () {
+  const WPM = 150, OUTRO = 15;
+  const fmt = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
+  const words = el => (el.textContent.replace(/^[^:]{0,20}:\s/, "").match(/[\p{L}\p{N}'’-]+/gu) || []).length;
+  const toc = [];
+  document.querySelectorAll("main article").forEach(a => {
+    let t = 0;
+    a.querySelectorAll("tbody tr:not(.chap)").forEach(tr => {
+      const cell = tr.querySelector("td.t"), v = tr.querySelector("td.v");
+      cell.textContent = fmt(t);
+      const s = cell.dataset.s ? +cell.dataset.s : words(v) / WPM * 60 + 0.8;
+      t += s;
+    });
+    const isLong = !!a.querySelector("td.t[data-s]");
+    if (isLong) t += OUTRO;
+    a.querySelector(".est").innerHTML = "<b>Durée estimée :</b> " + fmt(t) + (isLong ? " (avec générique et fin)" : "");
+    toc.push(`<a href="#${a.id}"><span class="dot ${a.className}"></span><span>${a.querySelector("h2").textContent}</span><span class="d">${fmt(t)}</span></a>`);
+  });
+  document.getElementById("toc").innerHTML = toc.join("");
+
+  document.querySelectorAll(".copy").forEach(b => b.addEventListener("click", () => {
+    const pre = b.closest(".yt").querySelector("pre");
+    const done = () => { b.textContent = "Copié"; setTimeout(() => b.textContent = "Copier", 1500); };
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Texte sélectionné"; };
+    try { navigator.clipboard.writeText(pre.textContent).then(done, fallback); } catch (e) { fallback(); }
+  }));
+})();
+</script>
