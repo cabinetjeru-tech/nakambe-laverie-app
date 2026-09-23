@@ -45,12 +45,15 @@ export class AuthGuard implements CanActivate {
     if (!user) throw new UnauthorizedException('Session expirée ou invalide. Reconnectez-vous.');
     request.user = user;
 
-    if (policy.kind === 'permissions') {
+    if (policy.kind === 'permissions' || policy.kind === 'anyPermission') {
       if (!user.tenantId || !user.membershipId) {
         throw new ForbiddenException('Sélectionnez une entreprise pour accéder à cette fonction.');
       }
-      const missing = policy.permissions.filter((code) => !user.permissions.includes(code));
-      if (missing.length > 0) {
+      const granted =
+        policy.kind === 'permissions'
+          ? policy.permissions.every((code) => user.permissions.includes(code))
+          : policy.permissions.some((code) => user.permissions.includes(code));
+      if (!granted) {
         throw new ForbiddenException("Vous n'avez pas la permission d'effectuer cette action.");
       }
     }

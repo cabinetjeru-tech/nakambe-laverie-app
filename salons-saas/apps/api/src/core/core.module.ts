@@ -14,6 +14,11 @@ import { PrismaExceptionFilter } from './http/prisma-exception.filter';
 import { MessagingService } from './messaging/messaging.service';
 import { CryptoService } from './security/crypto.service';
 import { PasswordService } from './security/password.service';
+import { LedgerService } from './tenant/ledger.service';
+import { SequenceService } from './tenant/sequence.service';
+import { StaffIdentityService } from './tenant/staff-identity.service';
+import { TenantCryptoService } from './tenant/tenant-crypto.service';
+import { TenantDefaultsService } from './tenant/tenant-defaults.service';
 
 @Global()
 @Module({
@@ -38,6 +43,11 @@ import { PasswordService } from './security/password.service';
     LiveAccessService,
     AuditService,
     MessagingService,
+    TenantCryptoService,
+    SequenceService,
+    LedgerService,
+    TenantDefaultsService,
+    StaffIdentityService,
     // Ordre des gardes : limitation de débit, puis authentification/permissions.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
@@ -53,6 +63,11 @@ import { PasswordService } from './security/password.service';
     SessionService,
     AuditService,
     MessagingService,
+    TenantCryptoService,
+    SequenceService,
+    LedgerService,
+    TenantDefaultsService,
+    StaffIdentityService,
   ],
 })
 export class CoreModule {}

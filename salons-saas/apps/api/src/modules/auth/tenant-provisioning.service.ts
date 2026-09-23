@@ -5,6 +5,7 @@ import { DbService } from '../../core/db/db.service';
 import { RESERVED_SLUGS, slugify } from '../../core/http/slug';
 import { DEFAULT_ROLES, OWNER_ROLE_CODE } from '../../core/permissions/catalog';
 import { CryptoService } from '../../core/security/crypto.service';
+import { TenantDefaultsService } from '../../core/tenant/tenant-defaults.service';
 
 export interface NewTenantInput {
   ownerUserId: string;
@@ -24,6 +25,7 @@ export class TenantProvisioningService {
   constructor(
     private readonly db: DbService,
     private readonly crypto: CryptoService,
+    private readonly defaults: TenantDefaultsService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -95,7 +97,10 @@ export class TenantProvisioningService {
       },
     });
 
-    await tx.staffMember.create({
+    await this.defaults.openingHoursForNewSalon(salon.id);
+    await this.defaults.ensureExpenseCategories();
+
+    const ownerStaff = await tx.staffMember.create({
       data: {
         tenantId: tenant.id,
         membershipId: membership.id,
@@ -103,6 +108,7 @@ export class TenantProvisioningService {
         salons: { create: [{ salonId: salon.id }] },
       },
     });
+    await this.defaults.ensureStaffSchedule(ownerStaff.id, salon.id);
 
     return { tenantId: tenant.id, salonId: salon.id };
   }

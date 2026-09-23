@@ -1,5 +1,6 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { IsBoolean, IsIn, IsInt, IsLatitude, IsLongitude, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, IsArray, IsBoolean, IsIn, IsInt, IsLatitude, IsLongitude, IsOptional, IsString, Matches, Max, MaxLength, Min, ValidateNested } from 'class-validator';
 import { IsNormalizedEmail, IsPhone, IsTrimmedName } from '../../../core/http/validators';
 
 const TIMEZONES = Intl.supportedValuesOf('timeZone');
@@ -82,4 +83,27 @@ export class UpdateSalonDto extends PartialType(CreateSalonDto) {
   @IsOptional()
   @IsIn(['ACTIVE', 'INACTIVE'])
   status?: 'ACTIVE' | 'INACTIVE';
+}
+
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export class OpeningSlotDto {
+  @IsInt()
+  @Min(1)
+  @Max(7)
+  weekday: number;
+
+  @Matches(HHMM, { message: 'Heure au format HH:MM' })
+  opensAt: string;
+
+  @Matches(HHMM, { message: 'Heure au format HH:MM' })
+  closesAt: string;
+}
+
+export class OpeningHoursDto {
+  @IsArray()
+  @ArrayMaxSize(28)
+  @ValidateNested({ each: true })
+  @Type(() => OpeningSlotDto)
+  hours: OpeningSlotDto[];
 }

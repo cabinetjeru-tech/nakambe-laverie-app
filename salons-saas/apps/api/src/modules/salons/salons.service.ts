@@ -1,10 +1,11 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { AuditService } from '../../core/audit/audit.service';
 import { AuthUser } from '../../core/auth/auth-user';
 import { DbService } from '../../core/db/db.service';
 import { slugify } from '../../core/http/slug';
 import { assertSalonAccess, salonIdFilter } from '../../core/permissions/salon-scope';
-import { CreateSalonDto, UpdateSalonDto } from './dto/salon.dto';
+import { TenantDefaultsService } from '../../core/tenant/tenant-defaults.service';
+import { CreateSalonDto, OpeningHoursDto, UpdateSalonDto } from './dto/salon.dto';
 
 const salonSelect = {
   id: true,
@@ -40,6 +41,7 @@ export class SalonsService {
   constructor(
     private readonly db: DbService,
     private readonly audit: AuditService,
+    private readonly defaults: TenantDefaultsService,
   ) {}
 
   list(user: AuthUser) {
@@ -75,6 +77,7 @@ export class SalonsService {
       data: { ...dto, slug, tenantId: user.tenantId! },
       select: salonSelect,
     });
+    await this.defaults.openingHoursForNewSalon(salon.id);
     await this.audit.log({ action: 'salon.create', entityType: 'salon', entityId: salon.id, salonId: salon.id, after: { name: salon.name } });
     return salon;
   }
@@ -92,6 +95,36 @@ export class SalonsService {
       after: JSON.parse(JSON.stringify(salon)),
     });
     return salon;
+  }
+
+  async openingHours(user: AuthUser, salonId: string) {
+    await this.get(user, salonId);
+    return this.db.tx.salonOpeningHour.findMany({
+      where: { salonId },
+      select: { weekday: true, opensAt: true, closesAt: true },
+      orderBy: [{ weekday: 'asc' }, { opensAt: 'asc' }],
+    });
+  }
+
+  /** Remplace les horaires d'ouverture (plusieurs plages par jour possibles, ex. pause de midi). */
+  async setOpeningHours(user: AuthUser, salonId: string, dto: OpeningHoursDto) {
+    await this.get(user, salonId);
+    const byDay = new Map<number, { opensAt: string; closesAt: string }[]>();
+    for (const slot of dto.hours) {
+      if (slot.closesAt <= slot.opensAt) throw new BadRequestException("L'heure de fermeture doit suivre l'heure d'ouverture.");
+      const day = byDay.get(slot.weekday) ?? [];
+      if (day.some((other) => slot.opensAt < other.closesAt && other.opensAt < slot.closesAt)) {
+        throw new BadRequestException('Deux plages horaires se chevauchent le même jour.');
+      }
+      day.push(slot);
+      byDay.set(slot.weekday, day);
+    }
+    await this.db.tx.salonOpeningHour.deleteMany({ where: { salonId } });
+    await this.db.tx.salonOpeningHour.createMany({
+      data: dto.hours.map((h) => ({ tenantId: user.tenantId!, salonId, weekday: h.weekday, opensAt: h.opensAt, closesAt: h.closesAt })),
+    });
+    await this.audit.log({ action: 'salon.opening_hours', entityType: 'salon', entityId: salonId, salonId, after: { hours: dto.hours } as never });
+    return this.openingHours(user, salonId);
   }
 
   private async assertSlugFree(slug: string) {

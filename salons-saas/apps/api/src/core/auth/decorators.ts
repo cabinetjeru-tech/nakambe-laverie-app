@@ -9,7 +9,8 @@ export const MANUAL_TRANSACTION_KEY = 'manual-transaction';
 export type AccessPolicy =
   | { kind: 'public' }
   | { kind: 'authenticated' }
-  | { kind: 'permissions'; permissions: PermissionCode[] };
+  | { kind: 'permissions'; permissions: PermissionCode[] }
+  | { kind: 'anyPermission'; permissions: PermissionCode[] };
 
 /**
  * Chaque route DOIT déclarer une politique d'accès, sinon le garde la refuse (défaut sûr).
@@ -25,6 +26,10 @@ export const Authenticated = () =>
 /** Tenant actif obligatoire + TOUTES les permissions listées. */
 export const RequirePermissions = (...permissions: PermissionCode[]) =>
   SetMetadata(ACCESS_POLICY_KEY, { kind: 'permissions', permissions } satisfies AccessPolicy);
+
+/** Tenant actif obligatoire + AU MOINS UNE des permissions listées (le service affine ensuite). */
+export const RequireAnyPermission = (...permissions: PermissionCode[]) =>
+  SetMetadata(ACCESS_POLICY_KEY, { kind: 'anyPermission', permissions } satisfies AccessPolicy);
 
 /**
  * La route gère elle-même ses transactions (DbService.withContext) au lieu d'être

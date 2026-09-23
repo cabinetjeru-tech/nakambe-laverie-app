@@ -16,6 +16,7 @@ import { isUuid } from '../../core/http/parse-id.pipe';
 import { MessagingService } from '../../core/messaging/messaging.service';
 import { CryptoService } from '../../core/security/crypto.service';
 import { PasswordService } from '../../core/security/password.service';
+import { TenantDefaultsService } from '../../core/tenant/tenant-defaults.service';
 import { AcceptInvitationDto } from '../auth/dto/auth.dto';
 import { AccessPolicyService } from './access-policy.service';
 import { CreateInvitationDto } from './dto/access.dto';
@@ -38,6 +39,7 @@ export class InvitationsService {
     private readonly sessions: SessionService,
     private readonly messaging: MessagingService,
     private readonly audit: AuditService,
+    private readonly defaults: TenantDefaultsService,
     @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
@@ -181,6 +183,7 @@ export class InvitationsService {
       ? (await tx.salon.findMany({ where: { deletedAt: null }, select: { id: true } })).map((s) => s.id)
       : invitation.salonIds;
     await tx.staffSalon.createMany({ data: salons.map((salonId) => ({ tenantId, staffId: staff.id, salonId })), skipDuplicates: true });
+    for (const salonId of salons) await this.defaults.ensureStaffSchedule(staff.id, salonId);
 
     await tx.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } });
     await this.audit.log({ action: 'invitation.accept', entityType: 'membership', entityId: membership.id });

@@ -1770,6 +1770,7 @@ enum LedgerAccount {
   CLIENT_CREDIT // avoirs clients
   EXPENSES
   CASH_DIFFERENCE // écarts de caisse
+  OWNER_EQUITY // apports et retraits du propriétaire (mouvements d'espèces hors vente)
 }
 
 /// Registre en partie double : chaque opération d'argent produit des lignes dont la somme
