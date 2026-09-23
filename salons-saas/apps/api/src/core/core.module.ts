@@ -28,6 +28,7 @@ import { TenantDefaultsService } from './tenant/tenant-defaults.service';
     // Stockage en mémoire : à remplacer par Redis dès qu'il y aura plusieurs instances de l'API.
     ThrottlerModule.forRoot({
       throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+      errorMessage: 'Trop de tentatives depuis cette connexion. Patientez quelques minutes puis réessayez.',
       // Désactivable uniquement pendant les tests automatisés (des dizaines d'inscriptions
       // depuis la même IP) ; la variable est ignorée dans tout autre environnement.
       skipIf: () => process.env.NODE_ENV === 'test' && process.env.THROTTLE_DISABLED === 'true',
