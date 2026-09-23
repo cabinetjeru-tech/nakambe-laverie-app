@@ -1,6 +1,6 @@
 import { Bike, Clock, MapPinned, ShieldCheck, Smartphone, Wallet } from 'lucide-react';
 import Link from 'next/link';
-import { Logo } from '@/components/logo';
+import { FullLogo, Logo } from '@/components/logo';
 import { InstallButton } from '@/components/pwa';
 import { SERVICES } from '@/lib/services';
 import { HomeRedirect } from './home-redirect';
@@ -12,26 +12,31 @@ export default function LandingPage() {
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-dark via-brand to-[#123E80] text-white">
         <div className="mx-auto max-w-5xl px-5 pb-16 pt-6">
           <header className="flex items-center justify-between">
-            <Logo light tagline />
+            <Logo light />
             <Link href="/connexion" className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold ring-1 ring-white/20 hover:bg-white/20">
               Se connecter
             </Link>
           </header>
-          <div className="mt-12 max-w-2xl">
-            <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100 ring-1 ring-white/15">
-              <MapPinned className="h-3.5 w-3.5" /> Ouagadougou · Tenkodogo
-            </p>
-            <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-5xl">
-              Vos colis et vos courses, livrés <span className="text-brand-green">vite</span> et en toute confiance.
-            </h1>
-            <p className="mt-4 text-lg text-blue-100">
-              Un livreur à moto ou en tricycle récupère, achète et livre pour vous. Prix connu d’avance, suivi en direct, paiement en espèces ou Mobile Money.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/commander" className="rounded-xl bg-brand-green px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-green-900/30 hover:bg-brand-greenDark">
-                Commander une livraison
-              </Link>
-              <InstallButton variant="secondary" />
+          <div className="mt-12 flex flex-col-reverse gap-10 lg:flex-row lg:items-center">
+            <div className="max-w-2xl">
+              <p className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-blue-100 ring-1 ring-white/15">
+                <MapPinned className="h-3.5 w-3.5" /> Ouagadougou · Tenkodogo
+              </p>
+              <h1 className="mt-4 text-4xl font-extrabold leading-tight sm:text-5xl">
+                Vos colis et vos courses, livrés <span className="text-brand-green">vite</span> et en toute confiance.
+              </h1>
+              <p className="mt-4 text-lg text-blue-100">
+                Un livreur à moto ou en tricycle récupère, achète et livre pour vous. Prix connu d’avance, suivi en direct, paiement en espèces ou Mobile Money.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <Link href="/commander" className="rounded-xl bg-brand-green px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-green-900/30 hover:bg-brand-greenDark">
+                  Commander une livraison
+                </Link>
+                <InstallButton variant="secondary" />
+              </div>
+            </div>
+            <div className="mx-auto w-full max-w-xs shrink-0 rounded-3xl bg-white p-5 shadow-2xl lg:max-w-sm">
+              <FullLogo className="w-full" />
             </div>
           </div>
         </div>
@@ -97,11 +102,12 @@ export default function LandingPage() {
       </section>
 
       <footer className="mx-auto max-w-5xl px-5 py-8 text-sm text-slate-500">
-        <Logo tagline />
+        <FullLogo className="w-48" />
         <p className="mt-3">ALLÔ-COURSIER est un service du GROUPE AKAMBI SARL — Burkina Faso.</p>
         <p className="mt-1">
           <Link href="/suivi" className="underline">Suivre un colis</Link> · <Link href="/connexion" className="underline">Espace client</Link> ·{' '}
-          <Link href="/livreur" className="underline">Espace livreur</Link> · <Link href="/admin" className="underline">Administration</Link>
+          <Link href="/livreur" className="underline">Espace livreur</Link> · <Link href="/partenaires/inscription" className="underline">Devenir partenaire</Link> ·{' '}
+          <Link href="/admin" className="underline">Administration</Link>
         </p>
       </footer>
     </main>

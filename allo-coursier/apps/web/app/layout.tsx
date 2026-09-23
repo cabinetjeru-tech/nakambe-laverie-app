@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   applicationName: 'Allô-Coursier',
   manifest: '/manifest-client.webmanifest',
   icons: {
-    icon: [{ url: '/icons/favicon-32.png', sizes: '32x32' }, { url: '/logo.svg', type: 'image/svg+xml' }],
+    icon: [{ url: '/icons/favicon-32.png', sizes: '32x32' }, { url: '/icons/icon-192.png', sizes: '192x192' }],
     apple: '/icons/apple-touch-icon.png',
   },
   appleWebApp: { capable: true, title: 'Allô-Coursier', statusBarStyle: 'black-translucent' },

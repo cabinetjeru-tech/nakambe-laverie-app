@@ -1,5 +1,5 @@
 /* Service worker ALLÔ-COURSIER : fonctionnement en réseau faible et notifications push. */
-const VERSION = 'ac-v1';
+const VERSION = 'ac-v2';
 const SHELL = `${VERSION}-shell`;
 const STATIC = `${VERSION}-static`;
 const TILES = `${VERSION}-tiles`;
@@ -8,7 +8,7 @@ const OFFLINE_URL = '/hors-ligne';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(SHELL).then((cache) => cache.addAll([OFFLINE_URL, '/icons/icon-192.png', '/logo.svg'])).then(() => self.skipWaiting()),
+    caches.open(SHELL).then((cache) => cache.addAll([OFFLINE_URL, '/icons/icon-192.png', '/brand/logo-mark.webp'])).then(() => self.skipWaiting()),
   );
 });
 

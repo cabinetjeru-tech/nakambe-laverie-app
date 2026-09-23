@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start -p 3000",
     "lint": "tsc --noEmit",
-    "icons": "node scripts/generate-icons.mjs"
+    "icons": "python3 scripts/generate-icons.py"
   },
   "devDependencies": {
     "@types/leaflet": "^1.9.22",

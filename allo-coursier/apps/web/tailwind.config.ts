@@ -13,6 +13,7 @@ const config: Config = {
           sky: '#EAF2FE',
           green: '#1DB954', // accent vert
           greenDark: '#138A3E',
+          orange: '#F86800', // orange du logo
         },
       },
       fontFamily: {
