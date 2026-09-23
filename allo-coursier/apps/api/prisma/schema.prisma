@@ -1,0 +1,1262 @@
+// ============================================================================
+// ALLÔ-COURSIER — Schéma de base de données
+// Voir docs/01-CADRAGE-ARCHITECTURE.md §4.
+//
+// Conventions :
+//   - montants en entiers (francs CFA, XOF, sans centimes) ;
+//   - coordonnées GPS en latitude/longitude (Float, WGS84) ;
+//   - zones stockées en GeoJSON (Polygon), testées côté application.
+// ============================================================================
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// 1. COMPTES, ACCÈS, RÔLES ET PERMISSIONS
+// ============================================================================
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+// PIN : code à chiffres (clients, livreurs). PASSWORD : mot de passe (personnel).
+enum SecretKind {
+  PIN
+  PASSWORD
+}
+
+model User {
+  id                  String     @id @default(uuid())
+  phone               String     @unique // format E.164 : +226XXXXXXXX
+  firstName           String
+  lastName            String
+  email               String?    @unique
+  avatarUrl           String?
+  secretHash          String
+  secretKind          SecretKind @default(PIN)
+  phoneVerifiedAt     DateTime?
+  status              UserStatus @default(ACTIVE)
+  failedLoginAttempts Int        @default(0)
+  lockedUntil         DateTime?
+  lastLoginAt         DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  roles             UserRole[]
+  sessions          Session[]
+  pushSubscriptions PushSubscription[]
+  addresses         Address[]
+  driverProfile     DriverProfile?
+  merchantMembers   MerchantMember[]
+  clientOrders      Order[]            @relation("ClientOrders")
+  driverOrders      Order[]            @relation("DriverOrders")
+  wallets           Wallet[]
+  notifications     Notification[]
+  complaints        Complaint[]        @relation("ComplaintAuthor")
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique // CLIENT, DRIVER, MERCHANT, SUPER_ADMIN, CITY_MANAGER...
+  name        String
+  description String?
+  isSystem    Boolean  @default(false) // rôle système : non supprimable
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String @id @default(uuid())
+  code        String @unique // ex : "pricing.update"
+  group       String // ex : "Tarifs"
+  description String
+
+  roles RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  // Périmètre : si renseigné, le rôle ne s'applique qu'à cette ville.
+  cityId    String?
+  createdAt DateTime @default(now())
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  city City? @relation(fields: [cityId], references: [id])
+
+  @@unique([userId, roleId, cityId])
+  @@map("user_roles")
+}
+
+model Session {
+  id               String    @id @default(uuid())
+  userId           String
+  refreshTokenHash String    @unique
+  deviceLabel      String?
+  userAgent        String?
+  ip               String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
+}
+
+// Prévu pour la vérification par SMS, activée dès qu'un fournisseur SMS est branché.
+model OtpCode {
+  id         String    @id @default(uuid())
+  phone      String
+  codeHash   String
+  purpose    String // SIGNUP, LOGIN, RESET_SECRET
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, purpose])
+  @@map("otp_codes")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?
+  action     String // ex : "pricing_rule.update"
+  entityType String
+  entityId   String?
+  before     Json?
+  after      Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ============================================================================
+// 2. GÉOGRAPHIE
+// ============================================================================
+
+model City {
+  id              String   @id @default(uuid())
+  name            String
+  slug            String   @unique
+  countryCode     String   @default("BF")
+  centerLat       Float
+  centerLng       Float
+  // Rayon desservi autour du centre, utilisé quand aucune zone ne correspond.
+  serviceRadiusKm Float    @default(15)
+  timezone        String   @default("Africa/Ouagadougou")
+  currency        String   @default("XOF")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  zones        Zone[]
+  addresses    Address[]
+  userRoles    UserRole[]
+  drivers      DriverProfile[]
+  merchants    Merchant[]
+  orders       Order[]
+  pricingRules PricingRule[]
+  promotions   Promotion[]
+
+  @@map("cities")
+}
+
+model Zone {
+  id        String   @id @default(uuid())
+  cityId    String
+  name      String
+  // GeoJSON Polygon : { "type": "Polygon", "coordinates": [[[lng, lat], ...]] }
+  polygon   Json
+  priority  Int      @default(0) // en cas de chevauchement, la plus haute l'emporte
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  city         City          @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  pricingRules PricingRule[]
+  merchants    Merchant[]
+
+  @@index([cityId])
+  @@map("zones")
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  userId       String
+  label        String // "Maison", "Bureau"...
+  lat          Float
+  lng          Float
+  landmark     String // repère : "derrière la pharmacie X, portail bleu"
+  details      String?
+  contactName  String?
+  contactPhone String?
+  cityId       String?
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City? @relation(fields: [cityId], references: [id])
+
+  @@index([userId])
+  @@map("addresses")
+}
+
+// ============================================================================
+// 3. LIVREURS
+// ============================================================================
+
+enum DriverStatus {
+  PENDING // en attente de validation
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum EmploymentType {
+  SALARIE
+  INDEPENDANT
+}
+
+enum VehicleType {
+  MOTO
+  TRICYCLE
+}
+
+enum DocumentType {
+  CNIB
+  PERMIS
+  CARTE_GRISE
+  ASSURANCE
+  PHOTO
+  CASIER_JUDICIAIRE
+  AUTRE
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DriverProfile {
+  userId            String         @id
+  status            DriverStatus   @default(PENDING)
+  employmentType    EmploymentType @default(INDEPENDANT)
+  vehicleType       VehicleType    @default(MOTO)
+  plateNumber       String?
+  cityId            String
+  isOnline          Boolean        @default(false)
+  lastLat           Float?
+  lastLng           Float?
+  lastLocationAt    DateTime?
+  ratingAvg         Float          @default(0)
+  ratingCount       Int            @default(0)
+  // Plafond de dette espèces ; au-delà, plus de missions. Null = réglage global.
+  cashDebtLimit     Int?
+  // Taux propre au livreur (indépendants). Null = taux de la règle tarifaire.
+  commissionPercent Float?
+  rejectionReason   String?
+  approvedById      String?
+  approvedAt        DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  user            User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city            City                @relation(fields: [cityId], references: [id])
+  documents       DriverDocument[]
+  locationLogs    DriverLocationLog[]
+  shifts          DriverShift[]
+  offers          DispatchOffer[]
+  cashSettlements CashSettlement[]
+
+  @@index([cityId, status, isOnline])
+  @@map("driver_profiles")
+}
+
+model DriverDocument {
+  id              String         @id @default(uuid())
+  driverId        String
+  type            DocumentType
+  fileKey         String
+  status          DocumentStatus @default(PENDING)
+  rejectionReason String?
+  expiresAt       DateTime?
+  reviewedById    String?
+  reviewedAt      DateTime?
+  createdAt       DateTime       @default(now())
+
+  driver DriverProfile @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+
+  @@index([driverId])
+  @@map("driver_documents")
+}
+
+model DriverLocationLog {
+  id         BigInt   @id @default(autoincrement())
+  driverId   String
+  orderId    String?
+  lat        Float
+  lng        Float
+  speed      Float?
+  heading    Float?
+  accuracy   Float?
+  recordedAt DateTime
+
+  driver DriverProfile @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+
+  @@index([driverId, recordedAt])
+  @@index([orderId])
+  @@map("driver_location_logs")
+}
+
+model DriverShift {
+  id        String    @id @default(uuid())
+  driverId  String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  driver DriverProfile @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+
+  @@index([driverId, startedAt])
+  @@map("driver_shifts")
+}
+
+// ============================================================================
+// 4. COMMERÇANTS ET CATALOGUE (phase 2 — structure prête)
+// ============================================================================
+
+enum MerchantType {
+  RESTAURANT
+  BOUTIQUE
+  SUPERMARCHE
+  PHARMACIE
+  ENTREPRISE
+  AUTRE
+}
+
+enum MerchantStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum MerchantMemberRole {
+  OWNER
+  MANAGER
+  STAFF
+}
+
+model Merchant {
+  id                String         @id @default(uuid())
+  name              String
+  slug              String         @unique
+  type              MerchantType
+  logoUrl           String?
+  coverUrl          String?
+  phone             String
+  lat               Float
+  lng               Float
+  addressText       String?
+  landmark          String?
+  cityId            String
+  zoneId            String?
+  commissionPercent Float?
+  description       String?
+  avgPrepMinutes    Int            @default(20)
+  minOrderAmount    Int? // montant minimum des articles
+  ratingAvg         Float          @default(0)
+  ratingCount       Int            @default(0)
+  status            MerchantStatus @default(PENDING)
+  // Forçage manuel ouvert/fermé ; null = selon les horaires.
+  isOpenOverride    Boolean?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  city         City                  @relation(fields: [cityId], references: [id])
+  zone         Zone?                 @relation(fields: [zoneId], references: [id])
+  members      MerchantMember[]
+  openingHours MerchantOpeningHour[]
+  closures     MerchantClosure[]
+  categories   CatalogCategory[]
+  products     Product[]
+  orders       Order[]
+  wallets      Wallet[]
+
+  @@index([cityId, status])
+  @@map("merchants")
+}
+
+model MerchantMember {
+  merchantId String
+  userId     String
+  role       MerchantMemberRole @default(STAFF)
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([merchantId, userId])
+  @@map("merchant_members")
+}
+
+model MerchantOpeningHour {
+  id         String @id @default(uuid())
+  merchantId String
+  weekday    Int // 0 = dimanche ... 6 = samedi
+  opensAt    String // "08:00"
+  closesAt   String // "22:00"
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@index([merchantId])
+  @@map("merchant_opening_hours")
+}
+
+model MerchantClosure {
+  id         String   @id @default(uuid())
+  merchantId String
+  startsAt   DateTime
+  endsAt     DateTime
+  reason     String?
+
+  merchant Merchant @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+
+  @@map("merchant_closures")
+}
+
+model CatalogCategory {
+  id         String @id @default(uuid())
+  merchantId String
+  name       String
+  position   Int    @default(0)
+
+  merchant Merchant  @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  products Product[]
+
+  @@map("catalog_categories")
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  merchantId  String
+  categoryId  String?
+  name        String
+  description String?
+  price       Int
+  imageUrl    String?
+  isAvailable Boolean  @default(true)
+  position    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  merchant     Merchant             @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  category     CatalogCategory?     @relation(fields: [categoryId], references: [id])
+  optionGroups ProductOptionGroup[]
+  orderItems   OrderItem[]
+
+  @@index([merchantId])
+  @@map("products")
+}
+
+model ProductOptionGroup {
+  id         String @id @default(uuid())
+  productId  String
+  name       String
+  minChoices Int    @default(0)
+  maxChoices Int    @default(1)
+
+  product Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  options ProductOption[]
+
+  @@map("product_option_groups")
+}
+
+model ProductOption {
+  id         String @id @default(uuid())
+  groupId    String
+  name       String
+  extraPrice Int    @default(0)
+
+  group ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@map("product_options")
+}
+
+// ============================================================================
+// 5. COMMANDES ET LIVRAISONS
+// ============================================================================
+
+enum ServiceType {
+  PARCEL // colis et documents
+  PICKUP_DROP // retrait et dépôt
+  ERRAND // petites courses
+  PURCHASE // achat effectué par le livreur
+  FOOD // repas (phase 2)
+  B2B // entreprises (phase 3)
+}
+
+enum DeliverySpeed {
+  STANDARD
+  EXPRESS
+}
+
+enum PackageSize {
+  SMALL // enveloppe, petit sac
+  MEDIUM // carton moyen
+  LARGE // volumineux (tricycle)
+}
+
+enum OrderStatus {
+  CREATED
+  PENDING_PAYMENT
+  SCHEDULED
+  MERCHANT_ACCEPTED
+  PREPARING
+  READY
+  SEARCHING_DRIVER
+  DRIVER_ASSIGNED
+  DRIVER_AT_PICKUP
+  PURCHASING
+  PICKED_UP
+  IN_TRANSIT
+  ARRIVED_AT_DROPOFF
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  FAILED
+  RETURNED
+}
+
+enum MerchantOrderStatus {
+  PENDING // en attente d'acceptation
+  ACCEPTED // en préparation
+  READY // prête à être récupérée
+  REJECTED
+}
+
+enum StopKind {
+  PICKUP
+  DROPOFF
+}
+
+enum OfferStatus {
+  OFFERED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ProofType {
+  OTP
+  PHOTO
+  SIGNATURE
+  RECEIPT
+}
+
+model Order {
+  id                       String               @id @default(uuid())
+  reference                String               @unique // AC-250922-0042
+  clientId                 String
+  merchantId               String?
+  cityId                   String
+  serviceType              ServiceType
+  speed                    DeliverySpeed        @default(STANDARD)
+  vehicleType              VehicleType          @default(MOTO)
+  status                   OrderStatus          @default(CREATED)
+  scheduledAt              DateTime?
+  packageDescription       String?
+  packageSize              PackageSize?
+  isFragile                Boolean              @default(false)
+  purchaseBudget           Int? // budget annoncé pour les courses/achats
+  purchaseActualAmount     Int? // montant réellement avancé par le livreur
+  distanceMeters           Int
+  pricingRuleId            String?
+  priceBreakdown           Json // détail du prix figé au moment de la commande
+  itemsSubtotal            Int                  @default(0)
+  deliveryFee              Int
+  discountAmount           Int                  @default(0)
+  waitingFee               Int                  @default(0)
+  totalAmount              Int
+  commissionAmount         Int
+  driverEarning            Int
+  paymentMethod            PaymentProvider
+  paymentStatus            PaymentStatus        @default(PENDING)
+  promotionId              String?
+  // Code à 4 chiffres remis par le client au destinataire, demandé par le livreur à la remise.
+  deliveryCode             String?
+  // Jeton du lien de suivi public partageable au destinataire.
+  trackingToken            String               @unique
+  // Clé fournie par l'application : une commande renvoyée après une coupure réseau n'est pas dupliquée.
+  idempotencyKey           String?              @unique
+  // Paiement en espèces : encaissé au ramassage (expéditeur) ou à la livraison (destinataire).
+  cashCollectAt            StopKind?
+  dispatchAttempts         Int                  @default(0)
+  lastDispatchAt           DateTime?
+  dispatchAlertedAt        DateTime?
+  driverId                 String?
+  note                     String?
+  cancelledById            String?
+  cancelReason             String?
+  acceptedAt               DateTime?
+  pickedUpAt               DateTime?
+  deliveredAt              DateTime?
+  // Repas / commerces : suivi côté commerçant (en parallèle de la livraison).
+  merchantStatus           MerchantOrderStatus?
+  prepMinutes              Int?
+  merchantAcceptedAt       DateTime?
+  readyAt                  DateTime?
+  merchantCommissionAmount Int                  @default(0)
+  merchantEarning          Int                  @default(0)
+  // Recherche du livreur différée pour qu'il arrive quand la commande est prête.
+  dispatchAfter            DateTime?
+  completedAt              DateTime?
+  cancelledAt              DateTime?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+
+  client        User                 @relation("ClientOrders", fields: [clientId], references: [id])
+  driver        User?                @relation("DriverOrders", fields: [driverId], references: [id])
+  merchant      Merchant?            @relation(fields: [merchantId], references: [id])
+  city          City                 @relation(fields: [cityId], references: [id])
+  pricingRule   PricingRule?         @relation(fields: [pricingRuleId], references: [id])
+  promotion     Promotion?           @relation(fields: [promotionId], references: [id])
+  stops         OrderStop[]
+  items         OrderItem[]
+  statusHistory OrderStatusHistory[]
+  offers        DispatchOffer[]
+  proofs        DeliveryProof[]
+  payments      Payment[]
+  conversations Conversation[]
+  ratings       Rating[]
+  complaints    Complaint[]
+
+  @@index([status, cityId])
+  @@index([clientId, createdAt])
+  @@index([driverId, createdAt])
+  @@index([scheduledAt])
+  @@map("orders")
+}
+
+model OrderStop {
+  id             String    @id @default(uuid())
+  orderId        String
+  sequence       Int
+  kind           StopKind
+  lat            Float
+  lng            Float
+  addressText    String?
+  landmark       String?
+  contactName    String
+  contactPhone   String
+  arrivedAt      DateTime?
+  completedAt    DateTime?
+  waitingSeconds Int       @default(0)
+
+  order  Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  proofs DeliveryProof[]
+
+  @@unique([orderId, sequence])
+  @@map("order_stops")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String?
+  label     String
+  quantity  Int     @default(1)
+  unitPrice Int?
+  options   Json?
+  note      String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model OrderStatusHistory {
+  id         String       @id @default(uuid())
+  orderId    String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus
+  actorId    String?
+  actorRole  String?
+  lat        Float?
+  lng        Float?
+  note       String?
+  createdAt  DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+model DispatchOffer {
+  id             String      @id @default(uuid())
+  orderId        String
+  driverId       String
+  attempt        Int
+  status         OfferStatus @default(OFFERED)
+  distanceMeters Int?
+  offeredAt      DateTime    @default(now())
+  expiresAt      DateTime
+  respondedAt    DateTime?
+  rejectReason   String?
+
+  order  Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driver DriverProfile @relation(fields: [driverId], references: [userId], onDelete: Cascade)
+
+  @@index([driverId, status])
+  @@index([orderId])
+  @@map("dispatch_offers")
+}
+
+model DeliveryProof {
+  id        String    @id @default(uuid())
+  orderId   String
+  stopId    String?
+  type      ProofType
+  fileKey   String?
+  verified  Boolean   @default(false)
+  lat       Float?
+  lng       Float?
+  createdAt DateTime  @default(now())
+
+  order Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  stop  OrderStop? @relation(fields: [stopId], references: [id])
+
+  @@map("delivery_proofs")
+}
+
+// ============================================================================
+// 6. TARIFICATION ET PROMOTIONS
+// ============================================================================
+
+model PricingRule {
+  id                    String       @id @default(uuid())
+  name                  String
+  cityId                String
+  // Critères facultatifs : null = s'applique à tous.
+  zoneId                String?
+  serviceType           ServiceType?
+  vehicleType           VehicleType?
+  baseFare              Int // prise en charge
+  minFare               Int // prix minimum de la course
+  pricePerKm            Int
+  includedKm            Float        @default(0) // km inclus dans la prise en charge
+  expressFixed          Int          @default(0)
+  expressPercent        Float        @default(0)
+  waitingFreeMinutes    Int          @default(10)
+  waitingPricePerMinute Int          @default(0)
+  nightSurcharge        Int          @default(0)
+  nightStart            String? // "21:00"
+  nightEnd              String? // "06:00"
+  purchaseFeePercent    Float        @default(0) // frais d'achat (% du montant avancé)
+  purchaseFeeMin        Int          @default(0)
+  extraStopFee          Int          @default(0)
+  commissionPercent     Float // commission plateforme sur les frais de livraison
+  roundingStep          Int          @default(50)
+  priority              Int          @default(0)
+  validFrom             DateTime     @default(now())
+  validTo               DateTime?
+  isActive              Boolean      @default(true)
+  createdById           String?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  city   City    @relation(fields: [cityId], references: [id])
+  zone   Zone?   @relation(fields: [zoneId], references: [id])
+  orders Order[]
+
+  @@index([cityId, isActive])
+  @@map("pricing_rules")
+}
+
+enum PromotionType {
+  PERCENT
+  FIXED
+  FREE_DELIVERY
+}
+
+enum PromotionFunder {
+  PLATFORM
+  MERCHANT
+}
+
+model Promotion {
+  id             String          @id @default(uuid())
+  code           String?         @unique
+  name           String
+  type           PromotionType
+  value          Int // % ou montant selon le type
+  maxDiscount    Int?
+  minOrderAmount Int?
+  cityId         String?
+  serviceType    ServiceType?
+  merchantId     String?
+  usageLimit     Int?
+  perUserLimit   Int?            @default(1)
+  firstOrderOnly Boolean         @default(false)
+  fundedBy       PromotionFunder @default(PLATFORM)
+  startsAt       DateTime
+  endsAt         DateTime?
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  city        City?                 @relation(fields: [cityId], references: [id])
+  orders      Order[]
+  redemptions PromotionRedemption[]
+
+  @@map("promotions")
+}
+
+model PromotionRedemption {
+  id             String   @id @default(uuid())
+  promotionId    String
+  userId         String
+  orderId        String   @unique
+  discountAmount Int
+  createdAt      DateTime @default(now())
+
+  promotion Promotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+
+  @@index([promotionId, userId])
+  @@map("promotion_redemptions")
+}
+
+// ============================================================================
+// 7. ARGENT : PAIEMENTS, PORTEFEUILLES, REGISTRE COMPTABLE
+// ============================================================================
+
+enum PaymentProvider {
+  CASH
+  MANUAL_MOBILE_MONEY // transfert vers le numéro de l'entreprise + référence validée par l'admin
+  WALLET
+  ORANGE_MONEY // connecteur à brancher dès signature d'un contrat
+  MOOV_MONEY // connecteur à brancher dès signature d'un contrat
+  MOCK // tests uniquement
+}
+
+enum MobileMoneyOperator {
+  ORANGE
+  MOOV
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+  REFUNDED
+}
+
+enum PaymentPurpose {
+  ORDER
+  WALLET_TOPUP
+}
+
+model Payment {
+  id                String               @id @default(uuid())
+  orderId           String?
+  userId            String
+  purpose           PaymentPurpose
+  provider          PaymentProvider
+  operator          MobileMoneyOperator?
+  amount            Int
+  currency          String               @default("XOF")
+  status            PaymentStatus        @default(PENDING)
+  providerReference String? // référence de transaction saisie ou renvoyée par l'opérateur
+  payerPhone        String?
+  idempotencyKey    String?              @unique
+  failureReason     String?
+  metadata          Json?
+  validatedById     String?
+  confirmedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  order Order? @relation(fields: [orderId], references: [id])
+
+  @@unique([provider, providerReference])
+  @@index([status, provider])
+  @@map("payments")
+}
+
+enum WalletKind {
+  CLIENT
+  DRIVER
+  MERCHANT
+  PLATFORM_REVENUE // commissions de la plateforme
+  CASH_CLEARING // espèces détenues par les livreurs, à reverser
+}
+
+model Wallet {
+  id         String     @id @default(uuid())
+  kind       WalletKind
+  userId     String?
+  merchantId String?
+  // Solde en cache ; la vérité est la somme des écritures du registre.
+  balance    Int        @default(0)
+  currency   String     @default("XOF")
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  user     User?           @relation(fields: [userId], references: [id])
+  merchant Merchant?       @relation(fields: [merchantId], references: [id])
+  entries  LedgerEntry[]
+  payouts  PayoutRequest[]
+
+  @@unique([kind, userId])
+  @@unique([kind, merchantId])
+  @@map("wallets")
+}
+
+enum LedgerTransactionType {
+  ORDER_PAYMENT
+  COMMISSION
+  DRIVER_EARNING
+  MERCHANT_EARNING
+  TOPUP
+  WITHDRAWAL
+  REFUND
+  CASH_COLLECTED
+  CASH_SETTLEMENT
+  ADJUSTMENT
+}
+
+model LedgerTransaction {
+  id          String                @id @default(uuid())
+  type        LedgerTransactionType
+  orderId     String?
+  paymentId   String?
+  description String
+  createdById String?
+  createdAt   DateTime              @default(now())
+
+  entries LedgerEntry[]
+
+  @@index([orderId])
+  @@map("ledger_transactions")
+}
+
+// La somme des montants des écritures d'une même transaction vaut toujours 0.
+model LedgerEntry {
+  id            String   @id @default(uuid())
+  transactionId String
+  walletId      String
+  amount        Int // positif = crédit, négatif = débit
+  balanceAfter  Int
+  createdAt     DateTime @default(now())
+
+  transaction LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  wallet      Wallet            @relation(fields: [walletId], references: [id])
+
+  @@index([walletId, createdAt])
+  @@map("ledger_entries")
+}
+
+model CashSettlement {
+  id           String   @id @default(uuid())
+  driverId     String
+  amount       Int
+  receivedById String
+  method       String // ESPECES, MOBILE_MONEY
+  reference    String?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  driver DriverProfile @relation(fields: [driverId], references: [userId])
+
+  @@index([driverId, createdAt])
+  @@map("cash_settlements")
+}
+
+enum PayoutStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
+}
+
+model PayoutRequest {
+  id               String       @id @default(uuid())
+  walletId         String
+  amount           Int
+  method           String // MOBILE_MONEY, ESPECES
+  destinationPhone String?
+  status           PayoutStatus @default(PENDING)
+  reference        String?
+  processedById    String?
+  processedAt      DateTime?
+  createdAt        DateTime     @default(now())
+
+  wallet Wallet @relation(fields: [walletId], references: [id])
+
+  @@map("payout_requests")
+}
+
+// ============================================================================
+// 8. COMMUNICATION ET QUALITÉ
+// ============================================================================
+
+enum ConversationType {
+  ORDER
+  SUPPORT
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  LOCATION
+  QUICK_REPLY
+  SYSTEM
+}
+
+model Conversation {
+  id        String           @id @default(uuid())
+  orderId   String?
+  type      ConversationType @default(ORDER)
+  closedAt  DateTime?
+  createdAt DateTime         @default(now())
+
+  order        Order?                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([orderId])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  role           String // CLIENT, DRIVER, MERCHANT, SUPPORT
+  lastReadAt     DateTime?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@id([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model Message {
+  id              String      @id @default(uuid())
+  conversationId  String
+  senderId        String?
+  // Identifiant généré par le téléphone : évite les doublons après une reconnexion.
+  clientMessageId String?     @unique
+  type            MessageType @default(TEXT)
+  body            String?
+  attachmentKey   String?
+  lat             Float?
+  lng             Float?
+  createdAt       DateTime    @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  type      String // ORDER_STATUS, NEW_OFFER, PAYMENT, PROMO, SYSTEM...
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model NotificationTemplate {
+  id        String   @id @default(uuid())
+  code      String // ex : ORDER_DRIVER_ASSIGNED
+  channel   String // PUSH, SMS, IN_APP
+  locale    String   @default("fr")
+  title     String
+  body      String // variables : {{reference}}, {{driverName}}...
+  updatedAt DateTime @updatedAt
+
+  @@unique([code, channel, locale])
+  @@map("notification_templates")
+}
+
+enum RatingTarget {
+  DRIVER
+  CLIENT
+  MERCHANT
+}
+
+model Rating {
+  id         String       @id @default(uuid())
+  orderId    String
+  raterId    String
+  targetType RatingTarget
+  targetId   String
+  score      Int // 1 à 5
+  tags       String[]
+  comment    String?
+  createdAt  DateTime     @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@unique([orderId, raterId, targetType])
+  @@index([targetType, targetId])
+  @@map("ratings")
+}
+
+enum ComplaintCategory {
+  RETARD
+  COLIS_ENDOMMAGE
+  COLIS_PERDU
+  PAIEMENT
+  COMPORTEMENT
+  AUTRE
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+model Complaint {
+  id           String            @id @default(uuid())
+  reference    String            @unique
+  orderId      String?
+  userId       String
+  category     ComplaintCategory
+  description  String
+  status       ComplaintStatus   @default(OPEN)
+  priority     Int               @default(0)
+  assignedToId String?
+  resolution   String?
+  refundAmount Int?
+  resolvedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  order    Order?             @relation(fields: [orderId], references: [id])
+  user     User               @relation("ComplaintAuthor", fields: [userId], references: [id])
+  messages ComplaintMessage[]
+
+  @@index([status])
+  @@map("complaints")
+}
+
+model ComplaintMessage {
+  id            String   @id @default(uuid())
+  complaintId   String
+  authorId      String
+  body          String
+  attachmentKey String?
+  isInternal    Boolean  @default(false) // note interne, invisible du client
+  createdAt     DateTime @default(now())
+
+  complaint Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  @@map("complaint_messages")
+}
+
+// Réglages modifiables depuis l'administration (délais, rayons, plafonds...).
+model AppSetting {
+  key         String   @id
+  value       Json
+  description String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// Fichiers envoyés (photos de preuve, tickets, documents des livreurs, pièces jointes du chat).
+// Servis uniquement par des liens signés à durée limitée.
+enum FilePurpose {
+  DRIVER_DOCUMENT
+  DELIVERY_PROOF
+  RECEIPT
+  CHAT
+  COMPLAINT
+  AVATAR
+  MERCHANT_MEDIA // logos, photos des plats : publics
+}
+
+model StoredFile {
+  key       String      @id // nom aléatoire sur le disque
+  ownerId   String
+  purpose   FilePurpose
+  mimeType  String
+  size      Int
+  createdAt DateTime    @default(now())
+
+  @@index([ownerId])
+  @@map("stored_files")
+}

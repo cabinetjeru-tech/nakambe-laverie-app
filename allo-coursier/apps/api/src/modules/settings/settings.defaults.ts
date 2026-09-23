@@ -1,0 +1,117 @@
+/**
+ * Paramètres modifiables depuis l'administration, avec leur valeur par défaut.
+ * Toute clé absente de la base prend la valeur ci-dessous.
+ */
+export const SETTING_DEFINITIONS = {
+  'routing.roadCoefficient': {
+    default: 1.3,
+    description: "Coefficient appliqué à la distance à vol d'oiseau pour estimer la distance par la route",
+    validate: (v: unknown) => typeof v === 'number' && v >= 1 && v <= 3,
+  },
+  'auth.maxFailedAttempts': {
+    default: 5,
+    description: 'Nombre de codes secrets erronés avant blocage temporaire du compte',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 3 && (v as number) <= 20,
+  },
+  'auth.lockMinutes': {
+    default: 15,
+    description: 'Durée du blocage temporaire après trop de codes erronés (minutes)',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 1440,
+  },
+  'dispatch.offerTimeoutSeconds': {
+    default: 30,
+    description: "Délai laissé au livreur pour accepter une mission (secondes)",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 10 && (v as number) <= 300,
+  },
+  'dispatch.searchRadiusKm': {
+    default: 5,
+    description: 'Rayon initial de recherche des livreurs (km)',
+    validate: (v: unknown) => typeof v === 'number' && v > 0 && v <= 50,
+  },
+  'dispatch.maxAttempts': {
+    default: 5,
+    description: "Nombre de livreurs sollicités avant d'alerter l'administration",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 50,
+  },
+  'dispatch.alertAfterMinutes': {
+    default: 5,
+    description: "Alerter l'administration si aucun livreur n'est trouvé après X minutes",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 120,
+  },
+  'dispatch.locationMaxAgeMinutes': {
+    default: 15,
+    description: "Ignorer les livreurs dont la dernière position GPS date de plus de X minutes",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 240,
+  },
+  'orders.requireDeliveryCode': {
+    default: true,
+    description: 'Exiger le code de livraison du destinataire (sinon une photo suffit)',
+    validate: (v: unknown) => typeof v === 'boolean',
+  },
+  'orders.autoCompleteHours': {
+    default: 24,
+    description: 'Clôture automatique des commandes livrées après X heures',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 720,
+  },
+  'chat.openHoursAfterDelivery': {
+    default: 24,
+    description: 'Durée pendant laquelle le chat reste ouvert après la livraison (heures)',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 168,
+  },
+  'payments.manualTimeoutMinutes': {
+    default: 60,
+    description: 'Annulation automatique des commandes dont le paiement Mobile Money n’est pas validé après X minutes',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 10 && (v as number) <= 1440,
+  },
+  'payouts.minAmount': {
+    default: 1000,
+    description: 'Montant minimum d’une demande de retrait des livreurs indépendants (FCFA)',
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0,
+  },
+  'merchants.defaultCommissionPercent': {
+    default: 15,
+    description: 'Commission de la plateforme sur les articles vendus par les commerçants (%)',
+    validate: (v: unknown) => typeof v === 'number' && v >= 0 && v <= 100,
+  },
+  'merchants.acceptTimeoutMinutes': {
+    default: 10,
+    description: "Annulation d'une commande de repas si le commerçant ne l'accepte pas dans ce délai (minutes)",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 2 && (v as number) <= 120,
+  },
+  'merchants.driverLeadMinutes': {
+    default: 10,
+    description: "Recherche du livreur X minutes avant la fin de préparation annoncée par le commerçant",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 120,
+  },
+  'drivers.defaultCashDebtLimit': {
+    default: 25000,
+    description: "Montant maximal d'espèces qu'un livreur peut détenir avant de devoir les reverser (FCFA)",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 0,
+  },
+  'orders.scheduleLeadMinutes': {
+    default: 30,
+    description: "Pour une livraison programmée : recherche d'un livreur X minutes avant l'heure prévue",
+    validate: (v: unknown) => Number.isInteger(v) && (v as number) >= 5 && (v as number) <= 240,
+  },
+  'payments.mobileMoney.orangeNumber': {
+    default: '',
+    description: "Numéro Orange Money de l'entreprise affiché aux clients (paiement manuel)",
+    validate: (v: unknown) => typeof v === 'string',
+  },
+  'payments.mobileMoney.moovNumber': {
+    default: '',
+    description: "Numéro Moov Money de l'entreprise affiché aux clients (paiement manuel)",
+    validate: (v: unknown) => typeof v === 'string',
+  },
+} as const;
+
+export type SettingKey = keyof typeof SETTING_DEFINITIONS;
+export type SettingValue<K extends SettingKey> = (typeof SETTING_DEFINITIONS)[K]['default'] extends number
+  ? number
+  : (typeof SETTING_DEFINITIONS)[K]['default'] extends boolean
+    ? boolean
+    : string;
+
+export function isSettingKey(key: string): key is SettingKey {
+  return Object.prototype.hasOwnProperty.call(SETTING_DEFINITIONS, key);
+}

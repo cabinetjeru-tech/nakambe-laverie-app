@@ -1,0 +1,16 @@
+# Environnement de développement : base PostgreSQL locale.
+# Usage : docker compose -f infra/docker-compose.yml up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: allo
+      POSTGRES_PASSWORD: allo_dev_pwd
+      POSTGRES_DB: allo_coursier
+    ports:
+      - "5432:5432"
+    volumes:
+      - allo_pgdata:/var/lib/postgresql/data
+
+volumes:
+  allo_pgdata:

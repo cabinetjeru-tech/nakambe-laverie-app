@@ -1,0 +1,17 @@
+{
+  "name": "allo-coursier",
+  "private": true,
+  "description": "ALLÔ-COURSIER — Livraison • Courses • Services (GROUPE AKAMBI SARL)",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:api": "npm run start:dev -w apps/api",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
