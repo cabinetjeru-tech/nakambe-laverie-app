@@ -224,6 +224,8 @@ Garanties complémentaires :
 
 ## 4. Base de données
 
+> Structure détaillée et vérifiée : `apps/api/prisma/schema.prisma` et `docs/02-BASE-DE-DONNEES.md`.
+
 ### 4.1 Conventions
 
 | Règle | Détail |
