@@ -1,6 +1,6 @@
 # Base de données — structure et relations
 
-> Référence : `apps/api/prisma/schema.prisma` (101 tables, 45 énumérations) et ses deux migrations.
+> Référence : `apps/api/prisma/schema.prisma` (101 tables, 45 énumérations) et ses migrations.
 > Ce document explique **comment les tables s'articulent**. Le détail des colonnes est commenté dans
 > le schéma lui-même.
 
@@ -9,6 +9,7 @@
 | `prisma/schema.prisma` | Tables, colonnes, relations, index |
 | `prisma/migrations/20260923120000_init` | SQL généré par Prisma (+ extension `pg_trgm`) |
 | `prisma/migrations/20260923120100_securite_postgres` | Ce que Prisma ne sait pas exprimer : RLS, anti-double-booking, contraintes CHECK, tables en ajout seul, registre équilibré |
+| `prisma/migrations/20260923140000_audit_plateforme` | Autorise l'API à écrire (sans les relire) les événements d'audit de niveau plateforme (tenant NULL) |
 | `prisma/sql/roles.sql` | Rôles de connexion `salons_app` (soumis à RLS) et `salons_platform` (console éditeur) |
 | `prisma/sql/verification.sql` | 9 contrôles automatiques des garanties ci-dessus |
 
@@ -223,8 +224,8 @@ cd salons-saas/apps/api
 # 1. Migrations, avec le rôle propriétaire des tables
 DATABASE_URL="postgresql://salons_owner:...@hote:5432/salons" npx prisma@6.19.3 migrate deploy
 
-# 2. Rôles de connexion (une seule fois, en superutilisateur)
-psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 \
+# 2. Rôles de connexion (une seule fois, en superutilisateur ; owner_role = rôle des migrations)
+psql "$ADMIN_DATABASE_URL" -v ON_ERROR_STOP=1 -v owner_role=salons_owner \
      -v app_password="'...'" -v platform_password="'...'" -f prisma/sql/roles.sql
 
 # 3. Contrôle des garanties (sur une base de test)

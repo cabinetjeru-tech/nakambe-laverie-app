@@ -587,6 +587,8 @@ payée ne se modifie plus : correction = annulation + nouvelle vente, ou avoir.
 
 ## 8. Sécurité
 
+> Mise en œuvre de l'authentification, des permissions et de l'isolation : `docs/03-AUTHENTIFICATION-ET-ACCES.md`.
+
 ### 8.1 Menaces prioritaires
 
 | Menace | Parade |

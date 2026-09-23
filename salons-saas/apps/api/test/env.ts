@@ -1,0 +1,25 @@
+/**
+ * Environnement des tests e2e. Seules les deux connexions PostgreSQL doivent être fournies :
+ *   DATABASE_URL            rôle salons_app (soumis à la RLS) — celui qu'utilise l'API
+ *   DATABASE_MIGRATION_URL  rôle propriétaire des tables (migrations, remise à zéro, seed)
+ * La base doit être dédiée aux tests : elle est VIDÉE avant chaque exécution.
+ */
+for (const key of ['DATABASE_URL', 'DATABASE_MIGRATION_URL']) {
+  if (!process.env[key]) {
+    throw new Error(`${key} est requis pour les tests e2e (voir test/env.ts et docs/03-AUTHENTIFICATION-ET-ACCES.md).`);
+  }
+}
+
+const defaults: Record<string, string> = {
+  NODE_ENV: 'test',
+  JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdefghijklmnop',
+  MASTER_KEY: Buffer.alloc(32, 7).toString('base64'),
+  HASH_PEPPER: 'test-pepper-0123456789abcdefghijklmnopqrstuvwxyz',
+  OTP_DRIVER: 'memory',
+  COOKIE_SECURE: 'false',
+  DEFAULT_PLAN_CODE: 'SALON',
+  THROTTLE_DISABLED: 'true',
+};
+for (const [key, value] of Object.entries(defaults)) {
+  process.env[key] ??= value;
+}

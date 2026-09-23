@@ -4,7 +4,10 @@
 -- remplaçant les mots de passe. (Hors migrations Prisma : la création de rôles exige
 -- des droits que l'utilisateur de migration n'a pas toujours chez un hébergeur.)
 --
---   psql "$ADMIN_DATABASE_URL" -v app_password="'...'" -v platform_password="'...'" -f prisma/sql/roles.sql
+--   psql "$ADMIN_DATABASE_URL" -v owner_role=salons_owner \
+--        -v app_password="'...'" -v platform_password="'...'" -f prisma/sql/roles.sql
+--
+-- owner_role = rôle propriétaire des tables, celui qui exécute les migrations.
 --
 -- Trois identités :
 --   propriétaire des tables : exécute les migrations (DATABASE_MIGRATION_URL) ; RLS ne s'applique pas à lui
@@ -32,11 +35,15 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO salons_ap
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO salons_app, salons_platform;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA public TO salons_app, salons_platform;
 
--- Tables futures créées par le propriétaire (migrations suivantes).
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
+-- Tables futures créées par le propriétaire lors des migrations suivantes.
+-- (FOR ROLE est indispensable : sans lui, ces droits ne viseraient que les objets créés
+--  par l'utilisateur qui exécute ce script.)
+ALTER DEFAULT PRIVILEGES FOR ROLE :owner_role IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO salons_app, salons_platform;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public
+ALTER DEFAULT PRIVILEGES FOR ROLE :owner_role IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO salons_app, salons_platform;
+ALTER DEFAULT PRIVILEGES FOR ROLE :owner_role IN SCHEMA public
+  GRANT EXECUTE ON FUNCTIONS TO salons_app, salons_platform;
 
 -- Double protection des tables en ajout seul (en plus des triggers).
 REVOKE UPDATE, DELETE ON audit_logs, ledger_entries, stock_movements, client_consents, appointment_status_history
