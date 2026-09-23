@@ -1,0 +1,168 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Spot lavage mobile 9:16</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Figtree:wght@700;800&display=swap">
+<style>
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden}
+  body{position:relative;font-family:Figtree,Arial,sans-serif;color:#fff;
+    background:radial-gradient(ellipse at 50% 35%,#1E6FC4 0%,#0F4A9C 50%,#0A3573 100%)}
+  .stripe{position:absolute;left:0;right:0;height:56px;background:repeating-linear-gradient(90deg,
+    #0F4A9C 0 38px,#FFFFFF 38px 42px,#0F4A9C 42px 60px,#D9A521 60px 66px,#1E9BD7 66px 96px,#0A3573 96px 100px,
+    #1E9BD7 100px 112px,#FFFFFF 112px 116px,#3D9A4F 116px 140px,#D9A521 140px 146px,#3D9A4F 146px 156px,#FFFFFF 156px 160px)}
+  .stripe.t{top:0}.stripe.b{bottom:0}
+  .scene{position:absolute;inset:56px 0;opacity:0}
+  .h{font:800 92px/1.02 Unbounded,"Arial Black",sans-serif;text-transform:uppercase;text-align:center;letter-spacing:-.01em}
+  .h em{font-style:normal;color:#D9A521}
+  .p{font:800 54px/1.2 Figtree,Arial,sans-serif;text-align:center}
+  .abs{position:absolute;left:0;right:0}
+  .card{position:absolute;background:#fff;border-radius:48px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+  .card img{width:100%;height:100%;object-fit:contain;display:block}
+  .chip{display:inline-block;background:#D9A521;color:#0A3573;font:800 50px Figtree,Arial,sans-serif;padding:14px 38px;border-radius:999px}
+  .sub{position:absolute;left:70px;right:70px;bottom:100px;text-align:center}
+  .sub span{display:inline;background:rgba(5,20,50,.82);font:800 44px/1.5 Figtree,Arial,sans-serif;padding:6px 18px;
+    border-radius:12px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .cloth{position:absolute;border-radius:26px;height:70px}
+</style></head><body>
+<div class="stripe t"></div><div class="stripe b"></div>
+
+<!-- A : la montagne de linge -->
+<div class="scene" id="A">
+  <div class="abs h" id="A1" style="top:170px">Une montagne<br>de <em>linge</em></div>
+  <div class="abs h" id="A2" style="top:410px;font-size:74px">et pas le temps ?</div>
+  <div id="pile" style="position:absolute;left:140px;top:760px;width:520px;height:520px"></div>
+  <div id="fatiA" style="position:absolute;right:30px;top:640px;width:560px;height:560px"></div>
+</div>
+
+<!-- B : le tricycle arrive -->
+<div class="scene" id="B">
+  <div class="abs h" id="B1" style="top:150px;font-size:80px">Un simple<br>coup de fil,<br><em>nous voici !</em></div>
+  <div class="card" id="B2" style="left:150px;top:560px;width:780px;height:780px"><img src="../assets/tricycle-solaire.jpg" alt=""></div>
+  <div class="abs" id="B3" style="top:1390px;text-align:center"><span class="chip">MACHINE À LAVER À BORD</span></div>
+</div>
+
+<!-- C : seulement l'eau -->
+<div class="scene" id="C">
+  <div class="abs h" id="C1" style="top:150px;font-size:78px">Vous fournissez<br><em>seulement l'eau</em></div>
+  <svg id="drop" viewBox="0 0 100 130" style="position:absolute;left:440px;top:420px;width:200px;height:260px">
+    <path d="M50 4 C50 4 8 60 8 86 A42 42 0 0 0 92 86 C92 60 50 4 50 4Z" fill="#8FD3F5" stroke="#fff" stroke-width="5"/>
+    <path d="M28 88 A22 22 0 0 0 46 110" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round" opacity=".8"/>
+  </svg>
+  <div class="card" id="C2" style="left:210px;top:730px;width:660px;height:620px"><img src="../assets/tricycle-conductrice.jpg" alt=""></div>
+  <div class="abs p" id="C3" style="top:1390px">Lavé <span style="color:#D9A521">sur place</span>, en quelques minutes</div>
+</div>
+
+<!-- D : le prix -->
+<div class="scene" id="D">
+  <div class="abs" id="D1" style="top:330px;text-align:center;font:800 330px/1 Unbounded,'Arial Black',sans-serif"><span id="count">40</span></div>
+  <div class="abs h" id="D2" style="top:690px;font-size:110px">habits</div>
+  <div class="abs" id="D3" style="top:880px;text-align:center;font:800 100px Figtree,Arial,sans-serif;color:#8FD3F5">=</div>
+  <div class="abs" id="D4" style="top:1010px;text-align:center"><span style="display:inline-block;background:#D9A521;color:#0A3573;border-radius:40px;padding:26px 60px;font:800 150px/1 Unbounded,'Arial Black',sans-serif">2 000 F</span></div>
+  <div class="abs p" id="D5" style="top:1300px;font-size:64px">soit <span style="color:#D9A521">50 F l'habit</span> !</div>
+</div>
+
+<!-- E : signature -->
+<div class="scene" id="E">
+  <div id="E1" style="position:absolute;left:315px;top:110px;width:450px;height:450px;border-radius:50%;overflow:hidden;background:#fff;box-shadow:0 0 0 16px rgba(255,255,255,.18)"><img src="../assets/logo-nla.jpg" style="width:100%;height:100%;object-fit:cover" alt=""></div>
+  <div class="abs h" id="E2" style="top:640px;font-size:76px">Nouvelle Laverie<br><em>Africaine</em></div>
+  <div class="abs p" id="E3" style="top:880px;font-size:46px;color:#CFE6FA">Propreté · Confiance · Notre priorité</div>
+  <div class="abs" id="E4" style="top:1010px;text-align:center;font:800 88px/1.25 Unbounded,'Arial Black',sans-serif">73 12 26 12<br>54 54 28 18</div>
+  <div class="abs p" id="E5" style="top:1290px;font-size:50px">Tous les jours · 6h30 – 20h</div>
+</div>
+
+<div class="sub"><span id="sub"></span></div>
+<script>
+  const PEOPLE = {
+    awa:    { name: "Maman Awa",    skin: "#6B3E26", shade: "#55301D", style: "wrap",   cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0F4A9C" },
+    issouf: { name: "Tonton Issouf", skin: "#4E2C1B", shade: "#3C2114", style: "kufi",   cloth: "#F4F1E8", cloth2: "#6A2C70", wrap: "#6A2C70", wrap2: "#F4F1E8" },
+    kader:  { name: "Kader",        skin: "#8A5634", shade: "#6E4228", style: "cap",    cloth: "#0F4A9C", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0A3573" },
+    fati:   { name: "Fati",         skin: "#5C3520", shade: "#472817", style: "braids", cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#1A1210", wrap2: "#0F4A9C" }
+  };
+
+  function avatar(id, cls) {
+    const p = PEOPLE[id];
+    const hair = {
+      wrap: `<path d="M28 54 C22 22 48 8 62 14 C82 6 102 26 92 54 C84 38 40 36 28 54Z" fill="${p.wrap}"/>
+             <path d="M34 40 C50 30 74 30 88 40" stroke="${p.wrap2}" stroke-width="4" fill="none"/>
+             <path d="M32 48 C50 36 74 36 90 48" stroke="${p.wrap2}" stroke-width="3" fill="none" opacity=".7"/>
+             <ellipse cx="86" cy="18" rx="12" ry="9" fill="${p.wrap}"/><circle cx="86" cy="18" r="4" fill="${p.wrap2}"/>`,
+      kufi: `<path d="M37 42 C37 20 83 20 83 42Z" fill="${p.wrap}"/>
+             <path d="M40 34 H80" stroke="${p.wrap2}" stroke-width="2" stroke-dasharray="3 3"/>`,
+      cap:  `<path d="M36 44 C35 20 85 20 84 44Z" fill="${p.wrap}"/>
+             <path d="M60 40 L104 43 C104 48 100 50 96 50 L60 46Z" fill="${p.wrap2}"/>
+             <circle cx="60" cy="32" r="5" fill="#fff"/><circle cx="60" cy="32" r="2.5" fill="#1E9BD7"/>`,
+      braids: `<path d="M34 50 C30 20 90 20 86 50 L90 96 L82 96 L80 58 L40 58 L38 96 L30 96Z" fill="${p.wrap}"/>
+             <circle cx="84" cy="44" r="10" fill="${p.wrap}"/>`
+    }[p.style];
+    const extra = {
+      wrap: `<circle cx="36" cy="66" r="3" fill="#E9A21A"/><circle cx="84" cy="66" r="3" fill="#E9A21A"/>`,
+      kufi: `<g stroke="#141A2E" stroke-width="2" fill="rgba(255,255,255,.15)"><circle cx="50" cy="58" r="7"/><circle cx="70" cy="58" r="7"/><path d="M57 58 H63"/></g>
+             <path d="M42 70 C44 86 52 90 60 90 C68 90 76 86 78 70 C72 78 48 78 42 70Z" fill="#9A9A9A"/>`,
+      cap:  ``,
+      braids: `<path d="M35 44 C34 20 86 20 85 44Z" fill="${p.wrap2}"/><path d="M60 40 L102 43 C102 48 98 50 94 50 L60 46Z" fill="#0A3573"/>
+             <circle cx="60" cy="33" r="5" fill="#fff"/><circle cx="60" cy="33" r="2.5" fill="#1E9BD7"/>
+             <circle cx="37" cy="67" r="3.5" fill="#D9A521"/><circle cx="83" cy="67" r="3.5" fill="#D9A521"/>`
+    }[p.style];
+    const mouth = p.style === "kufi"
+      ? `<path d="M53 74 Q60 79 67 74" stroke="#2A140B" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M51 72 Q60 81 69 72 Z" fill="#fff" stroke="#2A140B" stroke-width="2" stroke-linejoin="round"/>`;
+    return `<svg class="${cls || ""}" viewBox="0 0 120 120" role="img" aria-label="${p.name}" xmlns="http://www.w3.org/2000/svg">
+      ${p.style === "braids" ? hair : ""}
+      <path d="M12 120 C16 94 40 86 60 86 C80 86 104 94 108 120Z" fill="${p.cloth}"/>
+      <path d="M44 88 L60 104 L76 88" stroke="${p.cloth2}" stroke-width="4" fill="none"/>
+      <circle cx="30" cy="108" r="3" fill="${p.cloth2}"/><circle cx="90" cy="108" r="3" fill="${p.cloth2}"/><circle cx="60" cy="115" r="3" fill="${p.cloth2}"/>
+      <rect x="51" y="72" width="18" height="18" rx="6" fill="${p.shade}"/>
+      <circle cx="36" cy="60" r="6" fill="${p.shade}"/><circle cx="84" cy="60" r="6" fill="${p.shade}"/>
+      <ellipse cx="60" cy="57" rx="24" ry="27" fill="${p.skin}"/>
+      <path d="M45 50 Q50 47 55 50 M65 50 Q70 47 75 50" stroke="#1A0D07" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="50" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/><ellipse cx="70" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/>
+      <circle cx="51" cy="57" r="1" fill="#fff"/><circle cx="71" cy="57" r="1" fill="#fff"/>
+      <path d="M58 60 Q60 67 62 60" stroke="${p.shade}" stroke-width="2" fill="none"/>
+      ${mouth}
+      ${p.style !== "braids" ? hair : ""}
+      ${extra}
+    </svg>`;
+  }
+
+const clamp=(x)=>Math.max(0,Math.min(1,x));
+const ease=(x)=>{x=clamp(x);return 1-Math.pow(1-x,3)};
+const $=id=>document.getElementById(id);
+document.getElementById("fatiA").innerHTML=avatar("fati").replace("<svg","<svg width='100%' height='100%'");
+const pile=$("pile");
+const colors=["#D9A521","#1E9BD7","#B24A22","#3D9A4F","#6A2C70","#FFFFFF","#E8622C","#0A3573","#F2C94C","#2E7D3F"];
+colors.forEach((c,i)=>{const d=document.createElement("div");d.className="cloth";d.style.background=c;
+  d.style.width=(300+((i*97)%180))+"px";d.style.left=((i*53)%150)+"px";d.style.bottom=(i*46)+"px";d.style.transform="rotate("+(((i*37)%24)-12)+"deg)";d.dataset.i=i;pile.appendChild(d)});
+const SCENES=[["A",0,4.6],["B",4.6,11],["C",11,17.6],["D",17.6,23.6],["E",23.6,30]];
+const SUBS=[[0.3,4.4,"Une montagne de linge et pas le temps ?"],
+ [4.8,10.8,"Un simple coup de fil, nous voici ! Notre tricycle solaire a sa machine à laver à bord."],
+ [11.2,17.4,"Vous donnez seulement l'eau. Nous lavons sur place, devant vous, en quelques minutes."],
+ [17.8,23.4,"Quarante habits pour deux mille francs. Oui : cinquante francs l'habit !"],
+ [23.8,29.8,"Nouvelle Laverie Africaine, tous les jours de 6h30 à 20h. Appelez le 73 12 26 12."]];
+function inout(t,a,b){return Math.min(ease((t-a)/0.45),ease((b-t)/0.45))}
+function pop(el,t,start,dy=60,dur=0.6){const k=ease((t-start)/dur);el.style.opacity=k;el.style.transform=`translateY(${(1-k)*dy}px)`}
+function render(t){
+  SCENES.forEach(([id,a,b])=>$(id).style.opacity=(t>=a-0.01&&t<=b+0.01)?(b>=30?ease((t-a)/0.45):inout(t,a,b)):0);
+  // A
+  pop($("A1"),t,0.1);pop($("A2"),t,0.9);
+  [...pile.children].forEach(d=>{const k=ease((t-0.3-d.dataset.i*0.12)/0.4);d.style.opacity=k;
+    d.style.marginBottom=((1-k)*300)+"px"});
+  const f=$("fatiA");const kf=ease((t-0.5)/0.6);f.style.opacity=kf;f.style.transform=`translateX(${(1-kf)*200}px) rotate(${Math.sin(t*3)*1.5}deg)`;
+  // B
+  pop($("B1"),t,4.8);
+  const kb=ease((t-5.4)/0.9);$("B2").style.opacity=kb;$("B2").style.transform=`translateX(${(1-kb)*900}px) scale(${1+ (t>6.3? (t-6.3)*0.012:0)})`;
+  const kc=ease((t-7.4)/0.5);$("B3").style.opacity=kc;$("B3").style.transform=`scale(${0.6+0.4*kc})`;
+  // C
+  pop($("C1"),t,11.2);
+  const kd=ease((t-11.8)/0.7);$("drop").style.opacity=kd;$("drop").style.transform=`translateY(${(1-kd)*-300}px) scale(${1+Math.sin(t*4)*0.03})`;
+  pop($("C2"),t,13,120,0.8);pop($("C3"),t,14.4);
+  // D
+  const n=Math.round(40*ease((t-17.9)/1.6));$("count").textContent=n;
+  pop($("D1"),t,17.8,40,0.4);pop($("D2"),t,18.6);pop($("D3"),t,19.4,30,0.3);
+  const kp=ease((t-19.8)/0.5);$("D4").style.opacity=kp;$("D4").style.transform=`scale(${0.5+0.5*kp+(t>20.3?Math.sin((t-20.3)*5)*0.02:0)})`;
+  pop($("D5"),t,21);
+  // E
+  const kl=ease((t-23.8)/0.8);$("E1").style.opacity=kl;$("E1").style.transform=`scale(${0.6+0.4*kl})`;
+  pop($("E2"),t,24.4);pop($("E3"),t,25);pop($("E4"),t,25.6);pop($("E5"),t,26.2);
+  // sous-titres
+  const s=SUBS.find(([a,b])=>t>=a&&t<=b);$("sub").textContent=s?s[2].replace(/ ([?!:])/g,"\u00a0$1"):"";
+  $("sub").parentElement.style.opacity=s?1:0;
+}
+window.render=render;render(0);
+</script></body></html>
