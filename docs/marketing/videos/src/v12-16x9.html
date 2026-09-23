@@ -1,0 +1,311 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Vidéo NLA</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@800&family=Figtree:wght@700;800&display=swap">
+<style>
+  html,body{margin:0;overflow:hidden}
+  body{position:relative;font-family:Figtree,Arial,sans-serif;color:#fff;background:var(--bg)}
+  body.laverie{--c:#0F4A9C;--c2:#0A3573;--hl:#8FD3F5}
+  body.pressing{--c:#6A2C70;--c2:#40163F;--hl:#F0B8F2}
+  body.auto{--c:#B24A22;--c2:#6E2A10;--hl:#FFC9A8}
+  body.formation{--c:#2E7D3F;--c2:#174A22;--hl:#B9F0C4}
+  body.pub{--c:#0F4A9C;--c2:#0A3573;--hl:#8FD3F5}
+  body{--bg:radial-gradient(ellipse at 35% 40%,color-mix(in srgb,var(--c) 80%,#fff 20%) 0%,var(--c) 45%,var(--c2) 100%)}
+  .stripe{position:absolute;left:0;right:0;height:22px;z-index:5;background:repeating-linear-gradient(90deg,
+    #0F4A9C 0 38px,#FFFFFF 38px 42px,#0F4A9C 42px 60px,#D9A521 60px 66px,#1E9BD7 66px 96px,#0A3573 96px 100px,
+    #1E9BD7 100px 112px,#FFFFFF 112px 116px,#3D9A4F 116px 140px,#D9A521 140px 146px,#3D9A4F 146px 156px,#FFFFFF 156px 160px)}
+  .stripe.t{top:0}.stripe.b{bottom:0}
+  .top{position:absolute;display:flex;align-items:center;gap:18px;z-index:4}
+  .top .lg{width:84px;height:84px;border-radius:50%;background:#fff;overflow:hidden;flex:none}
+  .top .lg img{width:100%;height:100%;object-fit:cover}
+  .top .nm{font:800 26px/1.1 Unbounded,"Arial Black",sans-serif;letter-spacing:.02em}
+  .top .sr{font:800 22px Figtree,Arial,sans-serif;background:rgba(255,255,255,.16);padding:4px 14px;border-radius:999px;margin-top:6px;display:inline-block}
+  .chap{position:absolute;z-index:4;font:800 30px/1.2 Figtree,Arial,sans-serif;background:#D9A521;color:#141A2E;padding:10px 26px;border-radius:999px;max-width:900px;opacity:0}
+  .avwrap{position:absolute;z-index:2}
+  .avwrap .disc{position:absolute;inset:6%;border-radius:50%;background:rgba(255,255,255,.12);box-shadow:0 0 0 18px rgba(255,255,255,.06)}
+  .avwrap svg{position:absolute;inset:0;width:100%;height:100%}
+  .guest{position:absolute;z-index:2;opacity:0}
+  .guest svg{width:100%;height:100%}
+  .guest .tag,.avwrap .tag{position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);font:800 26px Figtree,Arial,sans-serif;background:rgba(5,20,50,.8);padding:4px 16px;border-radius:10px;white-space:nowrap}
+  .mouth{transform-box:fill-box;transform-origin:50% 30%}
+  .eye{transform-box:fill-box;transform-origin:50% 50%}
+  .stage{position:absolute;z-index:3}
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:26px;opacity:0}
+  .big{font:800 var(--fs,96px)/1.05 Unbounded,"Arial Black",sans-serif;text-transform:uppercase;letter-spacing:-.01em}
+  .big em{font-style:normal;color:#D9A521}
+  .items{display:flex;flex-direction:column;gap:22px;align-items:flex-start}
+  .item{font:800 var(--fs,64px)/1.1 Unbounded,"Arial Black",sans-serif;text-transform:uppercase;background:#fff;color:var(--c2);padding:16px 30px;border-radius:22px}
+  .item:first-child{background:#D9A521;color:#141A2E}
+  .kick{font:800 34px Figtree,Arial,sans-serif;color:var(--hl);text-transform:uppercase;letter-spacing:.08em}
+  .recap{display:flex;flex-direction:column;gap:16px}
+  .recap div{font:800 var(--fs,40px)/1.2 Figtree,Arial,sans-serif;display:flex;gap:18px;align-items:center}
+  .recap div b{flex:none;width:1.4em;height:1.4em;border-radius:50%;background:#D9A521;color:#141A2E;display:grid;place-items:center;font-size:.8em}
+  .photo{background:#fff;border-radius:40px;overflow:hidden;box-shadow:0 24px 70px rgba(0,0,0,.35)}
+  .photo img{width:100%;height:100%;object-fit:contain;display:block}
+  .phones{font:800 var(--fs,60px)/1.25 Unbounded,"Arial Black",sans-serif}
+  .subbtn{display:inline-flex;align-items:center;gap:16px;background:#E0282E;color:#fff;font:800 40px Figtree,Arial,sans-serif;padding:18px 40px;border-radius:999px}
+  .phone{width:330px;height:600px;border-radius:50px;background:#0B0F1C;padding:18px;flex:none;box-shadow:0 24px 70px rgba(0,0,0,.4)}
+  .phone .scr{width:100%;height:100%;border-radius:42px;background:#F4F7FB;color:#0A3573;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:34px;text-align:center}
+  .phone .scr img{width:120px;height:120px;border-radius:50%}
+  .phone .scr .pbtn{background:#0F4A9C;color:#fff;font:800 34px/1.2 Figtree,Arial,sans-serif;padding:18px 24px;border-radius:18px}
+  .sub{position:absolute;z-index:6;text-align:center}
+  .sub span{background:rgba(5,15,40,.84);font:800 var(--sfs,44px)/1.5 Figtree,Arial,sans-serif;padding:6px 18px;border-radius:12px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+  .full{position:absolute;inset:0;z-index:7;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:30px;text-align:center;opacity:0;background:var(--bg)}
+  .full .lgbig{border-radius:50%;background:#fff;overflow:hidden;box-shadow:0 0 0 16px rgba(255,255,255,.16)}
+  .full .lgbig img{width:100%;height:100%;object-fit:cover}
+  /* ---- horizontal ---- */
+  body.H{width:1920px;height:1080px}
+  body.H .top{left:60px;top:48px}
+  body.H .chap{right:60px;top:62px}
+  body.H .avwrap{left:70px;top:210px;width:600px;height:600px}
+  body.H .guest{left:560px;top:520px;width:300px;height:300px}
+  body.H .stage{left:760px;right:80px;top:180px;height:620px}
+  body.H .sub{left:120px;right:120px;bottom:52px}
+  /* ---- vertical ---- */
+  body.V{width:1080px;height:1920px}
+  body.V .top{left:60px;top:60px}
+  body.V .chap{left:60px;top:190px}
+  body.V .stage{left:70px;right:70px;top:250px;height:760px}
+  body.V .scene{align-items:center;text-align:center}
+  body.V .items{align-items:center}
+  body.V .avwrap{left:200px;top:1000px;width:680px;height:680px}
+  body.V .sub{left:60px;right:60px;bottom:90px}
+</style></head><body>
+<div class="stripe t"></div><div class="stripe b"></div>
+<div class="top"><div class="lg"><img src="../../assets/logo-nla.jpg" alt=""></div><div><div class="nm">NOUVELLE LAVERIE AFRICAINE</div><div class="sr" id="seriesLabel"></div></div></div>
+<div class="chap" id="chap"></div>
+<div class="avwrap" id="av"><div class="disc"></div></div>
+<div class="guest" id="guest"></div>
+<div class="stage" id="stage"></div>
+<div class="sub"><span id="sub"></span></div>
+<div class="full" id="intro"></div>
+<div class="full" id="outro"></div>
+<script>
+  const PEOPLE = {
+    awa:    { name: "Maman Awa",    skin: "#6B3E26", shade: "#55301D", style: "wrap",   cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0F4A9C" },
+    issouf: { name: "Tonton Issouf", skin: "#4E2C1B", shade: "#3C2114", style: "kufi",   cloth: "#F4F1E8", cloth2: "#6A2C70", wrap: "#6A2C70", wrap2: "#F4F1E8" },
+    kader:  { name: "Kader",        skin: "#8A5634", shade: "#6E4228", style: "cap",    cloth: "#0F4A9C", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0A3573" },
+    fati:   { name: "Fati",         skin: "#5C3520", shade: "#472817", style: "braids", cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#1A1210", wrap2: "#0F4A9C" }
+  };
+
+  function avatar(id, cls) {
+    const p = PEOPLE[id];
+    const hair = {
+      wrap: `<path d="M28 54 C22 22 48 8 62 14 C82 6 102 26 92 54 C84 38 40 36 28 54Z" fill="${p.wrap}"/>
+             <path d="M34 40 C50 30 74 30 88 40" stroke="${p.wrap2}" stroke-width="4" fill="none"/>
+             <path d="M32 48 C50 36 74 36 90 48" stroke="${p.wrap2}" stroke-width="3" fill="none" opacity=".7"/>
+             <ellipse cx="86" cy="18" rx="12" ry="9" fill="${p.wrap}"/><circle cx="86" cy="18" r="4" fill="${p.wrap2}"/>`,
+      kufi: `<path d="M37 42 C37 20 83 20 83 42Z" fill="${p.wrap}"/>
+             <path d="M40 34 H80" stroke="${p.wrap2}" stroke-width="2" stroke-dasharray="3 3"/>`,
+      cap:  `<path d="M36 44 C35 20 85 20 84 44Z" fill="${p.wrap}"/>
+             <path d="M60 40 L104 43 C104 48 100 50 96 50 L60 46Z" fill="${p.wrap2}"/>
+             <circle cx="60" cy="32" r="5" fill="#fff"/><circle cx="60" cy="32" r="2.5" fill="#1E9BD7"/>`,
+      braids: `<path d="M34 50 C30 20 90 20 86 50 L90 96 L82 96 L80 58 L40 58 L38 96 L30 96Z" fill="${p.wrap}"/>
+             <circle cx="84" cy="44" r="10" fill="${p.wrap}"/>`
+    }[p.style];
+    const extra = {
+      wrap: `<circle cx="36" cy="66" r="3" fill="#E9A21A"/><circle cx="84" cy="66" r="3" fill="#E9A21A"/>`,
+      kufi: `<g stroke="#141A2E" stroke-width="2" fill="rgba(255,255,255,.15)"><circle cx="50" cy="58" r="7"/><circle cx="70" cy="58" r="7"/><path d="M57 58 H63"/></g>
+             <path d="M42 70 C44 86 52 90 60 90 C68 90 76 86 78 70 C72 78 48 78 42 70Z" fill="#9A9A9A"/>`,
+      cap:  ``,
+      braids: `<path d="M35 44 C34 20 86 20 85 44Z" fill="${p.wrap2}"/><path d="M60 40 L102 43 C102 48 98 50 94 50 L60 46Z" fill="#0A3573"/>
+             <circle cx="60" cy="33" r="5" fill="#fff"/><circle cx="60" cy="33" r="2.5" fill="#1E9BD7"/>
+             <circle cx="37" cy="67" r="3.5" fill="#D9A521"/><circle cx="83" cy="67" r="3.5" fill="#D9A521"/>`
+    }[p.style];
+    const mouth = p.style === "kufi"
+      ? `<path d="M53 74 Q60 79 67 74" stroke="#2A140B" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
+      : `<path d="M51 72 Q60 81 69 72 Z" fill="#fff" stroke="#2A140B" stroke-width="2" stroke-linejoin="round"/>`;
+    return `<svg class="${cls || ""}" viewBox="0 0 120 120" role="img" aria-label="${p.name}" xmlns="http://www.w3.org/2000/svg">
+      ${p.style === "braids" ? hair : ""}
+      <path d="M12 120 C16 94 40 86 60 86 C80 86 104 94 108 120Z" fill="${p.cloth}"/>
+      <path d="M44 88 L60 104 L76 88" stroke="${p.cloth2}" stroke-width="4" fill="none"/>
+      <circle cx="30" cy="108" r="3" fill="${p.cloth2}"/><circle cx="90" cy="108" r="3" fill="${p.cloth2}"/><circle cx="60" cy="115" r="3" fill="${p.cloth2}"/>
+      <rect x="51" y="72" width="18" height="18" rx="6" fill="${p.shade}"/>
+      <circle cx="36" cy="60" r="6" fill="${p.shade}"/><circle cx="84" cy="60" r="6" fill="${p.shade}"/>
+      <ellipse cx="60" cy="57" rx="24" ry="27" fill="${p.skin}"/>
+      <path d="M45 50 Q50 47 55 50 M65 50 Q70 47 75 50" stroke="#1A0D07" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <ellipse cx="50" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/><ellipse cx="70" cy="58" rx="3.2" ry="3.8" fill="#1A0D07"/>
+      <circle cx="51" cy="57" r="1" fill="#fff"/><circle cx="71" cy="57" r="1" fill="#fff"/>
+      <path d="M58 60 Q60 67 62 60" stroke="${p.shade}" stroke-width="2" fill="none"/>
+      ${mouth}
+      ${p.style !== "braids" ? hair : ""}
+      ${extra}
+    </svg>`;
+  }
+
+
+window.VIDEO={"id": "v12", "series": "formation", "title": "Académie NLA n°2 : doser la lessive en machine professionnelle", "date": "Samedi 31 octobre", "vertical": false, "rows": [{"chap": null, "who": null, "voice": "(générique Académie NLA)", "visual": "Logo + bandeau vert « Académie NLA ».", "ecran": null, "s": 4}, {"chap": null, "who": "Maman Awa", "voice": "Bienvenue à l'Académie NLA. Aujourd'hui, un geste qu'on fait des dizaines de fois par jour à la laverie, et qu'on fait souvent mal : doser la lessive. Beaucoup pensent que plus on en met, plus c'est propre. C'est faux. Trop de lessive, c'est du linge moins propre, de l'argent jeté et des machines qui s'abîment. Pas assez, c'est du linge gris. Voyons comment trouver la bonne dose.", "visual": "Maman Awa devant les machines de la laverie. Gobelet de lessive qui déborde.\nPLUS DE LESSIVE ≠ PLUS PROPRE", "ecran": "PLUS DE LESSIVE ≠ PLUS PROPRE", "s": null}, {"chap": "Les signes d'un mauvais dosage", "who": null, "voice": "Commençons par reconnaître un mauvais dosage. Trop de lessive : beaucoup de mousse au rinçage, un linge raide ou collant, parfois une odeur de lessive trop forte, et des clients qui se plaignent de démangeaisons. La lessive en trop reste dans les fibres. Pas assez de lessive : le blanc devient gris, les odeurs restent, et les cols et les poignets ne sont pas propres.", "visual": "Deux colonnes à l'écran : TROP / PAS ASSEZ, avec images (mousse dans le hublot, col gris).\nTROP : MOUSSE, RAIDEUR · PAS ASSEZ : GRIS, ODEURS", "ecran": "TROP : MOUSSE, RAIDEUR · PAS ASSEZ : GRIS, ODEURS", "s": null}, {"chap": "Critère 1 · Le poids du linge", "who": null, "voice": "Pour bien doser, on regarde trois choses. La première : le poids du linge. Une machine à moitié pleine ne demande pas la même dose qu'une machine pleine. À la laverie, on pèse. Pas au hasard, pas « à l'œil ». La balance est là pour ça.", "visual": "Sac de linge posé sur la balance, affichage du poids.\n1. PESER LE LINGE", "ecran": "1. PESER LE LINGE", "s": null}, {"chap": "Critère 2 · Le degré de saleté", "who": null, "voice": "La deuxième : le degré de saleté. Du linge du quotidien, peu sale, c'est la dose normale. Du linge très sale, comme les tenues de travail, les nappes de restaurant ou le linge de chantier, demande la dose « très sale » du fabricant. Et une tache particulière se traite avant, avec un détachant, pas en rajoutant de la lessive dans toute la machine.", "visual": "Trois piles : peu sale, normal, très sale (nappes de restaurant, tenue de chantier).\n2. DEGRÉ DE SALETÉ", "ecran": "2. DEGRÉ DE SALETÉ", "s": null}, {"chap": "Critère 3 · L'eau", "who": null, "voice": "La troisième : l'eau. Une eau calcaire, qu'on dit « dure », laisse des traces blanches dans les bouilloires. Elle demande un peu plus de lessive, parce que le calcaire en neutralise une partie. Si vous changez de source d'eau, parlez-en au responsable : le dosage doit peut-être être revu.", "visual": "Bouilloire entartrée. Robinet, puis forage.\n3. EAU CALCAIRE = UN PEU PLUS", "ecran": "3. EAU CALCAIRE = UN PEU PLUS", "s": null}, {"chap": "La méthode à la laverie", "who": null, "voice": "En pratique, voici notre méthode. Un : on lit la dose recommandée par le fabricant, sur le bidon. Deux : on utilise le tableau de dosage affiché au-dessus des machines, qui donne la dose selon le poids et la saleté. Trois : on mesure toujours avec le gobelet gradué, jamais en versant directement du bidon. Quatre : on note chaque machine lancée, pour que le responsable suive la consommation.", "visual": "Étiquette du bidon, tableau affiché au mur, gobelet gradué rempli jusqu'au trait, cahier ou plateforme.\nBIDON · TABLEAU · GOBELET · NOTER", "ecran": "BIDON · TABLEAU · GOBELET · NOTER", "s": null}, {"chap": "Adoucissant et produits spéciaux", "who": null, "voice": "Un mot sur l'adoucissant et le désinfectant textile : même règle. On suit la dose indiquée, et on les met dans le bon compartiment. Jamais d'adoucissant sur les serviettes en grande quantité : elles absorbent moins bien. Et on ne mélange jamais deux produits dans le même gobelet.", "visual": "Tiroir de la machine avec ses compartiments, chacun légendé.\nBON COMPARTIMENT · PAS DE MÉLANGE", "ecran": "BON COMPARTIMENT · PAS DE MÉLANGE", "s": null}, {"chap": "Le test du rinçage", "who": null, "voice": "Et voici un contrôle simple. Pendant le dernier rinçage, regardez par le hublot. S'il y a encore beaucoup de mousse, la dose était trop forte : on la réduit la prochaine fois. Un peu de mousse, ça va. Une machine pleine de mousse, non.", "visual": "Hublot pendant le rinçage : peu de mousse (bon) puis beaucoup (trop).\nMOUSSE AU RINÇAGE = DOSE TROP FORTE", "ecran": "MOUSSE AU RINÇAGE = DOSE TROP FORTE", "s": null}, {"chap": "Le test du rinçage", "who": null, "voice": "On résume : peser, regarder la saleté, tenir compte de l'eau, suivre le tableau, mesurer au gobelet, et vérifier au rinçage. Bien doser, c'est un linge plus propre, des clients contents, des machines qui durent et des économies pour toute l'équipe. Merci d'avoir suivi l'Académie NLA. Abonnez-vous, et à la prochaine formation !", "visual": "Récapitulatif en 6 lignes. Logo Académie NLA, bouton « S'abonner ».", "ecran": null, "s": null}]};
+const V = window.VIDEO;
+const SERIES = {laverie:"Astuces laverie",pressing:"Pressing pro",auto:"Auto-Moto Clean",formation:"Académie NLA",pub:"Nos services"};
+const WHO = {"Maman Awa":"awa","Tonton Issouf":"issouf","Kader":"kader","Fati":"fati"};
+const $ = id => document.getElementById(id);
+const clamp = x => Math.max(0, Math.min(1, x));
+const ease = x => 1 - Math.pow(1 - clamp(x), 3);
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;");
+const nb = s => s.replace(/(^|\s)(\d+\.) /g, "$1$2\u00a0").replace(/ ([?!:;»=])/g, "\u00a0$1").replace(/« /g, "«\u00a0");
+const W = s => (s.match(/[\p{L}\p{N}'’-]+/gu) || []).length;
+document.body.classList.add(V.vertical ? "V" : "H", V.series);
+$("seriesLabel").textContent = SERIES[V.series];
+
+function av(id){
+  return avatar(id)
+    .replace('<path d="M51 72 Q60 81 69 72 Z"', '<path class="mouth" d="M51 72 Q60 81 69 72 Z"')
+    .replace('<path d="M53 74 Q60 79 67 74"', '<path class="mouth" d="M53 74 Q60 79 67 74"')
+    .replace('<ellipse cx="50" cy="58"', '<ellipse class="eye" cx="50" cy="58"')
+    .replace('<ellipse cx="70" cy="58"', '<ellipse class="eye" cx="70" cy="58"');
+}
+const mainWho = WHO[(V.rows.find(r => r.who) || {}).who] || "fati";
+$("av").insertAdjacentHTML("beforeend", av(mainWho) + `<span class="tag">${[...Object.entries(WHO)].find(e=>e[1]===mainWho)[0]}</span>`);
+const hasGuest = V.id === "v06";
+if (hasGuest) $("guest").innerHTML = av("kader") + `<span class="tag">Le client</span>`;
+
+// ---------- timeline ----------
+const isLong = V.rows.some(r => r.s);
+const chapters = [...new Set(V.rows.map(r => r.chap).filter(Boolean))];
+let t = 0;
+const SC = [];
+V.rows.forEach((r, i) => {
+  const d = r.s ? r.s : Math.max(2.6, W(r.voice) / 150 * 60 + 0.8);
+  const last = i === V.rows.length - 1;
+  let type = "text";
+  if (r.s) type = "intro";
+  else if (/Récapitulatif/i.test(r.visual)) type = "recap";
+  else if (last && !r.ecran) type = "cta";
+  else if (/tricycle/i.test(r.voice) && !r.ecran) type = "tricycle";
+  else if (V.id === "v09" && r.ecran) type = "phone";
+  else if (V.id === "v09" && /Capture/.test(r.visual)) type = "phone";
+  SC.push({ ...r, i, a: t, b: t + d, type, last, guest: hasGuest && /Kader/.test(r.visual) });
+  t += d;
+});
+const OUT = isLong ? 15 : 0;
+const TOTAL = t + OUT;
+window.TOTAL = TOTAL;
+
+// subtitles
+const SUBS = [];
+SC.forEach(s => {
+  if (s.type === "intro" || !s.voice || /^\(/.test(s.voice)) return;
+  let parts = s.voice.match(/[^.!?…]+[.!?…]*[»"]?\s*/g) || [s.voice];
+  let chunks = [];
+  parts.forEach(p => {
+    p = p.trim(); if (!p) return;
+    let words = p.split(/\s+/);
+    if (words.length <= 14) { chunks.push(p); return; }
+    // split on commas first, then by 12 words
+    let sub = p.split(/(?<=,)\s+/); let cur = [];
+    sub.forEach(x => { const n = x.split(/\s+/).length; if (cur.join(" ").split(/\s+/).length + n > 14 && cur.length) { chunks.push(cur.join(" ")); cur = []; } cur.push(x); });
+    if (cur.length) chunks.push(cur.join(" "));
+  });
+  chunks = chunks.flatMap(c => { const w = c.split(/\s+/); if (w.length <= 16) return [c]; const o = []; for (let k = 0; k < w.length; k += 12) o.push(w.slice(k, k + 12).join(" ")); return o; });
+  const total = chunks.reduce((n, c) => n + W(c), 0) || 1;
+  const span = (s.b - s.a) - 0.6;
+  let x = s.a + 0.2;
+  chunks.forEach(c => { const d = span * W(c) / total; SUBS.push({ a: x, b: x + d, text: nb(c) }); x += d; });
+});
+
+// ---------- build scenes ----------
+const stage = $("stage");
+const IMG = "../../assets/";
+function ecranHTML(e){
+  const items = e.split(/\s·\s/);
+  if (items.length > 1) return `<div class="items">${items.map(x => `<div class="item">${esc(nb(x))}</div>`).join("")}</div>`;
+  return `<div class="big">${esc(nb(e))}</div>`;
+}
+SC.forEach(s => {
+  const el = document.createElement("div"); el.className = "scene"; s.el = el;
+  const kick = s.chap ? `<div class="kick">${esc(s.chap.split(" · ")[0])}</div>` : "";
+  if (s.type === "intro") { el.innerHTML = ""; }
+  else if (s.type === "recap") {
+    el.innerHTML = `<div class="kick">On résume</div><div class="recap">${chapters.filter(c=>!/^Le matériel|^Le client|^D'où|^Pourquoi|^Les signes/.test(c)).map((c, k) => `<div><b>${k+1}</b><span>${esc(nb(c.replace(/^(Étape|Règle|Réflexe|Critère) \d+ · /, "")))}</span></div>`).join("")}</div>`;
+  }
+  else if (s.type === "cta") {
+    el.innerHTML = `${s.ecran ? ecranHTML(s.ecran) : ""}<div class="phones">73 12 26 12<br>54 54 28 18</div><div><span class="subbtn">▶ S'abonner</span></div>`;
+  }
+  else if (s.type === "tricycle") {
+    el.innerHTML = `<div class="photo" style="width:${V.vertical?620:560}px;height:${V.vertical?620:520}px"><img src="${IMG}tricycle-solaire.jpg" alt=""></div><div class="big" style="--fs:54px">40 habits <em>= 2 000 F</em></div>`;
+  }
+  else if (s.type === "phone") {
+    el.style.flexDirection = "row"; el.style.alignItems = "center"; el.style.gap = "60px";
+    el.innerHTML = `<div class="phone"><div class="scr"><img src="${IMG}logo-nla.jpg" alt=""><div style="font:800 30px Figtree,Arial,sans-serif">Nouvelle Laverie Africaine</div><div class="pbtn">${esc(nb(s.ecran || "Créer mon compte client"))}</div></div></div>`;
+  }
+  else {
+    const txt = s.ecran || (s.last ? "" : (s.chap || V.title));
+    el.innerHTML = kick + (txt ? ecranHTML(txt) : "") + (s.last && !/73 12/.test(s.ecran || "") ? `<div class="phones" style="--fs:48px">73 12 26 12 · 54 54 28 18</div>` : "");
+  }
+  stage.appendChild(el);
+});
+// intro & outro
+const whoName = Object.entries(WHO).find(e => e[1] === mainWho)[0];
+$("intro").innerHTML = `<div class="lgbig" style="width:${V.vertical?360:300}px;height:${V.vertical?360:300}px"><img src="${IMG}logo-nla.jpg" alt=""></div>
+  <div class="sr" style="font:800 34px Figtree,Arial,sans-serif;background:#D9A521;color:#141A2E;padding:8px 26px;border-radius:999px">${SERIES[V.series]}</div>
+  <div class="big" style="--fs:${V.vertical?72:70}px;max-width:${V.vertical?960:1500}px;text-align:center">${esc(nb(V.title))}</div>
+  <div style="font:800 36px Figtree,Arial,sans-serif;color:var(--hl)">avec ${whoName}</div>`;
+$("outro").innerHTML = `<div class="lgbig" style="width:260px;height:260px"><img src="${IMG}logo-nla.jpg" alt=""></div>
+  <div class="big" style="--fs:64px">Un simple coup de fil, <em>nous voici !</em></div>
+  <div style="display:flex;gap:50px;align-items:center;justify-content:center;flex-wrap:wrap">
+    <div class="photo" style="width:340px;height:320px"><img src="${IMG}tricycle-solaire.jpg" alt=""></div>
+    <div style="display:flex;flex-direction:column;gap:18px;align-items:center">
+      <div class="phones" style="--fs:58px">73 12 26 12<br>54 54 28 18</div>
+      <div style="font:800 34px Figtree,Arial,sans-serif">Tous les jours · 6h30 – 20h</div>
+      <span class="subbtn">▶ S'abonner</span>
+    </div></div>`;
+
+// fit text to stage
+function fit(){
+  const H = stage.clientHeight, Wd = stage.clientWidth;
+  SC.forEach(s => {
+    const el = s.el; el.style.opacity = 1;
+    let fs = V.vertical ? 104 : 92;
+    const targets = el.querySelectorAll(".big,.items,.recap");
+    targets.forEach(x => x.style.setProperty("--fs", (x.classList.contains("recap") ? Math.round(fs*0.52) : x.classList.contains("items") ? Math.round(fs*0.66) : fs) + "px"));
+    while ((el.scrollHeight > H || [...targets].some(x => x.scrollWidth > Wd)) && fs > 30) {
+      fs -= 4;
+      targets.forEach(x => { if (x.style.getPropertyValue("--fs") && x.closest(".photo") == null) x.style.setProperty("--fs", (x.classList.contains("recap") ? Math.round(fs*0.52) : x.classList.contains("items") ? Math.round(fs*0.66) : fs) + "px"); });
+    }
+    el.style.opacity = 0;
+  });
+}
+window.prepare = async () => { await document.fonts.ready; fit(); };
+
+// ---------- render ----------
+function inout(t, a, b, f = 0.35){ return Math.min(ease((t - a) / f), ease((b - t) / f)); }
+let lastChap = null;
+function render(t){
+  const cur = SC.find(s => t >= s.a && t < s.b);
+  // intro / outro overlays
+  const intro = SC.find(s => s.type === "intro");
+  $("intro").style.opacity = intro ? (t < intro.b ? Math.min(1, ease((intro.b - t) / 0.4)) : 0) : 0;
+  if (intro && t < intro.b) { const k = ease(t / 0.8); $("intro").style.transform = `scale(${0.96 + 0.04 * k})`; }
+  $("outro").style.opacity = OUT && t >= TOTAL - OUT ? ease((t - (TOTAL - OUT)) / 0.5) : 0;
+  // scenes
+  SC.forEach(s => {
+    if (s.type === "intro") return;
+    const o = (t >= s.a - 0.01 && t <= s.b + 0.01) ? inout(t, s.a, s.b) : 0;
+    s.el.style.opacity = o;
+    if (o > 0) {
+      const kids = s.el.querySelectorAll(".kick,.big,.item,.recap > div,.phones,.subbtn,.photo,.phone");
+      kids.forEach((k, n) => { const e = ease((t - s.a - 0.15 - n * 0.35) / 0.5); k.style.opacity = e; k.style.transform = `translateY(${(1 - e) * 40}px)`; });
+    }
+  });
+  // chapter pill
+  const chap = cur && cur.chap && cur.type !== "intro" ? cur.chap : null;
+  const cp = $("chap");
+  if (chap !== lastChap) { cp.textContent = chap ? nb(chap) : ""; lastChap = chap; }
+  cp.style.opacity = chap ? 1 : 0;
+  // avatar: bob, talk, blink
+  const sub = SUBS.find(x => t >= x.a && t <= x.b);
+  const speaking = !!sub;
+  const avEl = $("av");
+  avEl.style.transform = `translateY(${Math.sin(t * 2.1) * 8}px) rotate(${Math.sin(t * 1.3) * 1.2}deg)`;
+  const m = avEl.querySelector(".mouth");
+  const open = speaking ? 0.35 + 0.65 * Math.abs(Math.sin(t * 13) * Math.sin(t * 5.3 + 1)) : 1;
+  if (m) m.style.transform = `scaleY(${open})`;
+  const blink = (t % 3.7) < 0.12 ? 0.1 : 1;
+  avEl.querySelectorAll(".eye").forEach(e => e.style.transform = `scaleY(${blink})`);
+  // guest
+  const g = $("guest");
+  if (hasGuest) { const on = cur && cur.guest; g.style.opacity = on ? ease((t - cur.a) / 0.5) : 0; g.style.transform = `translateY(${Math.sin(t * 2.4 + 1) * 6}px)`; }
+  // subtitles
+  $("sub").textContent = sub ? sub.text : "";
+  $("sub").parentElement.style.opacity = sub && $("intro").style.opacity < 0.5 && $("outro").style.opacity < 0.5 ? 1 : 0;
+}
+window.render = render;
+</script></body></html>
