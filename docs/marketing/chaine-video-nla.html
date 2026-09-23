@@ -4,19 +4,21 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    --ground: #F3F5F4;
+    --ground: #F4F7FB;
     --surface: #FFFFFF;
     --ink: #141A2E;
     --muted: #586177;
     --line: #DCE1E5;
-    --accent: #243B8A;
+    --accent: #0F4A9C;
     --accent-ink: #FFFFFF;
-    --chip: #E7EBF4;
-    --indigo: #243B8A;
+    --chip: #E8F0FB;
+    --indigo: #0F4A9C;
     --plum: #6A2C70;
     --laterite: #B24A22;
-    --leaf: #1D7350;
-    --sun: #E9A21A;
+    --leaf: #2E7D3F;
+    --sun: #D9A521;
+    --sky: #1E9BD7;
+    --navy: #0A3573;
     --display: "Unbounded", "Arial Black", system-ui, sans-serif;
     --body: "Figtree", "Segoe UI", system-ui, sans-serif;
   }
@@ -50,9 +52,9 @@
     position: relative; border-radius: 14px; overflow: hidden; aspect-ratio: 6 / 1; min-height: 110px; max-width: 100%;
     background:
       repeating-linear-gradient(90deg,
-        #243B8A 0 38px, #F4F1E8 38px 42px, #243B8A 42px 60px, #E9A21A 60px 66px,
-        #B24A22 66px 96px, #141A2E 96px 100px, #B24A22 100px 112px, #F4F1E8 112px 116px,
-        #1D7350 116px 140px, #E9A21A 140px 146px, #1D7350 146px 156px, #F4F1E8 156px 160px);
+        #0F4A9C 0 38px, #FFFFFF 38px 42px, #0F4A9C 42px 60px, #D9A521 60px 66px,
+        #1E9BD7 66px 96px, #0A3573 96px 100px, #1E9BD7 100px 112px, #FFFFFF 112px 116px,
+        #3D9A4F 116px 140px, #D9A521 140px 146px, #3D9A4F 146px 156px, #FFFFFF 156px 160px);
   }
   .banner::after {
     content: ""; position: absolute; inset: 0;
@@ -60,17 +62,16 @@
   }
   .banner-text {
     position: absolute; z-index: 1; left: 50%; top: 50%; transform: translate(-50%, -50%);
-    background: #141A2E; color: #F4F1E8; padding: 10px 18px; border-radius: 8px;
+    background: #0A3573; color: #FFFFFF; padding: 10px 18px; border-radius: 8px;
     font-family: var(--display); font-weight: 700; font-size: clamp(11px, 1.8vw, 17px); letter-spacing: .04em; white-space: nowrap;
   }
 
   .channel { display: flex; gap: 22px; align-items: center; padding-block: 20px 8px; flex-wrap: wrap; }
   .logo {
-    width: 120px; height: 120px; border-radius: 50%; flex: none; display: grid; place-items: center;
-    background: #243B8A; color: #F4F1E8; font-family: var(--display); font-weight: 800; font-size: 34px;
-    box-shadow: 0 0 0 5px var(--ground), 0 0 0 8px #E9A21A;
+    width: 120px; height: 120px; border-radius: 50%; flex: none; overflow: hidden; background: #fff;
+    box-shadow: 0 0 0 5px var(--ground);
   }
-  .logo small { display: block; font-size: 9px; font-weight: 500; letter-spacing: .14em; text-align: center; margin-top: -4px; }
+  .logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .channel-info { flex: 1 1 320px; display: grid; gap: 6px; }
   .channel-info h1 { font-size: clamp(24px, 4vw, 36px); font-weight: 800; }
   .meta { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
@@ -119,7 +120,7 @@
     position: absolute; right: 8px; bottom: 8px; background: rgba(10,12,20,.85); color: #fff;
     font: 600 12px var(--body); padding: 2px 6px; border-radius: 4px; font-variant-numeric: tabular-nums;
   }
-  .badge.short { right: 8px; top: 8px; bottom: auto; z-index: 1; background: #E9A21A; color: #141A2E; }
+  .badge.short { right: 8px; top: 8px; bottom: auto; z-index: 1; background: #D9A521; color: #141A2E; }
   .brandmark {
     position: absolute; left: 6%; bottom: 9%; font: 700 10px var(--display); letter-spacing: .08em;
     background: rgba(0,0,0,.35); padding: 3px 7px; border-radius: 4px;
@@ -132,6 +133,31 @@
   .pub .t-text { text-shadow: none; }
   .pub .t-text em { background: #141A2E; color: #F4F1E8; }
   .pub .brandmark { background: rgba(20,26,46,.85); color: #F4F1E8; }
+
+  .thumb .photo {
+    position: absolute; right: 4%; top: 8%; bottom: 8%; aspect-ratio: 1 / 1; max-width: 42%;
+    background: #fff; border-radius: 10px; overflow: hidden; display: grid; place-items: center;
+  }
+  .thumb .photo img { width: 100%; height: 100%; object-fit: contain; }
+  .hero-photo { background: #fff; border-radius: 14px; overflow: hidden; position: relative; border: 1px solid var(--line); }
+  .hero-photo img { display: block; width: 100%; height: auto; }
+  .hero-photo .badge { right: 12px; bottom: 12px; }
+  .hero-photo .play {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 68px; height: 48px;
+    border-radius: 14px; background: rgba(10,53,115,.9); display: grid; place-items: center;
+  }
+  .hero-photo .play::after { content: ""; border-left: 18px solid #fff; border-top: 11px solid transparent; border-bottom: 11px solid transparent; margin-left: 4px; }
+
+  /* ---------- À propos ---------- */
+  .about { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+  .facts { margin: 0; display: grid; grid-template-columns: 150px 1fr; gap: 12px 16px; }
+  .facts dt { font-weight: 700; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding-top: 2px; }
+  .facts dd { margin: 0; }
+  .tel { font-weight: 700; font-variant-numeric: tabular-nums; user-select: all; }
+  .vehicle { background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; display: grid; }
+  .vehicle img { width: 100%; height: auto; display: block; }
+  .vehicle p { padding: 12px 14px; font-size: 13px; color: #414A60; border-top: 1px solid #E3E8EF; }
+  @media (max-width: 780px) { .about { grid-template-columns: 1fr; } .facts { grid-template-columns: 1fr; gap: 2px 0; } .facts dd { margin-bottom: 10px; } }
 
   /* ---------- Vidéo à la une ---------- */
   .featured { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 26px; align-items: center; }
@@ -200,11 +226,12 @@
   .script dt { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; padding-top: 1px; }
   .script dd { margin: 0; font-size: 14px; }
   .script dd i { color: var(--muted); }
+  .stack { display: grid; gap: 18px; }
   .callout { border-left: 4px solid var(--sun); background: var(--surface); padding: 14px 16px; border-radius: 0 10px 10px 0; display: grid; gap: 6px; }
 
   @media (max-width: 780px) {
     .featured, .two { grid-template-columns: 1fr; }
-    .logo { width: 84px; height: 84px; font-size: 24px; }
+    .logo { width: 84px; height: 84px; }
     .banner { aspect-ratio: 3 / 1; }
   }
   @media (prefers-reduced-motion: no-preference) {
@@ -220,11 +247,11 @@
   </div>
 
   <header class="channel">
-    <div class="logo" aria-hidden="true"><div>NLA<small>TENKODOGO</small></div></div>
+    <div class="logo"><img src="assets/logo-nla.jpg" alt="Logo de la Nouvelle Laverie Africaine : goutte d'eau, feuille et vague dorée"></div>
     <div class="channel-info">
       <h1>Nouvelle Laverie Africaine</h1>
-      <div class="meta"><b>@NouvelleLaverieAfricaine</b><span>Chaîne en lancement</span><span>12 vidéos prévues en octobre</span></div>
-      <p class="desc">Astuces de linge, de pressing et de lavage auto-moto, petites formations et nouvelles de nos services, avec Maman Awa, Tonton Issouf, Kader et Fati. Depuis Tenkodogo, pour tout le Burkina.</p>
+      <div class="meta"><b>@NouvelleLaverieAfricaine</b><span>Laverie express et digitale</span><span>12 vidéos prévues en octobre</span></div>
+      <p class="desc">Astuces de linge, de pressing et de lavage auto-moto, petites formations et nouvelles de nos services, avec Maman Awa, Tonton Issouf, Kader et Fati. Un simple coup de fil, nous voici ! Tenkodogo, Bagré, Fada N'Gourma, Koudougou.</p>
       <div class="actions">
         <button class="btn primary" id="sub" aria-pressed="false">S'abonner</button>
         <button class="btn" id="bell" aria-pressed="false">Activer les notifications</button>
@@ -238,15 +265,20 @@
     <a href="#personnages">Personnages</a>
     <a href="#calendrier">Calendrier</a>
     <a href="#production">Production</a>
+    <a href="#apropos">À propos</a>
   </nav>
 
   <section id="accueil">
     <div class="featured">
-      <div id="featured-thumb"></div>
+      <div class="hero-photo">
+        <img src="assets/tricycle-conductrice.jpg" alt="Une conductrice en tenue Nouvelle Laverie Africaine sur le tricycle solaire de collecte">
+        <span class="play" aria-hidden="true"></span>
+        <span class="badge">0:30</span>
+      </div>
       <div class="featured-info">
         <span class="eyebrow">Bande-annonce de la chaîne · 0:30</span>
-        <h2>Votre linge, notre fierté : bienvenue chez la Nouvelle Laverie Africaine</h2>
-        <p>Fati présente l'équipe et ce que la chaîne apporte chaque semaine :</p>
+        <h2>Un simple coup de fil, nous voici !</h2>
+        <p>Le tricycle solaire traverse la ville et vient chercher le linge à domicile. Fati présente l'équipe et ce que la chaîne apporte chaque semaine :</p>
         <ul class="promise">
           <li>Le lundi, une astuce en moins d'une minute</li>
           <li>Le mercredi, un tuto complet : laverie, pressing ou lavage auto-moto</li>
@@ -305,6 +337,7 @@
         <li><div class="step-body"><h3>Faire la miniature</h3><p class="note">Canva : couleur de la série, 3 à 5 mots, le personnage à droite. Toujours la même mise en page.</p></div></li>
         <li><div class="step-body"><h3>Publier et partager</h3><p class="note">Mettre en ligne à heure fixe, puis partager le lien sur le statut WhatsApp de la laverie, Facebook et TikTok. Indiquer dans la description que les personnages sont des avatars virtuels.</p></div></li>
       </ol>
+      <div class="stack">
       <div class="script">
         <span class="eyebrow">Exemple de script · Short du lundi 5 octobre</span>
         <h3>Tache d'huile sur un pagne : 3 gestes avant de laver</h3>
@@ -315,11 +348,48 @@
           <dt>0:28</dt><dd><b>Geste 3.</b> « Brosse, puis une goutte de liquide vaisselle, et lave à l'eau tiède. »</dd>
           <dt>0:40</dt><dd>« Si la tache résiste, amène le pagne à la Nouvelle Laverie Africaine : on s'en occupe ! » <i>(logo + adresse)</i></dd>
         </dl>
-        <div class="callout">
-          <b>Pour les spots publicitaires</b>
-          <p class="note">Même format, mais le message porte sur un service : ce qu'il règle pour le client, où nous trouver, comment déposer son linge. Les tarifs et promotions sont à ajouter selon vos offres du moment.</p>
-        </div>
       </div>
+      <div class="script">
+        <span class="eyebrow">Exemple de spot · samedi 10 octobre</span>
+        <h3>Le tricycle solaire vient chercher votre linge à domicile</h3>
+        <dl>
+          <dt>0:00</dt><dd><i>(Le tricycle arrive dans une cour, sonnette.)</i> <b>Fati :</b> « Pas le temps d'aller à la laverie ? »</dd>
+          <dt>0:04</dt><dd>« Un simple coup de fil, nous voici ! Notre tricycle solaire vient chercher votre linge chez vous. »</dd>
+          <dt>0:12</dt><dd>« Lavage, séchage, pressing, nettoyage : on s'occupe de tout, et vous suivez chaque étape sur notre site. »</dd>
+          <dt>0:22</dt><dd>« Nouvelle Laverie Africaine, tous les jours de 6h30 à 20h. Appelez le 73 12 26 12 ou le 54 54 28 18. »</dd>
+          <dt>0:28</dt><dd><i>(Logo + « Propreté · Confiance · Notre priorité »)</i></dd>
+        </dl>
+      </div>
+      <div class="callout">
+        <b>Tarifs dans les vidéos</b>
+        <p class="note">Citez les prix du catalogue de la plateforme seulement après vérification. Si un tarif change, une vidéo ancienne reste en ligne, alors préférez « à partir de » ou renvoyez vers le site.</p>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="apropos">
+    <div class="section-head">
+      <h2>À propos</h2>
+      <p>Les informations à mettre dans l'onglet « À propos » de la chaîne et en bas de chaque description de vidéo.</p>
+    </div>
+    <div class="about">
+      <dl class="facts">
+        <dt>Slogan</dt><dd>Laverie express et digitale. Un simple coup de fil, nous voici !</dd>
+        <dt>Nos services</dt><dd>Laverie et pressing, lavage et désinfection de chaussures, lavage auto et moto, nettoyage de tapis, moquettes, divans et matelas, nettoyage de domiciles et de chantiers.</dd>
+        <dt>À domicile</dt><dd>Collecte et livraison par tricycle solaire, ou dépôt à l'agence. Suivi de chaque étape depuis l'espace client.</dd>
+        <dt>Horaires</dt><dd>Tous les jours, dimanche compris, de 6h30 à 20h00</dd>
+        <dt>Téléphone et WhatsApp</dt><dd><span class="tel">+226 73 12 26 12</span> · <span class="tel">+226 54 54 28 18</span></dd>
+        <dt>Agences</dt><dd>Tenkodogo (Secteur 6, Cité du 11 Décembre) · Bagré (non loin du centre universitaire) · Fada N'Gourma (Secteur 2, route du Niger) · Koudougou (centre universitaire)</dd>
+        <dt>Paiement</dt><dd>Espèces, Orange Money, Moov Money, chèque</dd>
+        <dt>Réclamations</dt><dd>Sous 48 h après la livraison, depuis l'espace client ou par WhatsApp</dd>
+        <dt>Site</dt><dd><a href="https://accurate-alignment-production-3128.up.railway.app" target="_blank" rel="noopener">Faire une demande en ligne</a></dd>
+        <dt>Groupe</dt><dd>Une marque du Groupe Akambi SARL</dd>
+      </dl>
+      <figure class="vehicle" style="margin:0">
+        <img src="assets/tricycle-solaire.jpg" alt="Tricycle solaire de lavage mobile aux couleurs de la Nouvelle Laverie Africaine">
+        <p>Le tricycle solaire, vedette naturelle des spots : on le voit arriver, charger le linge et repartir.</p>
+      </figure>
     </div>
   </section>
 
@@ -330,10 +400,10 @@
 (function () {
   // ---------- Avatars ----------
   const PEOPLE = {
-    awa:    { name: "Maman Awa",    skin: "#6B3E26", shade: "#55301D", style: "wrap",   cloth: "#243B8A", cloth2: "#E9A21A", wrap: "#E9A21A", wrap2: "#B24A22" },
+    awa:    { name: "Maman Awa",    skin: "#6B3E26", shade: "#55301D", style: "wrap",   cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0F4A9C" },
     issouf: { name: "Tonton Issouf", skin: "#4E2C1B", shade: "#3C2114", style: "kufi",   cloth: "#F4F1E8", cloth2: "#6A2C70", wrap: "#6A2C70", wrap2: "#F4F1E8" },
-    kader:  { name: "Kader",        skin: "#8A5634", shade: "#6E4228", style: "cap",    cloth: "#1D7350", cloth2: "#F4F1E8", wrap: "#B24A22", wrap2: "#141A2E" },
-    fati:   { name: "Fati",         skin: "#5C3520", shade: "#472817", style: "braids", cloth: "#B24A22", cloth2: "#E9A21A", wrap: "#1A1210", wrap2: "#E9A21A" }
+    kader:  { name: "Kader",        skin: "#8A5634", shade: "#6E4228", style: "cap",    cloth: "#0F4A9C", cloth2: "#1E9BD7", wrap: "#D9A521", wrap2: "#0A3573" },
+    fati:   { name: "Fati",         skin: "#5C3520", shade: "#472817", style: "braids", cloth: "#0A3573", cloth2: "#1E9BD7", wrap: "#1A1210", wrap2: "#0F4A9C" }
   };
 
   function avatar(id, cls) {
@@ -347,16 +417,18 @@
              <path d="M40 34 H80" stroke="${p.wrap2}" stroke-width="2" stroke-dasharray="3 3"/>`,
       cap:  `<path d="M36 44 C35 20 85 20 84 44Z" fill="${p.wrap}"/>
              <path d="M60 40 L104 43 C104 48 100 50 96 50 L60 46Z" fill="${p.wrap2}"/>
-             <circle cx="60" cy="24" r="3" fill="${p.wrap2}"/>`,
+             <circle cx="60" cy="32" r="5" fill="#fff"/><circle cx="60" cy="32" r="2.5" fill="#1E9BD7"/>`,
       braids: `<path d="M34 50 C30 20 90 20 86 50 L90 96 L82 96 L80 58 L40 58 L38 96 L30 96Z" fill="${p.wrap}"/>
-             <circle cx="60" cy="18" r="11" fill="${p.wrap}"/><path d="M50 22 H70" stroke="${p.wrap2}" stroke-width="3"/>`
+             <circle cx="84" cy="44" r="10" fill="${p.wrap}"/>`
     }[p.style];
     const extra = {
       wrap: `<circle cx="36" cy="66" r="3" fill="#E9A21A"/><circle cx="84" cy="66" r="3" fill="#E9A21A"/>`,
       kufi: `<g stroke="#141A2E" stroke-width="2" fill="rgba(255,255,255,.15)"><circle cx="50" cy="58" r="7"/><circle cx="70" cy="58" r="7"/><path d="M57 58 H63"/></g>
              <path d="M42 70 C44 86 52 90 60 90 C68 90 76 86 78 70 C72 78 48 78 42 70Z" fill="#9A9A9A"/>`,
       cap:  ``,
-      braids: `<circle cx="37" cy="67" r="3.5" fill="#E9A21A"/><circle cx="83" cy="67" r="3.5" fill="#E9A21A"/>`
+      braids: `<path d="M35 44 C34 20 86 20 85 44Z" fill="${p.wrap2}"/><path d="M60 40 L102 43 C102 48 98 50 94 50 L60 46Z" fill="#0A3573"/>
+             <circle cx="60" cy="33" r="5" fill="#fff"/><circle cx="60" cy="33" r="2.5" fill="#1E9BD7"/>
+             <circle cx="37" cy="67" r="3.5" fill="#D9A521"/><circle cx="83" cy="67" r="3.5" fill="#D9A521"/>`
     }[p.style];
     const mouth = p.style === "kufi"
       ? `<path d="M53 74 Q60 79 67 74" stroke="#2A140B" stroke-width="2.5" fill="none" stroke-linecap="round"/>`
@@ -391,14 +463,14 @@
   const VIDEOS = [
     { d: "2026-10-05", s: "laverie",   who: "awa",    short: true, dur: "0:45", title: "Tache d'huile sur un pagne : 3 gestes avant de laver", thumb: "Tache d'huile ? <em>3 gestes</em>" },
     { d: "2026-10-07", s: "laverie",   who: "awa",    dur: "6:10", title: "Trier son linge comme un pro : blancs, couleurs, délicats", thumb: "Trier son linge <em>comme un pro</em>" },
-    { d: "2026-10-10", s: "pub",       who: "fati",   dur: "0:30", title: "Nouvelle Laverie Africaine : votre linge, notre fierté (spot)", thumb: "Votre linge, <em>notre fierté</em>" },
+    { d: "2026-10-10", s: "pub",       who: "fati",   dur: "0:30", img: "assets/tricycle-solaire.jpg", title: "Le tricycle solaire vient chercher votre linge à domicile (spot)", thumb: "On vient <em>chez vous</em>" },
     { d: "2026-10-12", s: "pressing",  who: "issouf", short: true, dur: "0:55", title: "Lire une étiquette d'entretien en moins d'une minute", thumb: "L'étiquette <em>en 1 minute</em>" },
     { d: "2026-10-14", s: "auto",      who: "kader",  dur: "6:40", title: "Laver sa moto après la pluie : boue et latérite sans abîmer", thumb: "Moto pleine de <em>latérite</em> ?" },
     { d: "2026-10-17", s: "formation", who: "fati",   dur: "12:30", title: "Académie NLA n°1 : bien accueillir un client au comptoir", thumb: "Accueillir <em>le client</em>" },
     { d: "2026-10-19", s: "auto",      who: "kader",  short: true, dur: "0:50", title: "4 erreurs qui rayent votre voiture au lavage", thumb: "<em>4 erreurs</em> qui rayent" },
     { d: "2026-10-21", s: "pressing",  who: "issouf", dur: "7:05", title: "Repasser un boubou en bazin sans le faire briller", thumb: "Bazin : <em>zéro brillance</em>" },
-    { d: "2026-10-24", s: "pub",       who: "fati",   dur: "1:00", title: "Laverie, pressing, lavage auto-moto : nos services en 1 minute", thumb: "Tout en <em>1 minute</em>" },
-    { d: "2026-10-26", s: "laverie",   who: "awa",    short: true, dur: "0:40", title: "Pagne wax : garder ses couleurs lavage après lavage", thumb: "Wax : <em>couleurs intactes</em>" },
+    { d: "2026-10-24", s: "pub",       who: "fati",   dur: "1:00", title: "Commander en ligne et suivre son linge étape par étape", thumb: "Suivez votre <em>linge</em> en direct" },
+    { d: "2026-10-26", s: "laverie",   who: "awa",    short: true, dur: "0:40", title: "Baskets blanches : lavage et désinfection UV", thumb: "Baskets <em>comme neuves</em>" },
     { d: "2026-10-28", s: "auto",      who: "kader",  dur: "5:15", title: "Harmattan : protéger la carrosserie de la poussière", thumb: "Poussière <em>d'harmattan</em>" },
     { d: "2026-10-31", s: "formation", who: "awa",    dur: "10:05", title: "Académie NLA n°2 : doser la lessive en machine professionnelle", thumb: "Bien doser <em>la lessive</em>" }
   ];
@@ -409,7 +481,7 @@
   function thumb(v, big) {
     return `<div class="thumb ${v.s}">
       <div class="t-text">${v.thumb}</div>
-      ${avatar(v.who, "av")}
+      ${v.img ? `<div class="photo"><img src="${v.img}" alt=""></div>` : avatar(v.who, "av")}
       <span class="brandmark">NLA · ${SERIES[v.s].label.toUpperCase()}</span>
       ${v.short ? `<span class="badge short">SHORT</span>` : ""}
       <span class="badge">${v.dur}</span>
@@ -417,8 +489,7 @@
   }
 
   // À la une
-  document.getElementById("featured-thumb").innerHTML = thumb(VIDEOS[2], true);
-
+  
   // Filtres + grille
   const filters = document.getElementById("filters");
   const grid = document.getElementById("grid");
@@ -450,10 +521,10 @@
 
   // Personnages
   const CAST = [
-    { id: "awa", bg: "var(--indigo)", role: "Astuces laverie", text: "La maman du quartier qui a tout vu : taches, pagnes délavés, blancs devenus gris. Chaleureuse, directe, toujours une solution simple.", line: "Ne frotte pas, ma fille, tamponne !" },
+    { id: "awa", bg: "var(--sky)", role: "Astuces laverie", text: "La maman du quartier qui a tout vu : taches, pagnes délavés, blancs devenus gris. Chaleureuse, directe, toujours une solution simple.", line: "Ne frotte pas, ma fille, tamponne !" },
     { id: "issouf", bg: "var(--plum)", role: "Pressing pro", text: "Le maître du fer et du bazin. Élégant, précis, il explique pourquoi un vêtement va au pressing et comment le garder impeccable.", line: "Un boubou bien repassé, c'est un homme respecté." },
     { id: "kader", bg: "var(--laterite)", role: "Auto-Moto Clean", text: "Jeune laveur passionné de motos. Il parle latérite, harmattan et saison des pluies, et montre les bons gestes pour ne rien rayer.", line: "Ta moto brille ? Alors toi aussi !" },
-    { id: "fati", bg: "var(--sun)", role: "Présentatrice · Académie NLA", text: "Visage des spots et des formations internes. Elle présente les services, les nouveautés, et anime l'Académie pour l'équipe.", line: "À la Nouvelle Laverie Africaine, votre linge est entre de bonnes mains." }
+    { id: "fati", bg: "var(--sun)", role: "Présentatrice · Académie NLA", text: "Casquette et polo aux couleurs de la maison, comme sur le tricycle. Visage des spots et des formations : elle présente les services, la collecte à domicile, et anime l'Académie.", line: "Un simple coup de fil, nous voici !" }
   ];
   document.getElementById("cast").innerHTML = CAST.map(c => `
     <article class="person">
