@@ -30,10 +30,40 @@ const envSchema = z
     OTP_DRIVER: z.enum(['console', 'memory']).default('console'),
     DEFAULT_PLAN_CODE: z.string().default('SALON'),
     TRIAL_DAYS: z.coerce.number().int().min(0).default(30),
+
+    // ---- Facturation de la plateforme (abonnements SaaS) ----
+    /** Connexion salons_platform (BYPASSRLS) : moteur de facturation et console éditeur uniquement. */
+    PLATFORM_DATABASE_URL: z.string().min(1),
+    /** Planificateur (renouvellements, relances, suspensions) : off dans les tests. */
+    BILLING_SCHEDULER: z.enum(['on', 'off']).default('on'),
+    BILLING_TICK_SECONDS: z.coerce.number().int().min(10).default(300),
+    /** Facture de renouvellement émise N jours avant l'échéance. */
+    BILLING_RENEWAL_LEAD_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    /** Délai de grâce après une échéance impayée, avant la suspension automatique. */
+    BILLING_GRACE_DAYS: z.coerce.number().int().min(0).max(30).default(3),
+    /** TVA appliquée aux factures de la plateforme (0 tant que le régime fiscal n'est pas arrêté). */
+    BILLING_VAT_PERCENT: z.coerce.number().min(0).max(30).default(0),
+    PLATFORM_LEGAL_NAME: z.string().default('Éditeur de la plateforme'),
+    PLATFORM_ADDRESS: z.string().default(''),
+    PLATFORM_TAX_ID: z.string().default(''),
+    /** Numéros de réception Mobile Money, ex. « Orange Money:+22670000000;Moov Money:+22660000000 ». */
+    PLATFORM_MOBILE_MONEY: z.string().default(''),
+    /** Paiement en ligne : none, cinetpay, ou sandbox (simulateur, interdit en production). */
+    PAYMENT_PROVIDER: z.enum(['none', 'cinetpay', 'sandbox']).default('none'),
+    CINETPAY_API_KEY: z.string().default(''),
+    CINETPAY_SITE_ID: z.string().default(''),
+    /** Adresse publique de l'API (URL de notification de l'agrégateur). */
+    API_PUBLIC_URL: z.string().url().default('http://localhost:3002'),
   })
   .superRefine((env, ctx) => {
     if (env.NODE_ENV === 'production' && env.OTP_DRIVER === 'memory') {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['OTP_DRIVER'], message: 'interdit en production' });
+    }
+    if (env.NODE_ENV === 'production' && env.PAYMENT_PROVIDER === 'sandbox') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['PAYMENT_PROVIDER'], message: 'le simulateur est interdit en production' });
+    }
+    if (env.PAYMENT_PROVIDER === 'cinetpay' && (!env.CINETPAY_API_KEY || !env.CINETPAY_SITE_ID)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['CINETPAY_API_KEY'], message: 'CINETPAY_API_KEY et CINETPAY_SITE_ID sont requis' });
     }
     if (env.NODE_ENV === 'production' && env.COOKIE_SECURE === false) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['COOKIE_SECURE'], message: 'doit être true en production' });

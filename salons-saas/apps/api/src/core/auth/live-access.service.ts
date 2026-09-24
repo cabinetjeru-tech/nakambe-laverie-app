@@ -12,13 +12,14 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
  * - le compte est actif ;
  * - l'adhésion au tenant est active et ses permissions n'ont pas changé depuis l'émission
  *   du jeton (sinon : 401, le client rafraîchit et obtient les nouveaux droits) ;
- * - un tenant suspendu ou résilié est en lecture seule.
+ * - un tenant suspendu ou résilié est en lecture seule (sauf routes @ReadOnlyExempt :
+ *   session, abonnement, notifications).
  */
 @Injectable()
 export class LiveAccessService {
   constructor(private readonly db: DbService) {}
 
-  async assertStillValid(user: AuthUser, method: string): Promise<void> {
+  async assertStillValid(user: AuthUser, method: string, readOnlyExempt = false): Promise<void> {
     const tx = this.db.tx;
 
     const activeSession = await tx.userSession.findFirst({
@@ -38,8 +39,12 @@ export class LiveAccessService {
     if (!membership || membership.status !== 'ACTIVE' || membership.permissionsVersion !== user.permissionsVersion) {
       throw new UnauthorizedException('Vos accès ont changé. Reconnectez-vous ou rafraîchissez la session.');
     }
-    if (READ_ONLY_TENANT_STATUSES.has(membership.tenant.status) && !SAFE_METHODS.has(method.toUpperCase())) {
-      throw new ForbiddenException("L'abonnement de cette entreprise est suspendu : consultation uniquement.");
+    if (!readOnlyExempt && READ_ONLY_TENANT_STATUSES.has(membership.tenant.status) && !SAFE_METHODS.has(method.toUpperCase())) {
+      throw new ForbiddenException(
+        membership.tenant.status === 'CANCELLED'
+          ? 'Abonnement résilié : consultation uniquement. Réabonnez-vous depuis la page Abonnement.'
+          : 'Abonnement suspendu : consultation uniquement. Réglez votre facture depuis la page Abonnement.',
+      );
     }
   }
 }

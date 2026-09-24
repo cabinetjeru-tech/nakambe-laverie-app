@@ -3,7 +3,7 @@ import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { APP_CONFIG, AppConfig } from '../../config/env';
 import { AuthUser } from '../../core/auth/auth-user';
-import { Authenticated, CurrentUser, ManualTransaction, Public } from '../../core/auth/decorators';
+import { Authenticated, CurrentUser, ManualTransaction, Public, ReadOnlyExempt } from '../../core/auth/decorators';
 import { SessionService } from '../../core/auth/session.service';
 import { requestMeta } from '../../core/db/db-context.interceptor';
 import { DbService } from '../../core/db/db.service';
@@ -23,6 +23,8 @@ import { assertCsrfHeader, clearRefreshCookie, readRefreshCookie, sessionBody, s
 
 const FIFTEEN_MINUTES = 15 * 60_000;
 
+/** Session et compte : utilisables même quand l'entreprise est en lecture seule. */
+@ReadOnlyExempt()
 @Controller('auth')
 export class AuthController {
   constructor(

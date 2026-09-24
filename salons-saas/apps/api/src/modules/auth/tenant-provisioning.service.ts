@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
-import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { APP_CONFIG, AppConfig } from '../../config/env';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { DbService } from '../../core/db/db.service';
+import { PlatformSettingsService } from '../../core/platform/platform-settings.service';
 import { RESERVED_SLUGS, slugify } from '../../core/http/slug';
 import { DEFAULT_ROLES, OWNER_ROLE_CODE } from '../../core/permissions/catalog';
 import { CryptoService } from '../../core/security/crypto.service';
@@ -26,18 +26,19 @@ export class TenantProvisioningService {
     private readonly db: DbService,
     private readonly crypto: CryptoService,
     private readonly defaults: TenantDefaultsService,
-    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    private readonly platformSettings: PlatformSettingsService,
   ) {}
 
   async provision(input: NewTenantInput): Promise<{ tenantId: string; salonId: string }> {
     const tx = this.db.tx;
-    const plan = await tx.plan.findFirst({ where: { code: this.config.DEFAULT_PLAN_CODE, isActive: true } });
+    const settings = await this.platformSettings.get();
+    const plan = await tx.plan.findFirst({ where: { code: settings.defaultPlanCode, isActive: true } });
     if (!plan) {
       throw new ServiceUnavailableException("Les offres ne sont pas configurées (lancer le seed de référence).");
     }
 
     const now = new Date();
-    const trialEnd = new Date(now.getTime() + this.config.TRIAL_DAYS * 24 * 3600 * 1000);
+    const trialEnd = new Date(now.getTime() + settings.trialDays * 24 * 3600 * 1000);
     const tenant = await tx.tenant.create({
       data: {
         slug: await this.uniqueTenantSlug(input.businessName),

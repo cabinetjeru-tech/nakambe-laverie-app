@@ -151,9 +151,12 @@ export class AuthService {
       select: { id: true, fullName: true, phone: true, email: true, phoneVerifiedAt: true, locale: true, createdAt: true },
     });
     const memberships = await this.activeMemberships(user.userId);
+    const platformStaff = await this.db.tx.platformStaff.findUnique({ where: { userId: user.userId }, select: { role: true, isActive: true } });
     return {
       user: profile,
       memberships,
+      /** Personnel de l'éditeur (console plateforme) ; null pour les salons. */
+      platformRole: platformStaff?.isActive ? platformStaff.role : null,
       activeTenant: user.tenantId
         ? {
             tenantId: user.tenantId,

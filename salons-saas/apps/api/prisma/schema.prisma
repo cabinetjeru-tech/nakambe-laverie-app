@@ -165,6 +165,8 @@ model Plan {
   features      PlanFeature[]
   tenants       Tenant[]
   subscriptions SaasSubscription[]
+  pendingFor    SaasSubscription[] @relation("PendingPlan")
+  invoices      SaasInvoice[]
 
   @@map("plans")
 }
@@ -190,33 +192,39 @@ enum TenantStatus {
 
 /// Entreprise cliente de la plateforme. Porte l'abonnement SaaS.
 model Tenant {
-  id            String       @id @default(uuid(7)) @db.Uuid
-  slug          String       @unique // sous-domaine : {slug}.plateforme.bf
-  legalName     String       @map("legal_name")
-  displayName   String       @map("display_name")
-  countryCode   String       @default("BF") @map("country_code") @db.Char(2)
-  currency      String       @default("XOF") @db.Char(3)
-  timezone      String       @default("Africa/Ouagadougou")
-  taxId         String?      @map("tax_id") // IFU
-  tradeRegister String?      @map("trade_register") // RCCM
-  logoKey       String?      @map("logo_key") // clé dans le stockage objet
-  status        TenantStatus @default(TRIAL)
-  planId        String       @map("plan_id") @db.Uuid
-  trialEndsAt   DateTime?    @map("trial_ends_at") @db.Timestamptz(3)
-  shard         String       @default("main") // base physique (porte de sortie vers une base dédiée)
-  dataKeyEnc    String       @map("data_key_enc") // clé de chiffrement du tenant, chiffrée par la clé maîtresse
-  createdAt     DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt     DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  cancelledAt   DateTime?    @map("cancelled_at") @db.Timestamptz(3)
+  id               String       @id @default(uuid(7)) @db.Uuid
+  slug             String       @unique // sous-domaine : {slug}.plateforme.bf
+  legalName        String       @map("legal_name")
+  displayName      String       @map("display_name")
+  countryCode      String       @default("BF") @map("country_code") @db.Char(2)
+  currency         String       @default("XOF") @db.Char(3)
+  timezone         String       @default("Africa/Ouagadougou")
+  taxId            String?      @map("tax_id") // IFU
+  tradeRegister    String?      @map("trade_register") // RCCM
+  logoKey          String?      @map("logo_key") // clé dans le stockage objet
+  status           TenantStatus @default(TRIAL)
+  planId           String       @map("plan_id") @db.Uuid
+  trialEndsAt      DateTime?    @map("trial_ends_at") @db.Timestamptz(3)
+  graceEndsAt      DateTime?    @map("grace_ends_at") @db.Timestamptz(3) // fin du délai de grâce (impayé)
+  suspendedAt      DateTime?    @map("suspended_at") @db.Timestamptz(3)
+  suspensionReason String?      @map("suspension_reason")
+  shard            String       @default("main") // base physique (porte de sortie vers une base dédiée)
+  dataKeyEnc       String       @map("data_key_enc") // clé de chiffrement du tenant, chiffrée par la clé maîtresse
+  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cancelledAt      DateTime?    @map("cancelled_at") @db.Timestamptz(3)
 
   plan Plan @relation(fields: [planId], references: [id])
 
   domains               TenantDomain[]
   subscriptions         SaasSubscription[]
   saasInvoices          SaasInvoice[]
+  saasPayments          SaasPayment[]
   usageCounters         UsageCounter[]
   featureOverrides      FeatureOverride[]
   impersonationGrants   ImpersonationGrant[]
+  supportTickets        SupportTicket[]
+  supportMessages       SupportMessage[]
   settings              TenantSetting[]
   salons                Salon[]
   roles                 Role[]
@@ -277,7 +285,9 @@ enum SaasSubscriptionStatus {
   EXPIRED
 }
 
-/// Abonnement du tenant à la plateforme (historique conservé : une ligne par période d'offre).
+/// Abonnement du tenant à la plateforme : une ligne courante par tenant, qui évolue
+/// (essai → actif → impayé…). L'historique des périodes est porté par les factures.
+/// L'essai est une période comme une autre (prix 0) : current_period_end = fin d'essai.
 model SaasSubscription {
   id                 String                 @id @default(uuid(7)) @db.Uuid
   tenantId           String                 @map("tenant_id") @db.Uuid
@@ -290,14 +300,20 @@ model SaasSubscription {
   currentPeriodEnd   DateTime               @map("current_period_end") @db.Timestamptz(3)
   cancelAtPeriodEnd  Boolean                @default(false) @map("cancel_at_period_end")
   cancelledAt        DateTime?              @map("cancelled_at") @db.Timestamptz(3)
+  /// Changement d'offre ou de cycle appliqué au prochain renouvellement.
+  pendingPlanId      String?                @map("pending_plan_id") @db.Uuid
+  pendingCycle       BillingCycle?          @map("pending_cycle")
+  pastDueSince       DateTime?              @map("past_due_since") @db.Timestamptz(3)
   createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
 
-  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
-  plan     Plan          @relation(fields: [planId], references: [id])
-  invoices SaasInvoice[]
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  plan        Plan          @relation(fields: [planId], references: [id])
+  pendingPlan Plan?         @relation("PendingPlan", fields: [pendingPlanId], references: [id])
+  invoices    SaasInvoice[]
 
-  @@index([tenantId, status])
+  @@unique([tenantId])
+  @@index([status, currentPeriodEnd])
   @@map("saas_subscriptions")
 }
 
@@ -308,12 +324,21 @@ enum SaasInvoiceStatus {
   VOID
 }
 
+enum SaasInvoiceKind {
+  RENEWAL // période suivante (y compris la première après l'essai)
+  UPGRADE // différence au prorata lors d'un passage à une offre supérieure
+}
+
 /// Facture émise par l'éditeur au tenant.
 model SaasInvoice {
   id             String            @id @default(uuid(7)) @db.Uuid
   tenantId       String            @map("tenant_id") @db.Uuid
   subscriptionId String?           @map("subscription_id") @db.Uuid
-  number         String            @unique // numérotation de l'éditeur
+  number         String            @unique // numérotation de l'éditeur : FS-2026-000001
+  kind           SaasInvoiceKind   @default(RENEWAL)
+  planId         String            @map("plan_id") @db.Uuid
+  cycle          BillingCycle
+  description    String
   status         SaasInvoiceStatus @default(DRAFT)
   periodStart    DateTime          @map("period_start") @db.Timestamptz(3)
   periodEnd      DateTime          @map("period_end") @db.Timestamptz(3)
@@ -323,34 +348,135 @@ model SaasInvoice {
   currency       String            @db.Char(3)
   dueAt          DateTime          @map("due_at") @db.Timestamptz(3)
   paidAt         DateTime?         @map("paid_at") @db.Timestamptz(3)
+  voidedAt       DateTime?         @map("voided_at") @db.Timestamptz(3)
+  voidReason     String?           @map("void_reason")
+  /// Identité de l'acheteur figée à l'émission (raison sociale, IFU, RCCM).
+  buyerSnapshot  Json              @map("buyer_snapshot")
   pdfKey         String?           @map("pdf_key")
   createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
 
   tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   subscription SaasSubscription? @relation(fields: [subscriptionId], references: [id])
+  plan         Plan              @relation(fields: [planId], references: [id])
   payments     SaasPayment[]
 
   @@index([tenantId, status])
+  @@index([status, dueAt])
   @@map("saas_invoices")
 }
 
+/// Paiement d'une facture de la plateforme. Mobile Money manuel (référence vérifiée par
+/// l'éditeur), agrégateur en ligne (CinetPay, confirmé par interrogation de l'agrégateur)
+/// ou bac à sable (développement et tests uniquement).
 model SaasPayment {
   id                String        @id @default(uuid(7)) @db.Uuid
+  tenantId          String        @map("tenant_id") @db.Uuid
   invoiceId         String        @map("invoice_id") @db.Uuid
   method            PaymentMethod
+  provider          String? // "cinetpay", "sandbox"
   status            PaymentStatus @default(PENDING)
   amount            BigInt
   currency          String        @db.Char(3)
-  providerReference String?       @map("provider_reference")
+  providerReference String?       @map("provider_reference") // référence Mobile Money saisie / id opérateur
+  providerToken     String?       @unique @map("provider_token") // identifiant de transaction chez l'agrégateur
+  checkoutUrl       String?       @map("checkout_url")
+  operator          String?
+  payerPhone        String?       @map("payer_phone")
   idempotencyKey    String        @unique @map("idempotency_key")
   rawPayload        Json?         @map("raw_payload")
+  failureReason     String?       @map("failure_reason")
+  validatedBy       String?       @map("validated_by") @db.Uuid
+  createdBy         String?       @map("created_by") @db.Uuid
   paidAt            DateTime?     @map("paid_at") @db.Timestamptz(3)
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
 
+  tenant  Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   invoice SaasInvoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   @@unique([method, providerReference])
+  @@index([status, method])
+  @@index([tenantId])
   @@map("saas_payments")
+}
+
+/// Paramètres de la plateforme modifiables par le super administrateur (coordonnées de
+/// l'éditeur, numéros Mobile Money, délais de facturation…). Une clé absente = valeur de
+/// l'environnement (.env).
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedBy String?  @map("updated_by") @db.Uuid
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("platform_settings")
+}
+
+enum SupportTicketStatus {
+  OPEN // en attente de l'équipe plateforme
+  PENDING // réponse de la plateforme, en attente du salon
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+/// Demande d'assistance d'un salon à l'équipe de la plateforme.
+model SupportTicket {
+  id              String                @id @default(uuid(7)) @db.Uuid
+  tenantId        String                @map("tenant_id") @db.Uuid
+  number          Int // numéro continu par entreprise
+  subject         String
+  category        String // billing, bug, question, account, other
+  status          SupportTicketStatus   @default(OPEN)
+  priority        SupportTicketPriority @default(NORMAL)
+  createdByUserId String                @map("created_by_user_id") @db.Uuid
+  assignedToId    String?               @map("assigned_to_id") @db.Uuid // agent plateforme
+  lastMessageAt   DateTime              @default(now()) @map("last_message_at") @db.Timestamptz(3)
+  resolvedAt      DateTime?             @map("resolved_at") @db.Timestamptz(3)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  messages SupportMessage[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, number])
+  @@index([status, lastMessageAt])
+  @@map("support_tickets")
+}
+
+model SupportMessage {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  tenantId     String   @map("tenant_id") @db.Uuid
+  ticketId     String   @map("ticket_id") @db.Uuid
+  authorUserId String   @map("author_user_id") @db.Uuid
+  fromPlatform Boolean  @default(false) @map("from_platform")
+  /// Note interne de l'équipe plateforme : jamais visible du salon.
+  internal     Boolean  @default(false)
+  body         String
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  ticket SupportTicket @relation(fields: [tenantId, ticketId], references: [tenantId, id], onDelete: Cascade)
+
+  @@index([tenantId, ticketId, createdAt])
+  @@map("support_messages")
+}
+
+/// Numérotation continue des pièces de l'éditeur (factures de la plateforme).
+model PlatformSequence {
+  docType String @map("doc_type")
+  year    Int
+  value   Int    @default(0)
+
+  @@id([docType, year])
+  @@map("platform_sequences")
 }
 
 /// Consommation par tenant et par période (SMS, stockage, rendez-vous) pour les quotas.
@@ -2488,7 +2614,11 @@ model Notification {
   channel           NotificationChannel
   event             String
   destination       String? // numéro, email, endpoint push (masqué dans l'interface)
+  title             String?
   body              String
+  actionUrl         String?             @map("action_url") // lien dans l'application
+  /// Clé d'unicité : une même alerte n'est jamais envoyée deux fois (planificateur rejouable).
+  dedupeKey         String?             @map("dedupe_key")
   status            NotificationStatus  @default(QUEUED)
   campaignId        String?             @map("campaign_id") @db.Uuid
   relatedEntity     String?             @map("related_entity") // "appointment:<id>"
@@ -2504,7 +2634,9 @@ model Notification {
   campaign Campaign?      @relation(fields: [tenantId, campaignId], references: [tenantId, id], onDelete: Restrict)
 
   @@unique([tenantId, id])
+  @@unique([tenantId, dedupeKey])
   @@index([tenantId, clientId, createdAt])
+  @@index([tenantId, recipientUserId, createdAt])
   @@index([status, scheduledFor])
   @@map("notifications")
 }

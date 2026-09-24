@@ -14,6 +14,7 @@
     "postinstall": "prisma generate",
     "prisma:migrate": "prisma migrate deploy",
     "prisma:seed": "ts-node --transpile-only prisma/seed.ts",
+    "platform:grant": "ts-node --transpile-only prisma/grant-platform.ts",
     "db:roles": "psql \"$ADMIN_DATABASE_URL\" -v ON_ERROR_STOP=1 -v owner_role=\"$DB_OWNER_ROLE\" -v app_password=\"'$APP_DB_PASSWORD'\" -v platform_password=\"'$PLATFORM_DB_PASSWORD'\" -f prisma/sql/roles.sql",
     "db:verify": "psql \"$ADMIN_DATABASE_URL\" -v ON_ERROR_STOP=1 -f prisma/sql/verification.sql"
   },

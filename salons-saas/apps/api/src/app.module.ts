@@ -11,6 +11,10 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
 import { StaffModule } from './modules/staff/staff.module';
 import { StockModule } from './modules/stock/stock.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PlatformModule } from './modules/platform/platform.module';
+import { SupportModule } from './modules/support/support.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SalonsModule } from './modules/salons/salons.module';
 
@@ -29,6 +33,10 @@ import { SalonsModule } from './modules/salons/salons.module';
     CashModule,
     ExpensesModule,
     ReportsModule,
+    BillingModule,
+    NotificationsModule,
+    SupportModule,
+    PlatformModule,
   ],
   controllers: [AppController],
 })

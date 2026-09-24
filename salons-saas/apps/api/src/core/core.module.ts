@@ -12,6 +12,8 @@ import { DbContextInterceptor } from './db/db-context.interceptor';
 import { DbService } from './db/db.service';
 import { PrismaExceptionFilter } from './http/prisma-exception.filter';
 import { MessagingService } from './messaging/messaging.service';
+import { PlatformDbService } from './platform/platform-db.service';
+import { PlatformSettingsService } from './platform/platform-settings.service';
 import { CryptoService } from './security/crypto.service';
 import { PasswordService } from './security/password.service';
 import { LedgerService } from './tenant/ledger.service';
@@ -49,6 +51,8 @@ import { TenantDefaultsService } from './tenant/tenant-defaults.service';
     LedgerService,
     TenantDefaultsService,
     StaffIdentityService,
+    PlatformDbService,
+    PlatformSettingsService,
     // Ordre des gardes : limitation de débit, puis authentification/permissions.
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: AuthGuard },
@@ -69,6 +73,8 @@ import { TenantDefaultsService } from './tenant/tenant-defaults.service';
     LedgerService,
     TenantDefaultsService,
     StaffIdentityService,
+    PlatformDbService,
+    PlatformSettingsService,
   ],
 })
 export class CoreModule {}

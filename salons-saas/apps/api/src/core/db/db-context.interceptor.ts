@@ -3,7 +3,7 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 import { from, lastValueFrom, Observable } from 'rxjs';
 import { LiveAccessService } from '../auth/live-access.service';
-import { MANUAL_TRANSACTION_KEY } from '../auth/decorators';
+import { MANUAL_TRANSACTION_KEY, READ_ONLY_EXEMPT_KEY } from '../auth/decorators';
 import { DbService, RequestMeta } from './db.service';
 
 export function requestMeta(request: Request): RequestMeta {
@@ -33,11 +33,13 @@ export class DbContextInterceptor implements NestInterceptor {
       context.getHandler(),
       context.getClass(),
     ]);
+    const exempt =
+      this.reflector.getAllAndOverride<boolean>(READ_ONLY_EXEMPT_KEY, [context.getHandler(), context.getClass()]) ?? false;
 
     if (manual) {
       // Le traitement ouvre ses propres transactions ; on vérifie seulement la session.
       const run = async () => {
-        if (user) await this.db.withContext(dbContext, () => this.liveAccess.assertStillValid(user, request.method));
+        if (user) await this.db.withContext(dbContext, () => this.liveAccess.assertStillValid(user, request.method, exempt));
         return lastValueFrom(next.handle(), { defaultValue: undefined });
       };
       return from(run());
@@ -45,7 +47,7 @@ export class DbContextInterceptor implements NestInterceptor {
 
     return from(
       this.db.withContext(dbContext, async () => {
-        if (user) await this.liveAccess.assertStillValid(user, request.method);
+        if (user) await this.liveAccess.assertStillValid(user, request.method, exempt);
         return lastValueFrom(next.handle(), { defaultValue: undefined });
       }),
     );

@@ -51,3 +51,10 @@ REVOKE UPDATE, DELETE ON audit_logs, ledger_entries, stock_movements, client_con
 
 -- L'API n'a pas à modifier le catalogue des offres ni les comptes du personnel plateforme.
 REVOKE INSERT, UPDATE, DELETE ON plans, plan_features, platform_staff, permissions FROM salons_app;
+
+-- Facturation de la plateforme : l'API des salons lit (RLS) et crée l'abonnement d'essai à
+-- l'inscription ; factures, paiements, numérotation et paramètres ne s'écrivent que par
+-- salons_platform (moteur de facturation, console super administrateur).
+REVOKE INSERT, UPDATE, DELETE ON platform_settings, saas_invoices, saas_payments FROM salons_app;
+REVOKE ALL ON platform_sequences FROM salons_app;
+REVOKE UPDATE, DELETE ON saas_subscriptions FROM salons_app;

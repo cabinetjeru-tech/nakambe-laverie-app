@@ -5,6 +5,7 @@ import type { AuthUser } from './auth-user';
 
 export const ACCESS_POLICY_KEY = 'access-policy';
 export const MANUAL_TRANSACTION_KEY = 'manual-transaction';
+export const READ_ONLY_EXEMPT_KEY = 'read-only-exempt';
 
 export type AccessPolicy =
   | { kind: 'public' }
@@ -37,6 +38,13 @@ export const RequireAnyPermission = (...permissions: PermissionCode[]) =>
  * la réponse est une erreur (compteur d'échecs de connexion, révocation de session…).
  */
 export const ManualTransaction = () => SetMetadata(MANUAL_TRANSACTION_KEY, true);
+
+/**
+ * Route utilisable même quand l'entreprise est suspendue ou résiliée (lecture seule) :
+ * session, abonnement et paiement, notifications. Sans cela, un salon suspendu ne pourrait
+ * ni se déconnecter ni régler sa facture.
+ */
+export const ReadOnlyExempt = () => SetMetadata(READ_ONLY_EXEMPT_KEY, true);
 
 export const CurrentUser = createParamDecorator((_data: unknown, ctx: ExecutionContext): AuthUser => {
   const request = ctx.switchToHttp().getRequest<Request>();
