@@ -7,6 +7,8 @@ export interface Me {
   user: { id: string; fullName: string; phone: string; email: string | null };
   memberships: { membershipId: string; tenantId: string; slug: string; name: string; status: string }[];
   activeTenant: Session['activeTenant'];
+  /** Membre de l'équipe plateforme (console super administrateur) ; null sinon. */
+  platformRole: 'PLATFORM_OWNER' | 'PLATFORM_BILLING' | 'PLATFORM_SUPPORT' | null;
 }
 
 interface AuthState {

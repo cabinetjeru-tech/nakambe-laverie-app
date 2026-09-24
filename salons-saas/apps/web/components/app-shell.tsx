@@ -4,12 +4,15 @@ import clsx from 'clsx';
 import {
   BarChart3,
   CalendarDays,
+  CreditCard,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   Package,
   Receipt,
   Scissors,
+  ShieldCheck,
   UserRound,
   Users,
   Wallet,
@@ -19,6 +22,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState } from 'react';
 import { useAuth } from '@/lib/auth';
+import { BillingBanner } from './billing-banner';
+import { NotificationBell } from './notification-bell';
 import { useSalon } from '@/lib/salon';
 
 /** Chaque entrée n'apparaît qu'avec l'une des permissions listées (l'API reste seule juge). */
@@ -32,6 +37,9 @@ export const NAVIGATION = [
   { href: '/depenses', label: 'Dépenses', icon: Receipt, any: ['expenses.create', 'expenses.manage'] },
   { href: '/stock', label: 'Stock', icon: Package, any: ['stock.read'] },
   { href: '/rapports', label: 'Rapports', icon: BarChart3, any: ['reports.read', 'reports.finance.read', 'reports.read.own'] },
+  { href: '/abonnement', label: 'Abonnement', icon: CreditCard, any: ['billing.manage'] },
+  // Tout membre peut écrire au support de la plateforme.
+  { href: '/support', label: 'Aide et support', icon: LifeBuoy, any: [] as string[] },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
@@ -39,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { salons, salon, setSalonId } = useSalon();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const items = NAVIGATION.filter((item) => can(...item.any));
+  const items = NAVIGATION.filter((item) => item.any.length === 0 || can(...item.any));
   const activeTenant = me?.memberships.find((m) => m.tenantId === me.activeTenant?.tenantId);
 
   const nav = (
@@ -90,6 +98,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         })}
       </ul>
       <div className="border-t border-stone-200 p-3">
+        {me?.platformRole && (
+          <Link href="/plateforme" className="mb-2 flex items-center gap-2 rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white hover:bg-stone-800">
+            <ShieldCheck className="h-4 w-4" aria-hidden /> Console super admin
+          </Link>
+        )}
         {me && me.memberships.length > 1 && (
           <select
             aria-label="Changer d'entreprise"
@@ -114,7 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-stone-200 bg-white lg:block">{nav}</aside>
+      <aside className="fixed inset-y-0 left-0 hidden w-60 border-r border-stone-200 bg-white lg:block print:hidden">{nav}</aside>
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-stone-900/40" onClick={() => setOpen(false)} />
@@ -126,13 +139,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </aside>
         </div>
       )}
-      <div className="lg:pl-60">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-stone-200 bg-white/90 px-4 py-3 backdrop-blur lg:hidden">
-          <button onClick={() => setOpen(true)} className="rounded-lg p-1 text-stone-700" aria-label="Ouvrir le menu">
+      <div className="lg:pl-60 print:pl-0">
+        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-stone-200 bg-white/90 px-4 py-2 backdrop-blur lg:px-8 print:hidden">
+          <button onClick={() => setOpen(true)} className="rounded-lg p-1 text-stone-700 lg:hidden" aria-label="Ouvrir le menu">
             <Menu className="h-6 w-6" />
           </button>
-          <span className="truncate font-semibold text-stone-900">{salon?.name ?? activeTenant?.name}</span>
+          <span className="flex-1 truncate font-semibold text-stone-900">{salon?.name ?? activeTenant?.name}</span>
+          <NotificationBell />
         </header>
+        <BillingBanner />
         <main className="mx-auto max-w-6xl px-4 py-6 lg:px-8">{children}</main>
       </div>
     </div>

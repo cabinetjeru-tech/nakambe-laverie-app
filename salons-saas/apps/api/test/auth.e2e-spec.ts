@@ -124,6 +124,14 @@ describe('Authentification', () => {
       await ctx.http().get('/api/v1/salons').set(bearer(first.body)).expect(200);
     });
 
+    it('renouvelle la session même si le navigateur joint un jeton d’accès périmé (droits modifiés)', async () => {
+      const owner = await signupOwner(ctx);
+      await ctx.admin.membership.updateMany({ where: { user: { phone: owner.phone } }, data: { permissionsVersion: { increment: 1 } } });
+      await ctx.http().get('/api/v1/salons').set(bearer(owner)).expect(401);
+      const renewed = await refresh(ctx, owner.cookie).set(bearer(owner)).expect(200);
+      await ctx.http().get('/api/v1/salons').set(bearer(renewed.body)).expect(200);
+    });
+
     it("révoque toute la session si un ancien refresh token est réutilisé (vol probable)", async () => {
       const owner = await signupOwner(ctx);
       const rotated = await refresh(ctx, owner.cookie).expect(200);

@@ -48,7 +48,8 @@ async function rawRequest(path: string, init: RequestInit = {}): Promise<Respons
   const headers = new Headers(init.headers);
   headers.set('X-Requested-With', 'salons-web');
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
-  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+  // Le renouvellement repose sur le cookie seul : le jeton d'accès (peut-être périmé) n'y est pas joint.
+  if (accessToken && path !== '/auth/refresh') headers.set('Authorization', `Bearer ${accessToken}`);
   return fetch(`/api/v1${path}`, { ...init, headers, credentials: 'same-origin' });
 }
 

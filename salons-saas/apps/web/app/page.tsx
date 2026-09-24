@@ -6,12 +6,13 @@ import { Spinner } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 
 export default function Home() {
-  const { status } = useAuth();
+  const { status, me } = useAuth();
   const router = useRouter();
   useEffect(() => {
-    if (status === 'authenticated') router.replace('/tableau-de-bord');
+    // L'équipe plateforme sans salon actif arrive directement sur la console.
+    if (status === 'authenticated') router.replace(me && !me.activeTenant && me.platformRole ? '/plateforme' : '/tableau-de-bord');
     if (status === 'anonymous') router.replace('/connexion');
-  }, [status, router]);
+  }, [status, me, router]);
   return (
     <div className="flex min-h-screen items-center justify-center">
       <Spinner />

@@ -20,7 +20,9 @@ export class SandboxGateway implements PaymentGateway {
 
   async createCheckout(request: CheckoutRequest): Promise<CheckoutResult> {
     this.transactions.set(request.transactionId, { amount: request.amount, currency: request.currency, outcome: 'PENDING' });
-    const url = `${this.appPublicUrl}/abonnement/paiement-test?transaction=${encodeURIComponent(request.transactionId)}&montant=${request.amount}`;
+    const url =
+      `${this.appPublicUrl}/abonnement/paiement-test?transaction=${encodeURIComponent(request.transactionId)}` +
+      `&montant=${request.amount}&retour=${encodeURIComponent(request.returnUrl)}`;
     return { checkoutUrl: url, raw: { sandbox: true } };
   }
 

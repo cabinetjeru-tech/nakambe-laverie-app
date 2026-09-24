@@ -33,8 +33,10 @@ export class PlatformStatsService {
     const now = new Date();
     const months = lastMonths();
     const [subs, monthly, byMethod, open, overdue, thisMonth, lastMonth] = await Promise.all([
+      // Revenu récurrent : abonnements actifs ou en délai de grâce ayant déjà payé au moins une
+      // facture (un essai expiré jamais payé n'est pas du revenu).
       db.saasSubscription.findMany({
-        where: { status: { in: ['ACTIVE', 'PAST_DUE'] } },
+        where: { status: { in: ['ACTIVE', 'PAST_DUE'] }, invoices: { some: { status: 'PAID' } } },
         select: { unitPrice: true, cycle: true, cancelAtPeriodEnd: true, plan: { select: { code: true, name: true } } },
       }),
       db.$queryRaw<{ month: string; total: bigint; count: bigint }[]>`

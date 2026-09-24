@@ -38,7 +38,9 @@ export class AuthGuard implements CanActivate {
     const user = token ? this.tokens.verify(token) : null;
 
     if (policy.kind === 'public') {
-      if (user) request.user = user;
+      // Un jeton éventuellement présent est ignoré : une route publique ne dépend jamais de
+      // l'utilisateur, et un jeton périmé (droits modifiés) ne doit pas faire échouer
+      // /auth/refresh, précisément la route qui sert à en obtenir un nouveau.
       return true;
     }
 
