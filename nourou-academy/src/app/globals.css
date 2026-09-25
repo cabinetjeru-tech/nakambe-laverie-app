@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+/*
+ * Identité visuelle NOUROU GLOBAL ACADEMY
+ * Les couleurs de marque sont injectées dynamiquement (paramètres d'administration)
+ * via les variables --brand-* définies dans le layout racine.
+ */
+:root {
+  --brand-primary: #0b2447;
+  --brand-secondary: #2f80ed;
+  --brand-accent: #e3a33b;
+}
+
+@theme inline {
+  --color-navy: var(--brand-primary);
+  --color-navy-900: color-mix(in oklab, var(--brand-primary) 85%, black);
+  --color-sky: var(--brand-secondary);
+  --color-sky-50: color-mix(in oklab, var(--brand-secondary) 7%, white);
+  --color-sky-100: color-mix(in oklab, var(--brand-secondary) 14%, white);
+  --color-sky-200: color-mix(in oklab, var(--brand-secondary) 28%, white);
+  --color-accent: var(--brand-accent);
+  --color-accent-50: color-mix(in oklab, var(--brand-accent) 10%, white);
+  --color-ink: #10213f;
+  --color-muted: #5b6b85;
+  --color-line: #e3e9f2;
+  --color-surface: #f5f8fc;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --shadow-soft: 0 1px 2px rgb(16 33 63 / 0.04), 0 8px 24px -12px rgb(16 33 63 / 0.18);
+  --radius-xl2: 1.1rem;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white text-ink antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand-secondary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Contenus riches (leçons, réponses du tuteur, articles) */
+.prose-nga { @apply text-[15px] leading-7 text-ink; }
+.prose-nga h2 { @apply mt-6 mb-2 text-xl font-bold text-navy; }
+.prose-nga h3 { @apply mt-5 mb-2 text-lg font-semibold text-navy; }
+.prose-nga h4, .prose-nga h5 { @apply mt-4 mb-1 font-semibold text-navy; }
+.prose-nga p { @apply my-2; }
+.prose-nga ul { @apply my-2 list-disc pl-5; }
+.prose-nga ol { @apply my-2 list-decimal pl-5; }
+.prose-nga li { @apply my-0.5; }
+.prose-nga a { @apply font-medium text-sky underline underline-offset-2; }
+.prose-nga code { @apply rounded bg-sky-50 px-1 py-0.5 text-[13px]; }
+.prose-nga pre { @apply my-3 overflow-x-auto rounded-lg bg-navy p-3 text-[13px] text-white; }
+.prose-nga pre code { @apply bg-transparent p-0 text-white; }
+.prose-nga blockquote { @apply my-3 border-l-4 border-accent bg-accent-50 px-4 py-2 italic; }
+.prose-nga .table-wrap { @apply my-3 overflow-x-auto; }
+.prose-nga table { @apply w-full border-collapse text-sm; }
+.prose-nga th { @apply border border-line bg-sky-50 px-2 py-1 text-left font-semibold; }
+.prose-nga td { @apply border border-line px-2 py-1 align-top; }
+.prose-nga hr { @apply my-4 border-line; }
+.prose-nga sup.cite { @apply ml-0.5 rounded bg-sky-100 px-1 text-[10px] font-bold text-navy; }
+
+/* Mode faible consommation de données : pas d'images décoratives ni d'animations */
+.low-data .decorative { display: none !important; }
+.low-data * { animation: none !important; transition: none !important; }
+
+.fade-in { animation: fadeIn 0.35s ease-out both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.typing span { @apply inline-block h-1.5 w-1.5 rounded-full bg-muted; animation: blink 1.2s infinite both; }
+.typing span:nth-child(2) { animation-delay: 0.2s; }
+.typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+
+.hero-grid {
+  background-image: radial-gradient(circle at 1px 1px, rgb(255 255 255 / 0.09) 1px, transparent 0);
+  background-size: 22px 22px;
+}
