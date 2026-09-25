@@ -3,14 +3,19 @@ const isProd = process.env.NODE_ENV === "production";
 
 // Politique de sécurité du contenu. Jitsi (visioconférence) est autorisé en iframe/script.
 const jitsiDomain = process.env.JITSI_DOMAIN || "meet.jit.si";
+// Envoi direct des fichiers du navigateur vers le stockage S3 (Supabase Storage, R2…).
+let storageOrigin = "";
+try {
+  if (process.env.S3_ENDPOINT) storageOrigin = new URL(process.env.S3_ENDPOINT).origin;
+} catch {}
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${isProd ? "" : "'unsafe-eval'"} https://${jitsiDomain}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https:",
-  "media-src 'self' blob: https:",
+  `img-src 'self' data: blob: https: ${storageOrigin}`.trim(),
+  `media-src 'self' blob: https: ${storageOrigin}`.trim(),
   "font-src 'self' data:",
-  `connect-src 'self' https://${jitsiDomain} wss://${jitsiDomain}`,
+  `connect-src 'self' https://${jitsiDomain} wss://${jitsiDomain} ${storageOrigin}`.trim(),
   `frame-src 'self' https://${jitsiDomain} https://www.youtube-nocookie.com https://player.vimeo.com`,
   "worker-src 'self'",
   "object-src 'none'",

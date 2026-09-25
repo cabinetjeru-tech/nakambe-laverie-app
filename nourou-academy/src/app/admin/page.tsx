@@ -38,6 +38,7 @@ export default async function AdminDashboard() {
       <PageHeader title="Tableau de bord" subtitle={`Environnement : ${env.appEnv}${env.paymentDemoEnabled ? " · paiements de démonstration actifs" : ""}`} />
       <div className="mb-6 space-y-2">
         {!ai.chat && <Alert tone="warning"><AlertTriangle className="mr-1 inline h-4 w-4" /> Le tuteur IA n'est pas actif : ajoutez une clé Anthropic ou OpenAI dans <Link href="/admin/parametres?onglet=ia" className="font-semibold underline">Paramètres › IA</Link>.</Alert>}
+        {process.env.VERCEL && process.env.STORAGE_DRIVER !== "s3" && <Alert tone="error">Hébergement Vercel détecté sans stockage S3 : les fichiers téléversés (vidéos, supports, images) ne seront pas conservés. Configurez STORAGE_DRIVER=s3 (Supabase Storage) — voir docs/05.</Alert>}
         {realProviders.length === 0 && <Alert tone="warning">Aucun prestataire de paiement réel n'est configuré. <Link href="/admin/parametres?onglet=paiements" className="font-semibold underline">Configurer les paiements</Link>.</Alert>}
         {toReview > 0 && <Alert tone="info">{toReview} formation(s) en attente de validation. <Link href="/admin/formations?statut=SUBMITTED" className="font-semibold underline">Examiner</Link></Alert>}
         {refunds > 0 && <Alert tone="info">{refunds} demande(s) de remboursement à traiter. <Link href="/admin/transactions?vue=remboursements" className="font-semibold underline">Voir</Link></Alert>}

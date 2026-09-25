@@ -12,7 +12,9 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx --conditions=react-server prisma/seed.ts",
-    "rag:reindex": "tsx --conditions=react-server scripts/reindex.ts"
+    "rag:reindex": "tsx --conditions=react-server scripts/reindex.ts",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "prisma": {
     "seed": "tsx --conditions=react-server prisma/seed.ts"

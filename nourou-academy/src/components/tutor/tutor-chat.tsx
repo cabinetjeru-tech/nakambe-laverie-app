@@ -46,6 +46,23 @@ function getBrowserRecognition(): (new () => SpeechRecognitionLike) | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/** Réduit les photos (téléphone) avant envoi : ≤ 1600 px, JPEG — moins de données et compatible limite 4,5 Mo. */
+async function shrinkImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.size < 1_000_000 || typeof createImageBitmap === "undefined") return file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext("2d")?.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/jpeg", 0.85));
+    return blob ? new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
+}
+
 function stripForSpeech(md: string) {
   return md
     .replace(/\[S\d+\]/g, "")
@@ -413,11 +430,14 @@ export function TutorChat({
               type="file"
               accept="image/png,image/jpeg,image/webp,application/pdf"
               className="hidden"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (f && f.size > 8 * 1024 * 1024) setError("Fichier trop volumineux (8 Mo max).");
-                else setFile(f ?? null);
-                e.target.value = "";
+              onChange={async (e) => {
+                const input = e.target;
+                const raw = input.files?.[0];
+                input.value = "";
+                if (!raw) return;
+                const f = await shrinkImage(raw);
+                if (f.size > 4 * 1024 * 1024) setError("Fichier trop volumineux (4 Mo max).");
+                else setFile(f);
               }}
             />
           </label>

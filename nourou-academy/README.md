@@ -11,6 +11,7 @@ Application indépendante des autres projets de ce dépôt.
 | [02 — Configuration des API](docs/02-CONFIGURATION-API.md) | IA (Anthropic / OpenAI), paiements (CinetPay, PayDunya, Wave), emails, Jitsi, stockage S3 |
 | [03 — Déploiement et maintenance](docs/03-DEPLOIEMENT-MAINTENANCE.md) | Mise en ligne, HTTPS, tâches planifiées, sauvegardes et restauration, mises à jour |
 | [04 — Sécurité et données personnelles](docs/04-SECURITE-DONNEES.md) | Mesures de sécurité, protection des données, obligations à vérifier |
+| [05 — Mise en ligne Vercel + Supabase](docs/05-MISE-EN-LIGNE-VERCEL-SUPABASE.md) | Guide pas à pas, sans ligne de commande, avec installation dans le navigateur (`/installation`) |
 
 ## Ce que contient la plateforme
 

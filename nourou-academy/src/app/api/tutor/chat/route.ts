@@ -48,7 +48,7 @@ export const POST = handle(async (req: Request) => {
   let attachmentName: string | null = null;
   const file = fd.get("file");
   if (file && typeof file !== "string" && file.size > 0) {
-    if (file.size > 8 * 1024 * 1024) return jsonError(413, "Pièce jointe trop volumineuse (8 Mo max).");
+    if (file.size > 4 * 1024 * 1024) return jsonError(413, "Pièce jointe trop volumineuse (4 Mo max).");
     const buf = Buffer.from(await file.arrayBuffer());
     const t = detectFileType(buf, file.name);
     if (!t) return jsonError(415, "Format de pièce jointe non pris en charge.");

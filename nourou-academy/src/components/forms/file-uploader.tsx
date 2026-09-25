@@ -31,34 +31,57 @@ export function FileUploader({
   const input = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
-  function upload(file: File) {
+  const finish = (ok: boolean, file: File, body: { id?: string; url?: string | null; error?: string }) => {
+    setProgress(null);
+    if (ok && body.id) {
+      setDone(`« ${file.name} » téléversé.${showUrl && body.url ? ` Adresse : ${body.url}` : ""}`);
+      onUploaded?.({ id: body.id, url: body.url ?? null });
+      router.refresh();
+    } else setError(body.error ?? "Échec du téléversement.");
+    if (input.current) input.current.value = "";
+  };
+
+  /** Envoi XHR avec progression. */
+  const send = (method: string, url: string, file: File, headers: Record<string, string>) =>
+    new Promise<{ status: number; text: string }>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, url);
+      for (const [k, v] of Object.entries(headers)) xhr.setRequestHeader(k, v);
+      xhr.upload.onprogress = (e) => e.lengthComputable && setProgress(Math.round((e.loaded / e.total) * 100));
+      xhr.onload = () => resolve({ status: xhr.status, text: xhr.responseText });
+      xhr.onerror = () => reject(new Error("network"));
+      xhr.send(file);
+    });
+
+  async function upload(file: File) {
     setError(null);
     setDone(null);
     setProgress(0);
-    const qs = new URLSearchParams({ ...params, ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v)) });
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", `/api/upload?${qs.toString()}`);
-    xhr.setRequestHeader("X-Filename", encodeURIComponent(file.name));
-    xhr.setRequestHeader("Content-Type", "application/octet-stream");
-    xhr.upload.onprogress = (e) => e.lengthComputable && setProgress(Math.round((e.loaded / e.total) * 100));
-    xhr.onload = () => {
-      setProgress(null);
+    const fields = { ...params, ...Object.fromEntries(Object.entries(extra).filter(([, v]) => v)) };
+    const meta = { ...fields, filename: file.name, contentType: file.type || "application/octet-stream", size: file.size };
+    try {
+      // 1. Envoi direct vers le stockage si disponible (S3 / Supabase Storage).
+      const init = await fetch("/api/upload/direct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ step: "init", ...meta }) });
+      const initBody = (await init.json().catch(() => ({}))) as { mode?: string; url?: string; key?: string; token?: string; contentType?: string; error?: string };
+      if (!init.ok) return finish(false, file, initBody);
+      if (initBody.mode === "direct" && initBody.url) {
+        const put = await send("PUT", initBody.url, file, { "Content-Type": initBody.contentType ?? "application/octet-stream" });
+        if (put.status < 200 || put.status >= 300) return finish(false, file, { error: "Le stockage a refusé le fichier (vérifiez la configuration CORS du stockage)." });
+        setProgress(100);
+        const done = await fetch("/api/upload/direct", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ step: "complete", ...meta, key: initBody.key, token: initBody.token }) });
+        return finish(done.ok, file, await done.json().catch(() => ({})));
+      }
+      // 2. Sinon, envoi via le serveur (stockage local).
+      const res = await send("POST", `/api/upload?${new URLSearchParams(fields).toString()}`, file, { "X-Filename": encodeURIComponent(file.name), "Content-Type": "application/octet-stream" });
       let body: { id?: string; url?: string | null; error?: string } = {};
       try {
-        body = JSON.parse(xhr.responseText);
+        body = JSON.parse(res.text);
       } catch {}
-      if (xhr.status >= 200 && xhr.status < 300 && body.id) {
-        setDone(`« ${file.name} » téléversé.${showUrl && body.url ? ` Adresse : ${body.url}` : ""}`);
-        onUploaded?.({ id: body.id, url: body.url ?? null });
-        router.refresh();
-      } else setError(body.error ?? "Échec du téléversement.");
-      if (input.current) input.current.value = "";
-    };
-    xhr.onerror = () => {
+      finish(res.status >= 200 && res.status < 300, file, body);
+    } catch {
       setProgress(null);
       setError("Connexion interrompue pendant l'envoi. Réessayez.");
-    };
-    xhr.send(file);
+    }
   }
 
   return (

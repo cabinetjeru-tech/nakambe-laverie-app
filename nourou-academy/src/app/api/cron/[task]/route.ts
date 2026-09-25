@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 /**
  * Tâches planifiées, à appeler par un planificateur (cron système, GitHub Actions, service cron) :
  *   POST /api/cron/all   avec l'en-tête  Authorization: Bearer <CRON_SECRET>
+ * Vercel Cron appelle la même route en GET avec le même en-tête (voir vercel.json).
  * Tâches : outbox (emails), reminders (rappels de classes), payments (réconciliation), subscriptions (expirations).
  */
 export async function POST(req: Request, ctx: { params: Promise<{ task: string }> }) {
@@ -67,3 +68,5 @@ export async function POST(req: Request, ctx: { params: Promise<{ task: string }
 
   return NextResponse.json({ ok: true, task, result });
 }
+
+export const GET = POST;
