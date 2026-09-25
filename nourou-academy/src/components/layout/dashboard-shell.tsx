@@ -27,7 +27,7 @@ export async function DashboardShell({ user, nav, title, children }: { user: Ses
             </span>
           </Link>
           <form action={logoutAction}>
-            <button className="grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-sky-50 hover:text-navy" aria-label="Se déconnecter" title="Se déconnecter">
+            <button data-logout className="grid h-10 w-10 place-items-center rounded-lg text-muted hover:bg-sky-50 hover:text-navy" aria-label="Se déconnecter" title="Se déconnecter">
               <LogOut className="h-5 w-5" />
             </button>
           </form>

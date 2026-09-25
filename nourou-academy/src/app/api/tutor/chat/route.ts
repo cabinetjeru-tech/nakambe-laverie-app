@@ -4,7 +4,7 @@ import { assertUser } from "@/lib/auth/session";
 import { handle, jsonError } from "@/lib/api";
 import { rateLimit } from "@/lib/rate-limit";
 import { checkQuota } from "@/lib/ai/quota";
-import { AiUnavailableError, streamText, type LlmMessage, type LlmPart } from "@/lib/ai/llm";
+import { AiUnavailableError, aiStatus, streamText, type LlmMessage, type LlmPart } from "@/lib/ai/llm";
 import { buildTutorSystem, type TutorMode } from "@/lib/ai/tutor";
 import { getAiSettings } from "@/lib/settings";
 import { detectFileType } from "@/lib/uploads";
@@ -24,6 +24,7 @@ const schema = z.object({
 
 export const POST = handle(async (req: Request) => {
   const user = await assertUser();
+  if (!(await aiStatus()).chat) return jsonError(503, new AiUnavailableError().message);
   const rl = rateLimit(`tutor:${user.id}`, 20, 60_000);
   if (!rl.ok) return jsonError(429, `Trop de messages rapprochés. Réessaie dans ${rl.retryAfter} s.`);
   const quota = await checkQuota(user, "TUTOR");

@@ -1,0 +1,54 @@
+# Production sur un serveur (VPS) : base, application, HTTPS automatique (Caddy), tâches planifiées.
+#   cp .env.example .env.production && (compléter)   puis
+#   docker compose -f infra/docker-compose.prod.yml --env-file .env.production up -d --build
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nourou}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définir POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-nourou_academy}
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nourou}"]
+      interval: 10s
+      retries: 10
+
+  app:
+    build: ..
+    restart: unless-stopped
+    env_file: ../.env.production
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nourou}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-nourou_academy}?schema=public
+      DIRECT_URL: postgresql://${POSTGRES_USER:-nourou}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-nourou_academy}?schema=public
+      APP_ENV: production
+      STORAGE_LOCAL_DIR: /app/storage
+    depends_on:
+      db: { condition: service_healthy }
+    volumes: [uploads:/app/storage]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?définir DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    depends_on: [app]
+
+  cron:
+    image: curlimages/curl:8.10.1
+    restart: unless-stopped
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?définir CRON_SECRET}
+    # Toutes les 5 minutes : emails en attente, rappels de classes, réconciliation des paiements, expirations.
+    entrypoint: ["sh", "-c", "while true; do curl -fsS -X POST -H \"Authorization: Bearer $$CRON_SECRET\" http://app:3000/api/cron/all || true; sleep 300; done"]
+    depends_on: [app]
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:

@@ -28,11 +28,16 @@ export function PwaRegister() {
       setOffline(!navigator.onLine);
       if (navigator.onLine) flushProgressQueue();
     };
+    const onLogout = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest("[data-logout]")) navigator.serviceWorker?.controller?.postMessage("logout");
+    };
+    document.addEventListener("click", onLogout);
     window.addEventListener("beforeinstallprompt", onPrompt);
     window.addEventListener("online", update);
     window.addEventListener("offline", update);
     update();
     return () => {
+      document.removeEventListener("click", onLogout);
       window.removeEventListener("beforeinstallprompt", onPrompt);
       window.removeEventListener("online", update);
       window.removeEventListener("offline", update);

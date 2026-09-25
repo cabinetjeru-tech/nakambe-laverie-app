@@ -5,14 +5,15 @@ import { getCurrentUser } from "@/lib/auth/session";
 import { homeFor } from "@/lib/permissions";
 import { Logo } from "./logo";
 import { buttonClass } from "../ui";
+import { t } from "@/lib/i18n";
 
 const nav = [
-  { href: "/formations", label: "Formations" },
-  { href: "/formateurs", label: "Formateurs" },
-  { href: "/tuteur-ia", label: "Tuteur IA" },
-  { href: "/tarifs", label: "Tarifs" },
-  { href: "/blog", label: "Ressources" },
-  { href: "/contact", label: "Contact" },
+  { href: "/formations", label: t("nav.courses") },
+  { href: "/formateurs", label: t("nav.trainers") },
+  { href: "/tuteur-ia", label: t("nav.tutor") },
+  { href: "/tarifs", label: t("nav.pricing") },
+  { href: "/blog", label: t("nav.resources") },
+  { href: "/contact", label: t("nav.contact") },
 ];
 
 export async function PublicHeader() {

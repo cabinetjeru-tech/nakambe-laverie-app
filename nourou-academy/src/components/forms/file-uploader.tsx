@@ -14,6 +14,7 @@ export function FileUploader({
   hint,
   onUploaded,
   extraFields,
+  showUrl,
 }: {
   params: Record<string, string>;
   accept?: string;
@@ -21,6 +22,7 @@ export function FileUploader({
   hint?: string;
   onUploaded?: (res: { id: string; url: string | null }) => void;
   extraFields?: { name: string; label: string; placeholder?: string }[];
+  showUrl?: boolean;
 }) {
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function FileUploader({
         body = JSON.parse(xhr.responseText);
       } catch {}
       if (xhr.status >= 200 && xhr.status < 300 && body.id) {
-        setDone(`« ${file.name} » téléversé.`);
+        setDone(`« ${file.name} » téléversé.${showUrl && body.url ? ` Adresse : ${body.url}` : ""}`);
         onUploaded?.({ id: body.id, url: body.url ?? null });
         router.refresh();
       } else setError(body.error ?? "Échec du téléversement.");

@@ -240,7 +240,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
         <Card>
           <CardBody className="p-4">
             <div className="text-sm font-semibold text-navy">Programme</div>
-            {enrollment && <div className="mt-2 flex items-center gap-2"><ProgressBar value={enrollment.progressPercent} /><span className="text-xs font-semibold">{enrollment.progressPercent} %</span></div>}
+            {enrollment && <div className="mt-2 flex items-center gap-2"><ProgressBar value={enrollment.progressPercent} /><span className="whitespace-nowrap text-xs font-semibold">{enrollment.progressPercent} %</span></div>}
             <nav className="mt-3 max-h-[65vh] space-y-3 overflow-y-auto pr-1" aria-label="Leçons">
               {course.modules.map((m, mi) => (
                 <div key={m.id}>

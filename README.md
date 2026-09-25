@@ -6,6 +6,9 @@ stock, finances et statistiques.
 
 📄 **Voir `docs/01-ARCHITECTURE.md` pour l'analyse du cahier des charges et les choix d'architecture.**
 
+> **Autres projets de ce dépôt** : `allo-coursier/` (livraison) et **`nourou-academy/`** — NOUROU GLOBAL ACADEMY,
+> plateforme de formation en ligne avec tuteur IA (voir [nourou-academy/README.md](nourou-academy/README.md)).
+
 ---
 
 ## 1. Structure du dépôt

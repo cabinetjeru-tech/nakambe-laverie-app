@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { BookOpen, FileText, ImagePlus, Loader2, Mic, Send, Square, Volume2, VolumeX, X } from "lucide-react";
 import { renderMarkdown } from "@/lib/markdown";
@@ -90,6 +91,7 @@ export function TutorChat({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     setBrowserVoice({ stt: !!getBrowserRecognition(), tts: typeof window !== "undefined" && "speechSynthesis" in window });
@@ -169,6 +171,7 @@ export function TutorChat({
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     let answer = "";
+    let newConversationId: string | null = null;
     try {
       const res = await fetch("/api/tutor/chat", { method: "POST", body: fd, signal: ctrl.signal });
       if (!res.ok || !res.body) {
@@ -191,6 +194,7 @@ export function TutorChat({
           const ev = JSON.parse(line) as { type: string; text?: string; conversationId?: string; citations?: TutorCitation[]; message?: string; messageId?: string };
           if (ev.type === "meta") {
             if (ev.conversationId) {
+              newConversationId = ev.conversationId;
               setConversationId(ev.conversationId);
               onConversation?.(ev.conversationId);
             }
@@ -208,6 +212,8 @@ export function TutorChat({
         }
       }
       if (oral && answer) speak(answer, messages.length + 1);
+      // Nouvelle discussion en plein écran : on l'ouvre dans l'historique.
+      if (!compact && !conversationId && newConversationId) router.replace(`/espace/tuteur?c=${newConversationId}`);
     } catch (e) {
       if ((e as Error).name === "AbortError") return;
       setError((e as Error).message);
