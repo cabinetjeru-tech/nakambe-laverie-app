@@ -5,10 +5,10 @@ import { Badge, Stars } from "../ui";
 import type { CourseCardData } from "@/lib/catalog";
 
 const gradients = [
-  "from-[#0b2447] to-[#2f80ed]",
+  "from-[#0b2447] to-[#1f5bd8]",
   "from-[#123a6b] to-[#4aa3ff]",
   "from-[#0b2447] to-[#1c6fd1]",
-  "from-[#16325c] to-[#e3a33b]",
+  "from-[#16325c] to-[#f2a900]",
 ];
 
 export function CourseCover({ title, image, category, className = "aspect-[16/9]" }: { title: string; image: string | null; category?: string | null; className?: string }) {

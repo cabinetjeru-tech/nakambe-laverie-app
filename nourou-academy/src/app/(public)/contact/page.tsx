@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
-import { getBrand } from "@/lib/settings";
+import { getBrand, phoneNumbers } from "@/lib/settings";
 import { getCurrentUser } from "@/lib/auth/session";
 import { contactAction } from "@/app/actions/support";
 import { ActionForm } from "@/components/forms/action-form";
@@ -19,7 +19,7 @@ export default async function ContactPage() {
         <p className="mt-2 text-muted">Une question sur une formation, un paiement ou votre compte ? Écrivez-nous : chaque demande reçoit un numéro de suivi.</p>
         <ul className="mt-8 space-y-4 text-sm">
           <li className="flex gap-3"><MapPin className="h-5 w-5 text-sky" aria-hidden />{brand.address}</li>
-          <li className="flex gap-3"><Phone className="h-5 w-5 text-sky" aria-hidden /><a href={`tel:${brand.phone.replace(/\s/g, "")}`}>{brand.phone}</a></li>
+          <li className="flex gap-3"><Phone className="h-5 w-5 text-sky" aria-hidden /><span className="flex flex-col gap-1">{phoneNumbers(brand.phone).map((n) => <a key={n} href={`tel:${n.replace(/\s/g, "")}`}>{n}</a>)}</span></li>
           <li className="flex gap-3"><Mail className="h-5 w-5 text-sky" aria-hidden /><a href={`mailto:${brand.email}`}>{brand.email}</a></li>
           {wa && <li className="flex gap-3"><MessageCircle className="h-5 w-5 text-emerald-600" aria-hidden /><a href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">WhatsApp</a></li>}
         </ul>

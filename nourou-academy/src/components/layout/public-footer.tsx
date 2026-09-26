@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Mail, MapPin, Phone } from "lucide-react";
-import { getBrand } from "@/lib/settings";
+import { getBrand, phoneNumbers } from "@/lib/settings";
 import { Logo } from "./logo";
 
 export async function PublicFooter() {
@@ -39,7 +39,7 @@ export async function PublicFooter() {
           <div className="mb-3 text-sm font-semibold text-white">Nous joindre</div>
           <ul className="space-y-2 text-sm">
             <li className="flex gap-2"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-sky-200" aria-hidden />{brand.address}</li>
-            <li className="flex gap-2"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-sky-200" aria-hidden />{brand.phone}</li>
+            <li className="flex gap-2"><Phone className="mt-0.5 h-4 w-4 shrink-0 text-sky-200" aria-hidden /><span className="flex flex-col gap-1">{phoneNumbers(brand.phone).map((n) => <a key={n} href={`tel:${n.replace(/\s/g, "")}`} className="hover:text-white">{n}</a>)}</span></li>
             <li className="flex gap-2"><Mail className="mt-0.5 h-4 w-4 shrink-0 text-sky-200" aria-hidden /><a href={`mailto:${brand.email}`} className="hover:text-white">{brand.email}</a></li>
           </ul>
         </div>

@@ -1,31 +1,26 @@
 import Link from "next/link";
 import clsx from "clsx";
 
-export function LogoMark({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 48 48" className={clsx("shrink-0", className)} aria-hidden>
-      {/* « A » en sommet (progression), chevron doré (maîtrise), étincelle (accompagnement IA) */}
-      <rect width="48" height="48" rx="12" fill="var(--brand-primary)" />
-      <path d="M22.2 8.5h3.6L39 39h-6.9L24 20.6 15.9 39H9z" fill="#fff" />
-      <path d="M16.4 34.2 24 27.6l7.6 6.6-2.2 3-5.4-4.7-5.4 4.7z" fill="var(--brand-accent)" />
-      <path d="M38.5 5.5c.5 2.6 1.4 3.5 4 4-2.6.5-3.5 1.4-4 4-.5-2.6-1.4-3.5-4-4 2.6-.5 3.5-1.4 4-4z" fill="var(--brand-accent)" />
-    </svg>
-  );
+/** Emblème officiel Akambi Academy (public/brand). Sur fond sombre, il est posé sur une pastille blanche pour rester lisible. */
+export function LogoMark({ className, light = false }: { className?: string; light?: boolean }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  const img = <img src="/brand/akambi-emblem-web.png" alt="" className={clsx("shrink-0 object-contain", light ? "h-full w-full" : className)} />;
+  return light ? <span className={clsx("grid shrink-0 place-items-center rounded-xl bg-white p-1", className)}>{img}</span> : img;
 }
 
 export function Logo({ name, logoUrl, href = "/", light = false }: { name: string; logoUrl?: string | null; href?: string; light?: boolean }) {
   const [first, ...rest] = name.split(" ");
   return (
-    <Link href={href} className="flex items-center gap-2.5" aria-label={`${name} — accueil`}>
+    <Link href={href} className="flex items-center gap-2" aria-label={`${name} — accueil`}>
       {logoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={logoUrl} alt="" className="h-9 w-auto" />
       ) : (
-        <LogoMark className="h-9 w-9" />
+        <LogoMark className={light ? "h-11 w-12" : "h-11 w-12"} light={light} />
       )}
-      <span className={clsx("leading-none", light ? "text-white" : "text-navy")}>
-        <span className="block text-[15px] font-extrabold uppercase tracking-[0.06em]">{first}</span>
-        <span className={clsx("block text-[10px] font-semibold uppercase tracking-[0.18em]", light ? "text-sky-200" : "text-sky")}>{rest.join(" ")}</span>
+      <span className="leading-none">
+        <span className={clsx("block text-[17px] font-extrabold uppercase tracking-[0.04em]", light ? "text-white" : "text-[#1747B5]")}>{first}</span>
+        <span className="mt-0.5 block text-[10.5px] font-bold uppercase tracking-[0.3em] text-accent">{rest.join(" ")}</span>
       </span>
     </Link>
   );

@@ -91,7 +91,7 @@ les statistiques affichées sont calculées depuis la base.
 | `E2E_BASE_URL=http://localhost:3000 npx vitest run --config vitest.e2e.config.mts` | Tests de bout en bout sur un serveur lancé (pages, contrôle d'accès, fichiers privés, webhooks, tuteur) |
 | `npm run db:seed` | Données initiales (idempotent) |
 | `npm run rag:reindex` | Ré-indexe toute la base de connaissances (après ajout d'une clé d'embeddings) |
-| `node scripts/generate-icons.mjs` | Régénère les icônes PWA depuis `public/icons/*.svg` |
+| `node scripts/generate-icons.mjs` | Régénère les icônes PWA depuis l'emblème `public/brand/akambi-emblem.png` |
 
 ## Ce qui nécessite vos identifiants
 

@@ -36,12 +36,12 @@ export const defaultBrand: BrandSettings = {
   promoter: "Groupe Akambi SARL",
   logoUrl: null,
   primaryColor: "#0B2447",
-  secondaryColor: "#2F80ED",
-  accentColor: "#E3A33B",
+  secondaryColor: "#1F5BD8",
+  accentColor: "#F2A900",
   email: "contact@akambi-academy.com",
-  phone: "+226 00 00 00 00",
-  whatsapp: "",
-  address: "Ouagadougou, Burkina Faso",
+  phone: "+226 57 10 69 11 / +226 58 55 17 15",
+  whatsapp: "+226 57 10 69 11",
+  address: "Siège : Ouagadougou, Burkina Faso",
   facebook: "",
   linkedin: "",
   youtube: "",
@@ -49,6 +49,11 @@ export const defaultBrand: BrandSettings = {
   certificateSignatoryTitle: "Akambi Academy — Groupe Akambi SARL",
   tutorName: "Noura IA",
 };
+
+/** Le champ téléphone peut contenir plusieurs numéros séparés par « / », « ; » ou « , ». */
+export function phoneNumbers(phone: string): string[] {
+  return phone.split(/[\/;,]/).map((n) => n.trim()).filter(Boolean);
+}
 
 export type AiSettings = {
   provider: "anthropic" | "openai";
