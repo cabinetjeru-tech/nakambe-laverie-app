@@ -59,18 +59,37 @@ export class EmployeesService {
 
   async update(
     id: string,
-    dto: Partial<Pick<CreateEmployeeDto, 'position' | 'salary' | 'branchId'>> & { status?: string },
+    dto: Partial<Pick<CreateEmployeeDto, 'position' | 'salary' | 'branchId'>> & {
+      status?: string;
+      fullName?: string;
+      phone?: string;
+    },
   ) {
     await this.findOne(id);
-    return this.prisma.employee.update({
-      where: { userId: id },
-      data: {
-        position: dto.position,
-        salary: dto.salary,
-        branchId: dto.branchId,
-        status: dto.status,
-      },
-    });
+
+    if (dto.phone) {
+      const existing = await this.prisma.user.findUnique({ where: { phone: dto.phone } });
+      if (existing && existing.id !== id) {
+        throw new ConflictException('Un autre utilisateur existe déjà avec ce numéro de téléphone.');
+      }
+    }
+
+    const [, employee] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { fullName: dto.fullName, phone: dto.phone },
+      }),
+      this.prisma.employee.update({
+        where: { userId: id },
+        data: {
+          position: dto.position,
+          salary: dto.salary,
+          branchId: dto.branchId,
+          status: dto.status,
+        },
+      }),
+    ]);
+    return employee;
   }
 
   async deactivate(id: string) {

@@ -148,6 +148,7 @@ async function main() {
   }
 
   await makeCategory(ServiceDomain.LAVERIE_PRESSING, 'Laverie & Pressing', [
+    { name: 'Repassage seul (article déjà lavé)', unit: 'pièce', price: 200 },
     { name: 'Chemise - lavage & repassage', unit: 'pièce', price: 750 },
     { name: 'Pantalon - lavage & repassage', unit: 'pièce', price: 1000 },
     { name: 'Costume complet - pressing', unit: 'pièce', price: 3500 },

@@ -62,6 +62,23 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 py-10">
+        <Link
+          href="/nouvelle-demande?domaine=LAVERIE_PRESSING"
+          className="mx-auto flex max-w-sm flex-col items-center gap-4 transition hover:-translate-y-0.5"
+        >
+          <Image
+            src="/images/promo-repassage.jpg"
+            alt="Promotion repassage de vos linges par des professionnels, à partir de 200 FCFA"
+            width={1254}
+            height={1254}
+            sizes="(min-width: 768px) 384px, 90vw"
+            className="w-full rounded-2xl shadow-xl"
+          />
+          <span className="btn-primary">Profiter de cette offre</span>
+        </Link>
+      </section>
+
       <section id="services" className="mx-auto max-w-6xl px-4 py-12">
         <h2 className="mb-6 text-center text-2xl font-bold text-brand-blue">Que voulez-vous faire aujourd&apos;hui ?</h2>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5">

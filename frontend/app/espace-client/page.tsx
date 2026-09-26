@@ -190,6 +190,39 @@ export default function EspaceClientPage() {
         )}
 
         <section className="mt-8">
+          <h2 className="mb-3 text-lg font-bold text-slate-800">Mes demandes récentes</h2>
+          <div className="flex flex-col gap-3">
+            {appointmentsQuery.data?.length ? (
+              appointmentsQuery.data.map((a: any) => (
+                <div key={a.id} className="card flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold text-brand-blue">
+                      {SERVICE_DOMAIN_LABELS[a.domain] ?? a.domain}
+                    </div>
+                    <div className="text-xs text-slate-500">{formatDateTime(a.scheduledDate)}</div>
+                    {a.address && <div className="text-xs text-slate-400">📍 {a.address}</div>}
+                    <div className="text-xs text-slate-400">{PAYMENT_TIMING_LABELS[a.paymentTiming] ?? a.paymentTiming}</div>
+                  </div>
+                  <span
+                    className={`badge ${
+                      a.status === 'DEMANDE'
+                        ? 'bg-brand-gold-light text-brand-blue-dark'
+                        : a.status === 'ANNULE'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {a.status === 'DEMANDE' ? '🕓 En attente de confirmation' : (APPOINTMENT_STATUS_LABELS[a.status] ?? a.status)}
+                  </span>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-slate-400">Aucune demande pour le moment.</p>
+            )}
+          </div>
+        </section>
+
+        <section className="mt-8">
           <h2 className="mb-3 text-lg font-bold text-slate-800">Mes commandes</h2>
           <div className="flex flex-col gap-3">
             {ordersQuery.data?.length ? (
@@ -219,31 +252,6 @@ export default function EspaceClientPage() {
               ))
             ) : (
               <p className="text-sm text-slate-400">Aucune commande pour le moment.</p>
-            )}
-          </div>
-        </section>
-
-        <section className="mt-8">
-          <h2 className="mb-3 text-lg font-bold text-slate-800">Mes rendez-vous</h2>
-          <div className="flex flex-col gap-3">
-            {appointmentsQuery.data?.length ? (
-              appointmentsQuery.data.map((a: any) => (
-                <div key={a.id} className="card flex items-center justify-between">
-                  <div>
-                    <div className="font-semibold text-brand-blue">
-                      {SERVICE_DOMAIN_LABELS[a.domain] ?? a.domain}
-                    </div>
-                    <div className="text-xs text-slate-500">{formatDateTime(a.scheduledDate)}</div>
-                    {a.address && <div className="text-xs text-slate-400">📍 {a.address}</div>}
-                    <div className="text-xs text-slate-400">{PAYMENT_TIMING_LABELS[a.paymentTiming] ?? a.paymentTiming}</div>
-                  </div>
-                  <span className="badge bg-slate-100 text-slate-600">
-                    {APPOINTMENT_STATUS_LABELS[a.status] ?? a.status}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-slate-400">Aucun rendez-vous pour le moment.</p>
             )}
           </div>
         </section>

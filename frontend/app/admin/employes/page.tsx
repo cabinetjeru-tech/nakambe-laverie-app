@@ -8,6 +8,68 @@ import { formatDate } from '@/lib/format';
 
 const INTERNAL_ROLES = ['ADMIN', 'GERANT', 'RECEPTIONNISTE', 'AGENT_LAVERIE', 'AGENT_NETTOYAGE', 'CHAUFFEUR'];
 
+function InlineFieldEditor({
+  userId,
+  field,
+  value: initialValue,
+  onSaved,
+  title,
+}: {
+  userId: string;
+  field: 'fullName' | 'phone';
+  value: string;
+  onSaved: () => void;
+  title: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(initialValue);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    if (!value.trim() || value === initialValue) {
+      setEditing(false);
+      setValue(initialValue);
+      setError(null);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await api.patch(`/employees/${userId}`, { [field]: value.trim() });
+      onSaved();
+      setEditing(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "Échec de l'enregistrement.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div>
+        <input
+          autoFocus
+          className="input !w-48 !py-1"
+          value={value}
+          disabled={saving}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => e.key === 'Enter' && save()}
+        />
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <button type="button" onClick={() => setEditing(true)} className="text-left hover:underline" title={title}>
+      {initialValue}
+    </button>
+  );
+}
+
 function NewEmployeeForm({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({ fullName: '', phone: '', password: '', role: 'RECEPTIONNISTE', position: '' });
   const [saving, setSaving] = useState(false);
@@ -79,6 +141,10 @@ export default function EmployesPage() {
     queryFn: async () => (await api.get('/employees')).data,
   });
 
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -120,8 +186,12 @@ export default function EmployesPage() {
             )}
             {data?.map((u: any) => (
               <tr key={u.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-semibold">{u.fullName}</td>
-                <td className="px-4 py-3">{u.phone}</td>
+                <td className="px-4 py-3 font-semibold">
+                  <InlineFieldEditor userId={u.id} field="fullName" value={u.fullName} onSaved={refresh} title="Modifier le nom" />
+                </td>
+                <td className="px-4 py-3">
+                  <InlineFieldEditor userId={u.id} field="phone" value={u.phone} onSaved={refresh} title="Modifier le téléphone" />
+                </td>
                 <td className="px-4 py-3">{ROLE_LABELS[u.role?.name] ?? u.role?.name}</td>
                 <td className="px-4 py-3">{u.employee?.position}</td>
                 <td className="px-4 py-3">
