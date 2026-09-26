@@ -102,3 +102,7 @@ Conservez-les dans un gestionnaire de mots de passe. **`SETTINGS_ENCRYPTION_KEY`
 - **Envoi de fichier refusé (« CORS »)** : vérifier `S3_ENDPOINT`, les clés et que le bucket `nourou` existe ;
   redéployer après toute modification de `S3_ENDPOINT` (il est intégré à la politique de sécurité au moment du build).
 - **Page /installation : « SETUP_TOKEN n'est pas défini »** : ajouter la variable puis redéployer.
+- **Mot de passe super-administrateur oublié (emails non configurés)** : ajoutez la variable `ADMIN_RECOVERY_TOKEN`
+  (une clé de votre choix, 16 caractères minimum), redéployez, ouvrez `/installation/recuperation`, saisissez la clé,
+  l'email du super-administrateur et un nouveau mot de passe. **Supprimez ensuite la variable et redéployez** : la page
+  redevient introuvable.
