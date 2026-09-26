@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { Download, WifiOff, X } from "lucide-react";
 import { flushProgressQueue } from "@/components/learn/offline-queue";
 
-type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+export type BeforeInstallPromptEvent = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: string }> };
+/** L'invitation d'installation (Android / Chrome) est partagée avec la page /application via window. */
+export type InstallWindow = Window & { ngaInstallPrompt?: BeforeInstallPromptEvent | null };
 
 /** Enregistre le service worker, propose l'installation (Android) et affiche l'état hors ligne. */
 export function PwaRegister() {
@@ -22,7 +24,10 @@ export function PwaRegister() {
     }
     const onPrompt = (e: Event) => {
       e.preventDefault();
-      setInstallEvent(e as BeforeInstallPromptEvent);
+      (window as InstallWindow).ngaInstallPrompt = e as BeforeInstallPromptEvent;
+      window.dispatchEvent(new Event("nga-install-ready"));
+      // La page /application a son propre bouton : pas de bandeau en double.
+      if (window.location.pathname !== "/application") setInstallEvent(e as BeforeInstallPromptEvent);
     };
     const update = () => {
       setOffline(!navigator.onLine);

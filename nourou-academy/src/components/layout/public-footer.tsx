@@ -20,6 +20,7 @@ export async function PublicFooter() {
             <li><Link href="/formations" className="hover:text-white">Catalogue des formations</Link></li>
             <li><Link href="/tuteur-ia" className="hover:text-white">{brand.tutorName}, votre tuteur</Link></li>
             <li><Link href="/tarifs" className="hover:text-white">Tarifs et abonnements</Link></li>
+            <li><Link href="/application" className="hover:text-white">Installer l'application</Link></li>
             <li><Link href="/blog" className="hover:text-white">Blog et ressources gratuites</Link></li>
             <li><Link href="/temoignages" className="hover:text-white">Avis des apprenants</Link></li>
           </ul>

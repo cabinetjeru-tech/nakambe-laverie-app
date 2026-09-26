@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: "/manifest.webmanifest",
     icons: { icon: "/icons/favicon-32.png", apple: "/icons/apple-touch-icon.png" },
     appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: "default" },
-    openGraph: { siteName: brand.name, locale: "fr_FR", type: "website" },
+    openGraph: { siteName: brand.name, locale: "fr_FR", type: "website", images: [{ url: "/brand/akambi-logo-complet.jpg", width: 1254, height: 1254, alt: brand.name }] },
   };
 }
 
