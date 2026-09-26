@@ -68,7 +68,9 @@ export class AppointmentsService {
     return this.prisma.appointment.findMany({
       where: { ...(status ? { status } : {}), ...(clientId ? { clientId } : {}) },
       include: { client: true, zone: true, quote: { include: { items: true } } },
-      orderBy: { scheduledDate: 'asc' },
+      // Vue client ("mine") : la demande la plus récente en premier.
+      // Vue équipe (planification) : ordre chronologique du rendez-vous.
+      orderBy: clientId ? { createdAt: 'desc' } : { scheduledDate: 'asc' },
     });
   }
 

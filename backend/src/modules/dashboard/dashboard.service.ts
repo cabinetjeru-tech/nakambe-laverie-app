@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OrderStatus } from '@prisma/client';
+import { AppointmentStatus, OrderStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 
 function startOfDay(d: Date) {
@@ -57,7 +57,7 @@ export class DashboardService {
 
   async overview() {
     const now = new Date();
-    const [today, week, month, lowStock, topServices] = await Promise.all([
+    const [today, week, month, lowStock, topServices, pendingAppointments] = await Promise.all([
       this.periodStats(startOfDay(now)),
       this.periodStats(startOfWeek(now)),
       this.periodStats(startOfMonth(now)),
@@ -65,6 +65,12 @@ export class DashboardService {
         .findMany()
         .then((rows) => rows.filter((p) => Number(p.currentStock) <= Number(p.minThreshold))),
       this.topServices(startOfMonth(now)),
+      this.prisma.appointment.findMany({
+        where: { status: AppointmentStatus.DEMANDE },
+        include: { client: { select: { fullName: true, phone: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
     ]);
 
     const monthExpenses = await this.prisma.expense.aggregate({
@@ -82,6 +88,7 @@ export class DashboardService {
       },
       lowStockAlerts: lowStock,
       topServices,
+      pendingAppointments,
     };
   }
 
