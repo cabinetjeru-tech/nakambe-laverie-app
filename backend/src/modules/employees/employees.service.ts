@@ -59,18 +59,25 @@ export class EmployeesService {
 
   async update(
     id: string,
-    dto: Partial<Pick<CreateEmployeeDto, 'position' | 'salary' | 'branchId'>> & { status?: string },
+    dto: Partial<Pick<CreateEmployeeDto, 'position' | 'salary' | 'branchId'>> & { status?: string; fullName?: string },
   ) {
     await this.findOne(id);
-    return this.prisma.employee.update({
-      where: { userId: id },
-      data: {
-        position: dto.position,
-        salary: dto.salary,
-        branchId: dto.branchId,
-        status: dto.status,
-      },
-    });
+    const [, employee] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id },
+        data: { fullName: dto.fullName },
+      }),
+      this.prisma.employee.update({
+        where: { userId: id },
+        data: {
+          position: dto.position,
+          salary: dto.salary,
+          branchId: dto.branchId,
+          status: dto.status,
+        },
+      }),
+    ]);
+    return employee;
   }
 
   async deactivate(id: string) {

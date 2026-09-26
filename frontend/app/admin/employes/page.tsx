@@ -8,6 +8,48 @@ import { formatDate } from '@/lib/format';
 
 const INTERNAL_ROLES = ['ADMIN', 'GERANT', 'RECEPTIONNISTE', 'AGENT_LAVERIE', 'AGENT_NETTOYAGE', 'CHAUFFEUR'];
 
+function NameEditor({ userId, fullName, onSaved }: { userId: string; fullName: string; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(fullName);
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!value.trim() || value === fullName) {
+      setEditing(false);
+      setValue(fullName);
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.patch(`/employees/${userId}`, { fullName: value.trim() });
+      onSaved();
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <input
+        autoFocus
+        className="input !w-48 !py-1"
+        value={value}
+        disabled={saving}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === 'Enter' && save()}
+      />
+    );
+  }
+
+  return (
+    <button type="button" onClick={() => setEditing(true)} className="text-left hover:underline" title="Modifier le nom">
+      {fullName}
+    </button>
+  );
+}
+
 function NewEmployeeForm({ onCreated }: { onCreated: () => void }) {
   const [form, setForm] = useState({ fullName: '', phone: '', password: '', role: 'RECEPTIONNISTE', position: '' });
   const [saving, setSaving] = useState(false);
@@ -79,6 +121,10 @@ export default function EmployesPage() {
     queryFn: async () => (await api.get('/employees')).data,
   });
 
+  function refresh() {
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
+  }
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -120,7 +166,9 @@ export default function EmployesPage() {
             )}
             {data?.map((u: any) => (
               <tr key={u.id} className="hover:bg-slate-50">
-                <td className="px-4 py-3 font-semibold">{u.fullName}</td>
+                <td className="px-4 py-3 font-semibold">
+                  <NameEditor userId={u.id} fullName={u.fullName} onSaved={refresh} />
+                </td>
                 <td className="px-4 py-3">{u.phone}</td>
                 <td className="px-4 py-3">{ROLE_LABELS[u.role?.name] ?? u.role?.name}</td>
                 <td className="px-4 py-3">{u.employee?.position}</td>
