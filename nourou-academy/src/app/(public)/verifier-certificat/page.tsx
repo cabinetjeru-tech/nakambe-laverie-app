@@ -14,9 +14,9 @@ export default async function VerifyForm({ searchParams }: { searchParams: Promi
         <CardBody className="text-center">
           <ShieldCheck className="mx-auto h-12 w-12 text-sky" aria-hidden />
           <h1 className="mt-3 text-2xl font-bold text-navy">Vérifier un certificat</h1>
-          <p className="mt-1 text-sm text-muted">Saisissez l'identifiant figurant sur le certificat (ex. NGA-2026-ABCDE-FGHJK) ou scannez son QR code.</p>
+          <p className="mt-1 text-sm text-muted">Saisissez l'identifiant figurant sur le certificat (ex. AKA-2026-ABCDE-FGHJK) ou scannez son QR code.</p>
           <form className="mt-6 flex gap-2">
-            <Input name="code" required placeholder="NGA-…" className="uppercase" aria-label="Identifiant du certificat" />
+            <Input name="code" required placeholder="AKA-…" className="uppercase" aria-label="Identifiant du certificat" />
             <button className={buttonClass("primary")}>Vérifier</button>
           </form>
         </CardBody>

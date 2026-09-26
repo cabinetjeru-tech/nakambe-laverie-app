@@ -2,7 +2,7 @@
   "name": "nourou-global-academy",
   "version": "0.1.0",
   "private": true,
-  "description": "NOUROU GLOBAL ACADEMY — plateforme de formation en ligne avec tuteur IA (NOUROU GLOBAL CONSULTING)",
+  "description": "Akambi Academy — plateforme panafricaine de formation professionnelle en ligne avec tuteur IA (Groupe Akambi SARL)",
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",

@@ -10,7 +10,7 @@ export function certificateCode() {
   const bytes = randomBytes(10);
   let s = "";
   for (const b of bytes) s += alphabet[b % alphabet.length];
-  return `NGA-${new Date().getFullYear()}-${s.slice(0, 5)}-${s.slice(5)}`;
+  return `AKA-${new Date().getFullYear()}-${s.slice(0, 5)}-${s.slice(5)}`;
 }
 
 export async function learnerRecord(userId: string, courseId: string): Promise<LearnerRecord> {

@@ -69,6 +69,6 @@ describe.skipIf(!run)("paiements et droits d'accès", () => {
     expect(quiz.isFinalExam).toBe(false);
     const cert = await evaluateCertificate(userId, courseId);
     expect(cert?.status).toBe("VALID");
-    expect(cert?.code).toMatch(/^NGA-\d{4}-[A-Z0-9]{5}-[A-Z0-9]{5}$/);
+    expect(cert?.code).toMatch(/^AKA-\d{4}-[A-Z0-9]{5}-[A-Z0-9]{5}$/);
   });
 });

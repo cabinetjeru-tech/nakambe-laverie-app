@@ -12,7 +12,7 @@ export async function PublicFooter() {
         <div className="md:col-span-1">
           <Logo name={brand.name} logoUrl={brand.logoUrl} light />
           <p className="mt-4 text-sm text-slate-300">{brand.slogan}</p>
-          <p className="mt-2 text-xs text-slate-400">Une initiative de {brand.promoter}.</p>
+          <p className="mt-2 text-xs text-slate-400">Une marque de {brand.promoter}.</p>
         </div>
         <div>
           <div className="mb-3 text-sm font-semibold text-white">Apprendre</div>

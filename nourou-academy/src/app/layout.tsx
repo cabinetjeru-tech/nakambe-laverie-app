@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     metadataBase: new URL(env.appUrl),
     title: { default: `${brand.name} — ${brand.slogan}`, template: `%s · ${brand.shortName}` },
-    description: `${brand.name} : formations professionnelles en ligne (numérique, entrepreneuriat, communication, métiers techniques) avec un tuteur IA pédagogique disponible 24h/24. Burkina Faso et Afrique francophone.`,
+    description: `${brand.name} : plateforme panafricaine de formation professionnelle en ligne, accessible sur ordinateur et smartphone, avec accompagnement pédagogique par intelligence artificielle. Une marque de ${brand.promoter}.`,
     applicationName: brand.shortName,
     manifest: "/manifest.webmanifest",
     icons: { icon: "/icons/favicon-32.png", apple: "/icons/apple-touch-icon.png" },

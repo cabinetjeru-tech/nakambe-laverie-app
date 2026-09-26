@@ -159,7 +159,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <Field label="Serveur"><Input name="smtpHost" defaultValue={tech.smtpHost} placeholder="smtp.exemple.com" /></Field>
                 <Field label="Port"><Input name="smtpPort" type="number" defaultValue={tech.smtpPort} /></Field>
                 <Field label="Utilisateur"><Input name="smtpUser" defaultValue={tech.smtpUser} /></Field>
-                <Field label="Expéditeur"><Input name="smtpFrom" defaultValue={tech.smtpFrom} placeholder="Nourou Academy <no-reply@…>" /></Field>
+                <Field label="Expéditeur"><Input name="smtpFrom" defaultValue={tech.smtpFrom} placeholder="Akambi Academy <no-reply@…>" /></Field>
                 <div className="pt-6"><Checkbox name="smtpSecure" defaultChecked={tech.smtpSecure} label="TLS direct (port 465)" /></div>
                 <SecretField k="smtp.password" label="Mot de passe SMTP" statuses={secrets} />
               </div>

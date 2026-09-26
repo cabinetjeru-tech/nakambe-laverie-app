@@ -30,15 +30,15 @@ export type BrandSettings = {
 };
 
 export const defaultBrand: BrandSettings = {
-  name: "NOUROU GLOBAL ACADEMY",
-  shortName: "Nourou Academy",
-  slogan: "Apprenez aujourd'hui, maîtrisez demain.",
-  promoter: "NOUROU GLOBAL CONSULTING",
+  name: "Akambi Academy",
+  shortName: "Akambi Academy",
+  slogan: "Apprenez aujourd'hui. Maîtrisez demain.",
+  promoter: "Groupe Akambi SARL",
   logoUrl: null,
   primaryColor: "#0B2447",
   secondaryColor: "#2F80ED",
   accentColor: "#E3A33B",
-  email: "contact@nourou-academy.com",
+  email: "contact@akambi-academy.com",
   phone: "+226 00 00 00 00",
   whatsapp: "",
   address: "Ouagadougou, Burkina Faso",
@@ -46,7 +46,7 @@ export const defaultBrand: BrandSettings = {
   linkedin: "",
   youtube: "",
   certificateSignatory: "La Direction pédagogique",
-  certificateSignatoryTitle: "NOUROU GLOBAL CONSULTING",
+  certificateSignatoryTitle: "Akambi Academy — Groupe Akambi SARL",
   tutorName: "Noura IA",
 };
 
@@ -92,7 +92,7 @@ export const defaultPayments: PaymentSettings = {
   enabled: [],
   cinetpaySiteId: "",
   paydunyaMode: "test",
-  paydunyaStoreName: "NOUROU GLOBAL ACADEMY",
+  paydunyaStoreName: "Akambi Academy",
   waveCountryNote: "",
 };
 

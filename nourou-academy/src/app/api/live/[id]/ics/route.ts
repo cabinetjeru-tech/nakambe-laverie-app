@@ -18,8 +18,8 @@ export const GET = handle(async (_req: Request, ctx: { params: Promise<{ id: str
   if (!s) return jsonError(404, "Séance introuvable.");
   const end = new Date(s.startsAt.getTime() + s.durationMinutes * 60_000);
   const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Nourou Global Academy//FR", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
-    `UID:${s.id}@nourou-academy`, `DTSTAMP:${icsDate(new Date())}`, `DTSTART:${icsDate(s.startsAt)}`, `DTEND:${icsDate(end)}`,
+    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Akambi Academy//FR", "CALSCALE:GREGORIAN", "BEGIN:VEVENT",
+    `UID:${s.id}@akambi-academy`, `DTSTAMP:${icsDate(new Date())}`, `DTSTART:${icsDate(s.startsAt)}`, `DTEND:${icsDate(end)}`,
     `SUMMARY:${esc(s.title)}`, `DESCRIPTION:${esc((s.description ?? "") + `\n${env.appUrl}/espace/classe/${s.id}`)}`, `URL:${env.appUrl}/espace/classe/${s.id}`,
     "BEGIN:VALARM", "TRIGGER:-PT30M", "ACTION:DISPLAY", "DESCRIPTION:Classe virtuelle dans 30 minutes", "END:VALARM",
     "END:VEVENT", "END:VCALENDAR",

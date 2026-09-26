@@ -1,7 +1,14 @@
-# NOUROU GLOBAL ACADEMY
+# Akambi Academy
 
-**Apprenez aujourd'hui, maîtrisez demain.** — plateforme de formation en ligne de NOUROU GLOBAL CONSULTING, avec
-**Noura IA**, un tuteur pédagogique connecté aux contenus des cours.
+**Apprenez aujourd'hui. Maîtrisez demain.**
+
+Akambi Academy, une marque de Groupe Akambi SARL : plateforme panafricaine de formation professionnelle en ligne,
+accessible sur ordinateur et smartphone, avec accompagnement pédagogique par intelligence artificielle
+(**Noura IA**, un tuteur connecté aux contenus des cours).
+
+> Les noms techniques (`nourou-academy` pour le dossier, le projet Vercel/Supabase, le bucket `nourou`, la base
+> `nourou_academy`) sont conservés volontairement : les changer casserait le déploiement existant. Ils ne sont pas
+> visibles des utilisateurs.
 
 Application indépendante des autres projets de ce dépôt.
 

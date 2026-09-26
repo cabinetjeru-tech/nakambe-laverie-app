@@ -32,7 +32,10 @@ export default async function HomePage() {
   ]);
   const courses = await withRatings(featured);
   const [courseCount, trainerCount, lessonTotal] = stats;
-  const [sloganA, ...sloganRest] = brand.slogan.split(",");
+  // Coupe la signature après sa première phrase (« … aujourd'hui. » / « … aujourd'hui, ») pour la mise en forme.
+  const sloganCut = brand.slogan.search(/[.,;!?]\s/);
+  const sloganA = sloganCut >= 0 ? brand.slogan.slice(0, sloganCut + 1) : brand.slogan;
+  const sloganB = sloganCut >= 0 ? brand.slogan.slice(sloganCut + 1).trim() : "";
 
   return (
     <>
@@ -47,16 +50,17 @@ export default async function HomePage() {
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
               {sloganA}
-              {sloganRest.length > 0 && (
+              {sloganB && (
                 <>
-                  ,<br />
-                  <span className="text-accent">{sloganRest.join(",").trim()}</span>
+                  <br />
+                  <span className="text-accent">{sloganB}</span>
                 </>
               )}
             </h1>
             <p className="mt-5 max-w-xl text-lg text-slate-200">
-              Des formations professionnelles pratiques en numérique, entrepreneuriat, communication et métiers techniques — pensées pour le Burkina
-              Faso et l'Afrique francophone, accessibles sur votre téléphone, même avec une connexion limitée.
+              La plateforme panafricaine de formation professionnelle en ligne : numérique, entrepreneuriat, communication et métiers
+              techniques, sur ordinateur et smartphone — même avec une connexion limitée — avec un accompagnement pédagogique par
+              intelligence artificielle.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/inscription" className={buttonClass("accent", "lg")}>

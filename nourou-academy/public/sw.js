@@ -1,4 +1,4 @@
-/* NOUROU GLOBAL ACADEMY — service worker (PWA)
+/* Akambi Academy — service worker (PWA)
  * - Ressources statiques : cache d'abord (versionnées par Next.js).
  * - Pages : réseau d'abord, repli sur la dernière version en cache puis sur /hors-ligne.
  * - API : jamais mises en cache (sauf supports explicitement enregistrés par l'apprenant,

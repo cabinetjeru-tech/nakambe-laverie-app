@@ -42,7 +42,7 @@ describe("site public", () => {
     expect(html).not.toContain("Photographie produit");
   });
   it("certificat inconnu", async () => {
-    expect(await (await get("/verifier-certificat/NGA-0000-XXXXX-XXXXX")).text()).toContain("Certificat introuvable");
+    expect(await (await get("/verifier-certificat/AKA-0000-XXXXX-XXXXX")).text()).toContain("Certificat introuvable");
   });
   it("en-têtes de sécurité", async () => {
     const r = await get("/");
