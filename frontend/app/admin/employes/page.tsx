@@ -8,44 +8,64 @@ import { formatDate } from '@/lib/format';
 
 const INTERNAL_ROLES = ['ADMIN', 'GERANT', 'RECEPTIONNISTE', 'AGENT_LAVERIE', 'AGENT_NETTOYAGE', 'CHAUFFEUR'];
 
-function NameEditor({ userId, fullName, onSaved }: { userId: string; fullName: string; onSaved: () => void }) {
+function InlineFieldEditor({
+  userId,
+  field,
+  value: initialValue,
+  onSaved,
+  title,
+}: {
+  userId: string;
+  field: 'fullName' | 'phone';
+  value: string;
+  onSaved: () => void;
+  title: string;
+}) {
   const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(fullName);
+  const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function save() {
-    if (!value.trim() || value === fullName) {
+    if (!value.trim() || value === initialValue) {
       setEditing(false);
-      setValue(fullName);
+      setValue(initialValue);
+      setError(null);
       return;
     }
     setSaving(true);
+    setError(null);
     try {
-      await api.patch(`/employees/${userId}`, { fullName: value.trim() });
+      await api.patch(`/employees/${userId}`, { [field]: value.trim() });
       onSaved();
+      setEditing(false);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? "Échec de l'enregistrement.");
     } finally {
       setSaving(false);
-      setEditing(false);
     }
   }
 
   if (editing) {
     return (
-      <input
-        autoFocus
-        className="input !w-48 !py-1"
-        value={value}
-        disabled={saving}
-        onChange={(e) => setValue(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => e.key === 'Enter' && save()}
-      />
+      <div>
+        <input
+          autoFocus
+          className="input !w-48 !py-1"
+          value={value}
+          disabled={saving}
+          onChange={(e) => setValue(e.target.value)}
+          onBlur={save}
+          onKeyDown={(e) => e.key === 'Enter' && save()}
+        />
+        {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      </div>
     );
   }
 
   return (
-    <button type="button" onClick={() => setEditing(true)} className="text-left hover:underline" title="Modifier le nom">
-      {fullName}
+    <button type="button" onClick={() => setEditing(true)} className="text-left hover:underline" title={title}>
+      {initialValue}
     </button>
   );
 }
@@ -167,9 +187,11 @@ export default function EmployesPage() {
             {data?.map((u: any) => (
               <tr key={u.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3 font-semibold">
-                  <NameEditor userId={u.id} fullName={u.fullName} onSaved={refresh} />
+                  <InlineFieldEditor userId={u.id} field="fullName" value={u.fullName} onSaved={refresh} title="Modifier le nom" />
                 </td>
-                <td className="px-4 py-3">{u.phone}</td>
+                <td className="px-4 py-3">
+                  <InlineFieldEditor userId={u.id} field="phone" value={u.phone} onSaved={refresh} title="Modifier le téléphone" />
+                </td>
                 <td className="px-4 py-3">{ROLE_LABELS[u.role?.name] ?? u.role?.name}</td>
                 <td className="px-4 py-3">{u.employee?.position}</td>
                 <td className="px-4 py-3">
