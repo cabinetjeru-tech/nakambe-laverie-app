@@ -20,7 +20,7 @@ export default async function HomePage() {
     prisma.category.findMany({ orderBy: { position: "asc" }, include: { _count: { select: { courses: { where: { status: "PUBLISHED" } } } } } }),
     Promise.all([
       prisma.course.count({ where: { status: "PUBLISHED" } }),
-      prisma.user.count({ where: { role: "TRAINER", status: "ACTIVE", coursesTaught: { some: { status: "PUBLISHED" } } } }),
+      prisma.user.count({ where: { role: "TRAINER", status: "ACTIVE", showOnSite: true, coursesTaught: { some: { status: "PUBLISHED" } } } }),
       prisma.lesson.count({ where: { module: { course: { status: "PUBLISHED" } } } }),
     ]),
     prisma.review.findMany({

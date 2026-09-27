@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { rateLimit } from "@/lib/rate-limit";
 import { randomToken } from "@/lib/crypto";
 import { audit } from "@/lib/audit";
-import { formBool, formString, nameSchema, phoneSchema, zodErrors, type ActionState } from "@/lib/validation";
+import { formBool, formString, nameSchema, phoneSchema, splitList, zodErrors, type ActionState } from "@/lib/validation";
 
 const profileSchema = z.object({
   name: nameSchema,
@@ -23,6 +23,7 @@ const profileSchema = z.object({
   marketingConsent: z.boolean(),
   headline: z.string().trim().max(160).optional(),
   bio: z.string().trim().max(3000).optional(),
+  expertise: z.array(z.string().trim().min(1).max(40)).max(12, "12 spécialités maximum."),
 });
 
 export async function updateProfileAction(_: ActionState, fd: FormData): Promise<ActionState> {
@@ -37,6 +38,7 @@ export async function updateProfileAction(_: ActionState, fd: FormData): Promise
     marketingConsent: formBool(fd, "marketingConsent"),
     headline: formString(fd, "headline") || undefined,
     bio: formString(fd, "bio") || undefined,
+    expertise: splitList(formString(fd, "expertise")),
   });
   if (!parsed.success) return zodErrors(parsed.error);
   const isTrainer = user.role !== "LEARNER";
@@ -50,7 +52,7 @@ export async function updateProfileAction(_: ActionState, fd: FormData): Promise
       level: parsed.data.level,
       lowDataMode: parsed.data.lowDataMode,
       marketingConsent: parsed.data.marketingConsent,
-      ...(isTrainer ? { headline: parsed.data.headline ?? null, bio: parsed.data.bio ?? null } : {}),
+      ...(isTrainer ? { headline: parsed.data.headline ?? null, bio: parsed.data.bio ?? null, expertise: parsed.data.expertise } : {}),
     },
   });
   const jar = await cookies();

@@ -5,7 +5,9 @@ import { deleteAccountAction, updateProfileAction } from "@/app/actions/account"
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Card, CardBody, Checkbox, Field, Input, PageHeader, Select, Textarea, buttonClass } from "@/components/ui";
-import { formatDate, roleLabels } from "@/lib/format";
+import { formatDate, initials, roleLabels } from "@/lib/format";
+import { publicFileUrl } from "@/lib/storage";
+import { FileUploader } from "@/components/forms/file-uploader";
 
 export const metadata = { title: "Profil et données personnelles" };
 
@@ -45,6 +47,7 @@ export default async function ProfilePage() {
                 <>
                   <Field label="Titre professionnel (public)"><Input name="headline" defaultValue={user.headline ?? ""} maxLength={160} /></Field>
                   <Field label="Biographie (publique)"><Textarea name="bio" defaultValue={user.bio ?? ""} rows={5} maxLength={3000} /></Field>
+                  <Field label="Spécialités (publiques)" hint="Séparées par des virgules, 12 maximum."><Input name="expertise" defaultValue={user.expertise.join(", ")} /></Field>
                 </>
               )}
               <Checkbox name="lowDataMode" defaultChecked={user.lowDataMode} label={<><b>Mode faible consommation de données</b> — vidéos chargées uniquement à la demande, images décoratives masquées, visioconférence en qualité réduite.</>} />
@@ -54,6 +57,22 @@ export default async function ProfilePage() {
           </CardBody>
         </Card>
         <div className="space-y-6">
+          {isTrainer && (
+            <Card>
+              <CardBody className="space-y-3">
+                <h2 className="font-semibold text-navy">Photo de profil (publique)</h2>
+                <div className="flex items-center gap-4">
+                  {user.avatarFileId ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={publicFileUrl(user.avatarFileId)!} alt="" className="h-20 w-20 rounded-full object-cover" />
+                  ) : (
+                    <span className="grid h-20 w-20 place-items-center rounded-full bg-navy text-xl font-bold text-white">{initials(user.name)}</span>
+                  )}
+                  <FileUploader params={{ purpose: "avatar" }} accept="image/jpeg,image/png,image/webp" label={user.avatarFileId ? "Changer la photo" : "Ajouter une photo"} hint="Photo carrée de préférence, 3 Mo maximum." />
+                </div>
+              </CardBody>
+            </Card>
+          )}
           <Card>
             <CardBody>
               <h2 className="font-semibold text-navy">Mot de passe</h2>

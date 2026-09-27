@@ -42,6 +42,12 @@ export async function resolveUploadTarget(user: SessionUser, p: UploadParams): P
     return { ...base, category: "image", maxBytes: 5 * 1048576, visibility: "PUBLIC", courseId: p.targetId };
   }
   if (p.purpose === "avatar") return { ...base, category: "image", maxBytes: 3 * 1048576, visibility: "PUBLIC" };
+  if (p.purpose === "trainer-avatar") {
+    if (!can(user.role, "users.manage")) return { error: "Action non autorisée.", status: 403 };
+    const trainer = await prisma.user.findFirst({ where: { id: p.targetId, role: "TRAINER" }, select: { id: true } });
+    if (!trainer) return { error: "Formateur introuvable.", status: 404 };
+    return { ...base, category: "image", maxBytes: 3 * 1048576, visibility: "PUBLIC" };
+  }
   if (p.purpose === "brand-logo") {
     if (!can(user.role, "settings.manage")) return { error: "Action non autorisée.", status: 403 };
     return { ...base, category: "image", maxBytes: 2 * 1048576, visibility: "PUBLIC" };
@@ -70,6 +76,9 @@ export async function linkUpload(user: SessionUser, t: UploadTarget, p: UploadPa
     await prisma.course.update({ where: { id: t.courseId }, data: { imageFileId: stored.id, imageUrl: null } });
   } else if (p.purpose === "avatar") {
     await prisma.user.update({ where: { id: user.id }, data: { avatarFileId: stored.id } });
+  } else if (p.purpose === "trainer-avatar") {
+    await prisma.user.update({ where: { id: p.targetId }, data: { avatarFileId: stored.id } });
+    await audit(user.id, "trainer.avatar", "User", p.targetId);
   } else if (p.purpose === "brand-logo") {
     await audit(user.id, "settings.logo", "Setting", "brand");
   }

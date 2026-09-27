@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 
 export default async function TrainersPage() {
   const trainers = await prisma.user.findMany({
-    where: { role: "TRAINER", status: "ACTIVE", coursesTaught: { some: { status: "PUBLISHED" } } },
+    where: { role: "TRAINER", status: "ACTIVE", showOnSite: true, coursesTaught: { some: { status: "PUBLISHED" } } },
     select: { id: true, name: true, headline: true, bio: true, avatarFileId: true, expertise: true, _count: { select: { coursesTaught: { where: { status: "PUBLISHED" } } } } },
-    orderBy: { name: "asc" },
+    orderBy: [{ displayOrder: "asc" }, { name: "asc" }],
   });
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">

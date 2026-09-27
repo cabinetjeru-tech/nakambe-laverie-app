@@ -51,6 +51,8 @@ model User {
   headline         String?
   bio              String?
   expertise        String[]   @default([])
+  showOnSite       Boolean    @default(true) // formateur visible sur la page publique « Nos formateurs »
+  displayOrder     Int        @default(0) // ordre d'affichage (croissant)
   level            Level      @default(BEGINNER)
   lowDataMode      Boolean    @default(false)
   locale           String     @default("fr")

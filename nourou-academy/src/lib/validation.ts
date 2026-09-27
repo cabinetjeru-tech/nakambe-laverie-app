@@ -43,3 +43,8 @@ export function formLines(fd: FormData, key: string): string[] {
     .filter(Boolean)
     .slice(0, 50);
 }
+
+/** Liste saisie avec des virgules ou des retours à la ligne (ex. spécialités), sans doublons. */
+export function splitList(value: string): string[] {
+  return [...new Set(value.split(/[,\n]/).map((s) => s.trim()).filter(Boolean))];
+}

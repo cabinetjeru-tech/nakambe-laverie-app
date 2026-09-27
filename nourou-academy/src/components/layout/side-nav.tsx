@@ -6,13 +6,13 @@ import clsx from "clsx";
 import {
   Award, BarChart3, Bell, BookOpen, Bot, Briefcase, CalendarDays, Circle, ClipboardCheck, CreditCard, FileText, Flag, FolderTree, Gauge,
   GraduationCap, Heart, HelpCircle, LayoutDashboard, LifeBuoy, Mail, Menu, MessageSquare, Newspaper, NotebookPen, Package, Radio, Receipt,
-  ScrollText, Settings, ShieldCheck, Sparkles, Star, Tag, TrendingUp, User, Users, Wallet, X, type LucideIcon,
+  Presentation, ScrollText, Settings, ShieldCheck, Sparkles, Star, Tag, TrendingUp, User, Users, Wallet, X, type LucideIcon,
 } from "lucide-react";
 
 // Liste explicite (et non `import *`) pour ne pas embarquer toute la bibliothèque d'icônes côté client.
 const iconMap: Record<string, LucideIcon> = {
   Award, BarChart3, Bell, BookOpen, Bot, Briefcase, CalendarDays, ClipboardCheck, CreditCard, FileText, Flag, FolderTree, Gauge, GraduationCap,
-  Heart, HelpCircle, LayoutDashboard, LifeBuoy, Mail, MessageSquare, Newspaper, NotebookPen, Package, Radio, Receipt, ScrollText, Settings,
+  Heart, HelpCircle, LayoutDashboard, LifeBuoy, Mail, MessageSquare, Newspaper, NotebookPen, Package, Radio, Presentation, Receipt, ScrollText, Settings,
   ShieldCheck, Sparkles, Star, Tag, TrendingUp, User, Users, Wallet,
 };
 
