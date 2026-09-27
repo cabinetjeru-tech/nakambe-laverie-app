@@ -65,6 +65,8 @@ model User {
   deletedAt        DateTime?
 
   sessions          Session[]
+  learnerNotes      LearnerNote[]         @relation("LearnerNotes")
+  authoredNotes     LearnerNote[]         @relation("LearnerNoteAuthor")
   resetTokens       PasswordResetToken[]
   coursesTaught     Course[]              @relation("CourseTrainer")
   enrollments       Enrollment[]
@@ -323,6 +325,8 @@ model Enrollment {
   lastAccessedAt  DateTime?
   progressPercent Int              @default(0)
   completedAt     DateTime?
+  nudgeCount      Int              @default(0) // relances automatiques envoyées depuis la dernière reprise
+  lastNudgeAt     DateTime?
   createdAt       DateTime         @default(now())
 
   @@unique([userId, courseId])
@@ -1065,4 +1069,20 @@ model GeneratedContent {
   updatedAt   DateTime        @updatedAt
 
   @@index([trainerId, createdAt])
+}
+
+/// Notes internes de l'équipe sur un apprenant (jamais visibles par l'apprenant), avec date de rappel facultative.
+model LearnerNote {
+  id         String    @id @default(cuid())
+  learnerId  String
+  learner    User      @relation("LearnerNotes", fields: [learnerId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?     @relation("LearnerNoteAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  body       String
+  followUpAt DateTime?
+  doneAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([learnerId, createdAt])
+  @@index([followUpAt])
 }

@@ -6,6 +6,7 @@ import { flushOutbox } from "@/lib/mail";
 import { notify } from "@/lib/notify";
 import { verifyOrder } from "@/lib/payments/checkout";
 import { formatDateTime } from "@/lib/format";
+import { runNudges } from "@/lib/engagement";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,8 @@ export const dynamic = "force-dynamic";
  * Tâches planifiées, à appeler par un planificateur (cron système, GitHub Actions, service cron) :
  *   POST /api/cron/all   avec l'en-tête  Authorization: Bearer <CRON_SECRET>
  * Vercel Cron appelle la même route en GET avec le même en-tête (voir vercel.json).
- * Tâches : outbox (emails), reminders (rappels de classes), payments (réconciliation), subscriptions (expirations).
+ * Tâches : outbox (emails), reminders (rappels de classes), nudges (relance des apprenants inactifs),
+ *          payments (réconciliation), subscriptions (expirations).
  */
 export async function POST(req: Request, ctx: { params: Promise<{ task: string }> }) {
   const auth = req.headers.get("authorization") ?? "";
@@ -41,6 +43,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ task: string }
     result.livesClosed = ended;
   }
 
+  if (task === "nudges" || task === "all") result.nudges = await runNudges();
+
   if (task === "payments" || task === "all") {
     // Réconciliation : commandes en attente depuis 5 minutes à 48 heures, interrogées auprès du prestataire.
     const pending = await prisma.order.findMany({
@@ -65,6 +69,8 @@ export async function POST(req: Request, ctx: { params: Promise<{ task: string }
     }
     result.subscriptionsExpired = expiring.length;
   }
+
+  if (task === "all" && result.nudges) result.emails += await flushOutbox(100);
 
   return NextResponse.json({ ok: true, task, result });
 }

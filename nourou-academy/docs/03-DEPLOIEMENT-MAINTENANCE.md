@@ -39,7 +39,7 @@ formateurs.
 
 ## 3. Tâches planifiées
 `POST /api/cron/all` avec `Authorization: Bearer <CRON_SECRET>` toutes les 5 minutes (service `cron` inclus dans le
-compose de production). Sous-tâches possibles : `outbox`, `reminders`, `payments`, `subscriptions`.
+compose de production). Sous-tâches possibles : `outbox`, `reminders`, `nudges` (relance des apprenants inactifs, réglable dans Administration › Apprenants), `payments`, `subscriptions`.
 
 ## 4. Sauvegardes et restauration
 `infra/backup.sh` (cron quotidien sur l'hôte) : dump PostgreSQL au format custom + archive des fichiers, rotation

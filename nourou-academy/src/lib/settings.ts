@@ -127,6 +127,23 @@ export const defaultTechnical: TechnicalSettings = {
   smtpSecure: process.env.SMTP_SECURE === "true",
 };
 
+export type EngagementSettings = {
+  nudgeEnabled: boolean;
+  nudgeAfterDays: number;
+  nudgeMax: number;
+  nudgeTitle: string;
+  nudgeBody: string;
+};
+
+/** Relance automatique des apprenants inactifs ({prenom}, {formation}, {progression} sont remplacés). */
+export const defaultEngagement: EngagementSettings = {
+  nudgeEnabled: true,
+  nudgeAfterDays: 7,
+  nudgeMax: 2,
+  nudgeTitle: "On vous attend sur « {formation} » !",
+  nudgeBody: "Bonjour {prenom}, vous en êtes à {progression} % de « {formation} ». Quelques minutes suffisent pour avancer : reprenez là où vous vous êtes arrêté. Votre tuteur IA est disponible pour vous aider.",
+};
+
 /** Clés secrètes gérées par l'administration, avec leur variable d'environnement de repli. */
 export const SECRET_KEYS = {
   "ai.anthropicKey": "ANTHROPIC_API_KEY",
@@ -168,8 +185,9 @@ export const getBrand = () => getGroup("brand", defaultBrand);
 export const getAiSettings = () => getGroup("ai", defaultAi);
 export const getPaymentSettings = () => getGroup("payments", defaultPayments);
 export const getTechnicalSettings = () => getGroup("technical", defaultTechnical);
+export const getEngagementSettings = () => getGroup("engagement", defaultEngagement);
 
-export async function saveGroup(key: "brand" | "ai" | "payments" | "technical", value: object) {
+export async function saveGroup(key: "brand" | "ai" | "payments" | "technical" | "engagement", value: object) {
   await prisma.setting.upsert({
     where: { key },
     create: { key, value: value as object, isSecret: false },

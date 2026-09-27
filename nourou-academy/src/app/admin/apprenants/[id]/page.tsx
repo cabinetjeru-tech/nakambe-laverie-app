@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Award, BookOpen, CheckCircle2, ClipboardCheck, CreditCard, FileText, LogIn, MessageSquare, Radio, UserPlus, XCircle } from "lucide-react";
+import { Award, BellRing, BookOpen, CheckCircle2, ClipboardCheck, CreditCard, FileText, LogIn, MessageSquare, NotebookPen, Radio, UserPlus, XCircle } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/permissions";
@@ -8,8 +8,8 @@ import { formatDate, formatDateTime, formatXof } from "@/lib/format";
 import { checkEligibility } from "@/lib/certificates/eligibility";
 import { learnerRecord } from "@/lib/certificates/issue";
 import {
-  checkCertificateAction, enrollLearnerAction, learnerCertificateDecisionAction, learnerPasswordLinkAction, messageLearnerAction,
-  setEnrollmentStatusAction, setLearnerStatusAction,
+  addLearnerNoteAction, checkCertificateAction, deleteLearnerNoteAction, enrollLearnerAction, learnerCertificateDecisionAction, learnerPasswordLinkAction,
+  messageLearnerAction, setEnrollmentStatusAction, setLearnerStatusAction, toggleFollowUpDoneAction,
 } from "@/app/actions/learners";
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -50,6 +50,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
       },
       certificates: true,
       orders: { where: { status: { in: ["PAID", "REFUNDED"] } }, orderBy: { createdAt: "desc" }, take: 20 },
+      learnerNotes: { orderBy: { createdAt: "desc" }, take: 50, include: { author: { select: { name: true } } } },
       _count: { select: { tutorConversations: true } },
     },
   });
@@ -81,9 +82,13 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
   for (const l of lives) if (l.attended) events.push({ at: l.joinedAt ?? l.session.startsAt, icon: <Radio className="h-4 w-4" />, text: <>Présent à la classe virtuelle « {l.session.title} »</> });
   for (const c of u.certificates) events.push({ at: c.issuedAt, icon: <Award className="h-4 w-4 text-accent" />, text: <>Certificat {c.status === "VALID" ? "obtenu" : c.status === "PENDING_APPROVAL" ? "demandé (en attente de validation)" : "révoqué"} : <b>{c.courseTitle}</b></> });
   for (const o of u.orders) events.push({ at: o.paidAt ?? o.createdAt, icon: <CreditCard className="h-4 w-4" />, text: <>Paiement : {o.itemLabel} — {formatXof(o.totalXof)}{o.mode === "DEMO" ? " (démo)" : ""}{o.status === "REFUNDED" ? " · remboursé" : ""}</> });
+  for (const e of u.enrollments) if (e.lastNudgeAt) events.push({ at: e.lastNudgeAt, icon: <BellRing className="h-4 w-4" />, text: <>Relance automatique envoyée pour <b>{e.course.title}</b> ({e.nudgeCount} depuis sa dernière reprise)</> });
+  for (const n of u.learnerNotes) events.push({ at: n.createdAt, icon: <NotebookPen className="h-4 w-4" />, text: <>Note de l'équipe ({n.author?.name ?? "—"}) : <span className="text-muted">{n.body.length > 90 ? `${n.body.slice(0, 90)}…` : n.body}</span></> });
   if (lastTutor) events.push({ at: lastTutor.updatedAt, icon: <MessageSquare className="h-4 w-4" />, text: <>Dernier échange avec le tuteur IA ({u._count.tutorConversations} conversation(s) au total, contenu privé)</> });
   events.sort((a, b) => b.at.getTime() - a.at.getTime());
 
+  const today = new Date();
+  today.setHours(23, 59, 59, 999);
   const avg = u.enrollments.length ? Math.round(u.enrollments.reduce((n, e) => n + e.progressPercent, 0) / u.enrollments.length) : 0;
 
   return (
@@ -147,6 +152,7 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
                   <div className="flex justify-between text-sm"><span>Progression</span><b>{e.progressPercent} %</b></div>
                   <ProgressBar value={e.progressPercent} className="mt-1" />
                   <div className="mt-1 text-xs text-muted">{done.size} / {lessons.length} leçon(s) terminée(s){lastLesson ? ` · dernière leçon ouverte : « ${lastLesson.title} »` : ""}</div>
+                  {e.lastNudgeAt && <div className="mt-1 flex items-center gap-1 text-xs text-muted"><BellRing className="h-3.5 w-3.5" aria-hidden /> Dernière relance automatique le {formatDate(e.lastNudgeAt)} ({e.nudgeCount} depuis sa dernière reprise)</div>}
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div>
@@ -236,6 +242,45 @@ export default async function LearnerPage({ params }: { params: Promise<{ id: st
         </div>
 
         <div className="space-y-4">
+          <Card><CardBody>
+            <h2 className="mb-1 flex items-center gap-2 font-semibold text-navy"><NotebookPen className="h-4 w-4 text-sky" aria-hidden /> Notes internes</h2>
+            <p className="mb-3 text-xs text-muted">Visibles uniquement par l'équipe, jamais par l'apprenant.</p>
+            <ActionForm action={addLearnerNoteAction} className="space-y-2" resetOnSuccess>
+              <input type="hidden" name="userId" value={u.id} />
+              <Textarea name="body" rows={3} required maxLength={3000} placeholder="Ex. : Appelé le 12/10, reprend la formation la semaine prochaine." />
+              <Field label="Me rappeler le (facultatif)"><Input name="followUpAt" type="date" /></Field>
+              <SubmitButton size="sm">Ajouter la note</SubmitButton>
+            </ActionForm>
+            {u.learnerNotes.length > 0 && (
+              <ul className="mt-4 space-y-3">
+                {u.learnerNotes.map((n) => {
+                  const due = n.followUpAt && !n.doneAt && n.followUpAt.getTime() <= today.getTime();
+                  return (
+                    <li key={n.id} className="rounded-xl border border-line p-3 text-sm">
+                      <p className="whitespace-pre-line text-ink">{n.body}</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
+                        <span>{n.author?.name ?? "—"} · {formatDateTime(n.createdAt)}</span>
+                        {n.followUpAt && (
+                          <Badge tone={n.doneAt ? "green" : due ? "amber" : "sky"}>
+                            {n.doneAt ? "Rappel fait" : `Rappel le ${formatDate(n.followUpAt, { dateStyle: "medium" })}${due ? " — à faire" : ""}`}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="mt-2 flex gap-1">
+                        {n.followUpAt && (
+                          <form action={toggleFollowUpDoneAction.bind(null, n.id)}><SubmitButton size="sm" variant="ghost">{n.doneAt ? "Rouvrir le rappel" : "Marquer comme fait"}</SubmitButton></form>
+                        )}
+                        {(n.authorId === admin.id || admin.role === "ADMIN" || admin.role === "SUPERADMIN") && (
+                          <form action={deleteLearnerNoteAction.bind(null, n.id)}><SubmitButton size="sm" variant="ghost" confirm="Supprimer cette note ?">Supprimer</SubmitButton></form>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardBody></Card>
+
           {manage && (
             <>
               <Card><CardBody>

@@ -1,29 +1,16 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
-import { Award, BookOpen, Clock, UserPlus, Users } from "lucide-react";
+import { Award, BellRing, BookOpen, Clock, NotebookPen, UserPlus, Users } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/session";
 import { can } from "@/lib/permissions";
 import { formatDate } from "@/lib/format";
-import { addLearnersAction } from "@/app/actions/learners";
+import { addLearnersAction, runNudgesNowAction, saveEngagementSettingsAction } from "@/app/actions/learners";
+import { getEngagementSettings } from "@/lib/settings";
+import { countNudgeCandidates } from "@/lib/engagement";
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
-import {
-  Badge,
-  Card,
-  CardBody,
-  Field,
-  PageHeader,
-  ProgressBar,
-  Select,
-  Stat,
-  Table,
-  Td,
-  Textarea,
-  Th,
-  buttonClass,
-  inputClass,
-} from "@/components/ui";
+import { Badge, Card, CardBody, Checkbox, Field, Input, PageHeader, ProgressBar, Select, Stat, Table, Td, Textarea, Th, buttonClass, inputClass } from "@/components/ui";
 
 export const metadata = { title: "Apprenants" };
 
@@ -37,7 +24,15 @@ const suiviOptions: Record<string, string> = {
   "certif-attente": "Certificat en attente de validation",
   certifie: "Certifiés",
   inactif: "Inactifs depuis 14 jours",
+  "a-rappeler": "Rappel à faire (notes)",
 };
+
+/** Fin de la journée en cours : les rappels du jour et en retard sont « à faire ». */
+function endOfToday() {
+  const d = new Date();
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
 
 type Search = {
   q?: string;
@@ -52,12 +47,7 @@ function buildWhere(sp: Search): Prisma.UserWhereInput {
   const and: Prisma.UserWhereInput[] = [
     { role: "LEARNER" },
     {
-      status:
-        sp.statut === "suspendu"
-          ? "SUSPENDED"
-          : sp.statut === "actif"
-            ? "ACTIVE"
-            : { not: "DELETED" },
+      status: sp.statut === "suspendu" ? "SUSPENDED" : sp.statut === "actif" ? "ACTIVE" : { not: "DELETED" },
     },
   ];
   if (sp.q)
@@ -110,34 +100,22 @@ function buildWhere(sp: Search): Prisma.UserWhereInput {
       break;
     case "inactif":
       and.push({
-        OR: [
-          { lastLoginAt: null },
-          { lastLoginAt: { lt: new Date(Date.now() - 14 * DAY) } },
-        ],
+        OR: [{ lastLoginAt: null }, { lastLoginAt: { lt: new Date(Date.now() - 14 * DAY) } }],
       });
+      break;
+    case "a-rappeler":
+      and.push({ learnerNotes: { some: { doneAt: null, followUpAt: { lte: endOfToday() } } } });
       break;
   }
   return { AND: and };
 }
 
-function lastActivity(u: {
-  lastLoginAt: Date | null;
-  enrollments: { lastAccessedAt: Date | null }[];
-}) {
-  const dates = [
-    u.lastLoginAt,
-    ...u.enrollments.map((e) => e.lastAccessedAt),
-  ].filter((d): d is Date => Boolean(d));
-  return dates.length
-    ? new Date(Math.max(...dates.map((d) => d.getTime())))
-    : null;
+function lastActivity(u: { lastLoginAt: Date | null; enrollments: { lastAccessedAt: Date | null }[] }) {
+  const dates = [u.lastLoginAt, ...u.enrollments.map((e) => e.lastAccessedAt)].filter((d): d is Date => Boolean(d));
+  return dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
 }
 
-export default async function LearnersPage({
-  searchParams,
-}: {
-  searchParams: Promise<Search>;
-}) {
+export default async function LearnersPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
   const admin = await requirePermission("users.view");
   const manage = can(admin.role, "users.manage");
@@ -176,6 +154,7 @@ export default async function LearnersPage({
           },
         },
         certificates: { select: { status: true } },
+        learnerNotes: { where: { doneAt: null, followUpAt: { lte: endOfToday() } }, select: { id: true }, take: 1 },
       },
     }),
     prisma.user.count({ where }),
@@ -207,20 +186,11 @@ export default async function LearnersPage({
         where: { status: "PENDING_APPROVAL", user: learner },
       }),
       prisma.certificate.count({ where: { status: "VALID", user: learner } }),
+      prisma.learnerNote.count({ where: { doneAt: null, followUpAt: { lte: endOfToday() }, learner } }),
     ]),
   ]);
-  const [
-    all,
-    new7,
-    new30,
-    active7,
-    suspended,
-    enrolled,
-    started,
-    completed,
-    certPending,
-    certValid,
-  ] = stats;
+  const [all, new7, new30, active7, suspended, enrolled, started, completed, certPending, certValid, followUps] = stats;
+  const [engagement, nudgeCandidates] = manage ? await Promise.all([getEngagementSettings(), countNudgeCandidates()]) : [null, 0];
   const funnel = [
     {
       label: "Inscriptions à une formation",
@@ -237,11 +207,8 @@ export default async function LearnersPage({
       hint: certPending ? `${certPending} en attente de validation` : undefined,
     },
   ];
-  const qs = (extra: Record<string, string>) =>
-    `?${new URLSearchParams({ ...(sp as Record<string, string>), ...extra })}`;
-  const filtered = Boolean(
-    sp.q || sp.statut || sp.periode || sp.formation || sp.suivi,
-  );
+  const qs = (extra: Record<string, string>) => `?${new URLSearchParams({ ...(sp as Record<string, string>), ...extra })}`;
+  const filtered = Boolean(sp.q || sp.statut || sp.periode || sp.formation || sp.suivi);
 
   return (
     <>
@@ -249,89 +216,58 @@ export default async function LearnersPage({
         title="Apprenants"
         subtitle="Suivi complet : inscriptions, progression, résultats, certificats et activité."
         actions={
-          <a
-            href="/api/admin/export/apprenants-liste"
-            className={buttonClass("outline")}
-          >
+          <a href="/api/admin/export/apprenants-liste" className={buttonClass("outline")}>
             Exporter (CSV)
           </a>
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
-          label="Apprenants"
-          value={all}
-          hint={suspended ? `${suspended} suspendu(s)` : "aucun suspendu"}
-          icon={<Users className="h-5 w-5" />}
-        />
-        <Stat
-          label="Nouveaux (7 jours)"
-          value={new7}
-          hint={`${new30} sur 30 jours`}
-          icon={<UserPlus className="h-5 w-5" />}
-        />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <Stat label="Apprenants" value={all} hint={suspended ? `${suspended} suspendu(s)` : "aucun suspendu"} icon={<Users className="h-5 w-5" />} />
+        <Stat label="Nouveaux (7 jours)" value={new7} hint={`${new30} sur 30 jours`} icon={<UserPlus className="h-5 w-5" />} />
         <Stat
           label="Actifs (7 jours)"
           value={active7}
-          hint={
-            all
-              ? `${Math.round((active7 / all) * 100)} % des apprenants`
-              : undefined
-          }
+          hint={all ? `${Math.round((active7 / all) * 100)} % des apprenants` : undefined}
           icon={<Clock className="h-5 w-5" />}
         />
         <Stat
           label="Certificats à valider"
           value={certPending}
           hint={
-            <Link
-              href="?suivi=certif-attente"
-              className="text-sky hover:underline"
-            >
+            <Link href="?suivi=certif-attente" className="text-sky hover:underline">
               Voir les apprenants
             </Link>
           }
           icon={<Award className="h-5 w-5" />}
+        />
+        <Stat
+          label="Rappels à faire"
+          value={followUps}
+          hint={
+            <Link href="?suivi=a-rappeler" className="text-sky hover:underline">
+              Aujourd'hui et en retard
+            </Link>
+          }
+          icon={<NotebookPen className="h-5 w-5" />}
         />
       </div>
 
       <Card className="mt-6">
         <CardBody>
           <h2 className="flex items-center gap-2 font-semibold text-navy">
-            <BookOpen className="h-5 w-5 text-sky" aria-hidden /> Parcours
-            jusqu'au certificat
+            <BookOpen className="h-5 w-5 text-sky" aria-hidden /> Parcours jusqu'au certificat
           </h2>
-          <p className="mt-1 text-sm text-muted">
-            Toutes formations confondues. Cliquez sur une étape pour voir les
-            apprenants concernés.
-          </p>
+          <p className="mt-1 text-sm text-muted">Toutes formations confondues. Cliquez sur une étape pour voir les apprenants concernés.</p>
           <div className="mt-4 grid gap-3 md:grid-cols-4">
             {funnel.map((f, i) => (
-              <Link
-                key={f.label}
-                href={f.href}
-                className="rounded-xl border border-line p-4 hover:border-sky-200"
-              >
-                <div className="text-xs font-medium uppercase tracking-wide text-muted">
-                  Étape {i + 1}
-                </div>
-                <div className="mt-1 text-2xl font-bold text-navy">
-                  {f.value}
-                </div>
+              <Link key={f.label} href={f.href} className="rounded-xl border border-line p-4 hover:border-sky-200">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">Étape {i + 1}</div>
+                <div className="mt-1 text-2xl font-bold text-navy">{f.value}</div>
                 <div className="text-sm text-ink">{f.label}</div>
-                {i > 0 && (
-                  <ProgressBar
-                    value={
-                      enrolled ? Math.round((f.value / enrolled) * 100) : 0
-                    }
-                    className="mt-2"
-                  />
-                )}
+                {i > 0 && <ProgressBar value={enrolled ? Math.round((f.value / enrolled) * 100) : 0} className="mt-2" />}
                 <div className="mt-1 text-xs text-muted">
-                  {i > 0 && enrolled
-                    ? `${Math.round((f.value / enrolled) * 100)} % des inscriptions`
-                    : ""}
+                  {i > 0 && enrolled ? `${Math.round((f.value / enrolled) * 100)} % des inscriptions` : ""}
                   {f.hint ? `${i > 0 && enrolled ? " · " : ""}${f.hint}` : ""}
                 </div>
               </Link>
@@ -341,41 +277,20 @@ export default async function LearnersPage({
       </Card>
 
       {manage && (
-        <details
-          className="group mt-6 rounded-2xl border border-line bg-white shadow-soft"
-          open={total === 0 && !filtered}
-        >
+        <details className="group mt-6 rounded-2xl border border-line bg-white shadow-soft" open={total === 0 && !filtered}>
           <summary className="flex cursor-pointer list-none items-center gap-2 p-5 font-semibold text-navy">
-            <UserPlus className="h-5 w-5 text-sky" aria-hidden /> Ajouter des
-            apprenants
-            <span className="text-sm font-normal text-muted">
-              — un ou plusieurs à la fois, avec inscription directe à une
-              formation
-            </span>
-            <span className="ml-auto text-sm text-sky group-open:hidden">
-              Ouvrir
-            </span>
+            <UserPlus className="h-5 w-5 text-sky" aria-hidden /> Ajouter des apprenants
+            <span className="text-sm font-normal text-muted">— un ou plusieurs à la fois, avec inscription directe à une formation</span>
+            <span className="ml-auto text-sm text-sky group-open:hidden">Ouvrir</span>
           </summary>
           <div className="border-t border-line p-5">
             <p className="text-sm text-muted">
-              Une personne par ligne : <b>Nom, email, téléphone</b> (téléphone
-              facultatif). Chacun reçoit un lien pour choisir son mot de passe.
+              Une personne par ligne : <b>Nom, email, téléphone</b> (téléphone facultatif). Chacun reçoit un lien pour choisir son mot de passe.
             </p>
-            <ActionForm
-              action={addLearnersAction}
-              className="mt-3"
-              resetOnSuccess
-            >
+            <ActionForm action={addLearnersAction} className="mt-3" resetOnSuccess>
               <div className="grid gap-3 lg:grid-cols-[1fr_320px]">
                 <Field label="Personnes">
-                  <Textarea
-                    name="people"
-                    rows={5}
-                    required
-                    placeholder={
-                      "Awa Ouédraogo, awa@exemple.com, +226 70 00 00 00\nMoussa Traoré, moussa@exemple.com"
-                    }
-                  />
+                  <Textarea name="people" rows={5} required placeholder={"Awa Ouédraogo, awa@exemple.com, +226 70 00 00 00\nMoussa Traoré, moussa@exemple.com"} />
                 </Field>
                 <div className="space-y-3">
                   <Field label="Inscrire à une formation (facultatif)">
@@ -396,20 +311,54 @@ export default async function LearnersPage({
         </details>
       )}
 
+      {manage && engagement && (
+        <details className="group mt-4 rounded-2xl border border-line bg-white shadow-soft">
+          <summary className="flex cursor-pointer list-none flex-wrap items-center gap-2 p-5 font-semibold text-navy">
+            <BellRing className="h-5 w-5 text-sky" aria-hidden /> Relance automatique des inactifs
+            <Badge tone={engagement.nudgeEnabled ? "green" : "gray"}>{engagement.nudgeEnabled ? `Active · après ${engagement.nudgeAfterDays} jours` : "Désactivée"}</Badge>
+            <span className="text-sm font-normal text-muted">— {nudgeCandidates} apprenant(s) à relancer au prochain passage</span>
+            <span className="ml-auto text-sm text-sky group-open:hidden">Régler</span>
+          </summary>
+          <div className="grid gap-6 border-t border-line p-5 lg:grid-cols-[1fr_300px]">
+            <ActionForm action={saveEngagementSettingsAction} className="space-y-3">
+              <Checkbox name="nudgeEnabled" defaultChecked={engagement.nudgeEnabled} label={<b>Relancer automatiquement les apprenants qui n'avancent plus</b>} />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Après combien de jours sans activité ?">
+                  <Input name="nudgeAfterDays" type="number" min={2} max={90} defaultValue={engagement.nudgeAfterDays} />
+                </Field>
+                <Field label="Nombre maximum de relances" hint="Remis à zéro dès que l'apprenant revient.">
+                  <Input name="nudgeMax" type="number" min={1} max={10} defaultValue={engagement.nudgeMax} />
+                </Field>
+              </div>
+              <Field label="Objet">
+                <Input name="nudgeTitle" defaultValue={engagement.nudgeTitle} maxLength={120} />
+              </Field>
+              <Field label="Message" hint="Variables : {prenom}, {formation}, {progression} (en %).">
+                <Textarea name="nudgeBody" rows={4} defaultValue={engagement.nudgeBody} maxLength={1000} />
+              </Field>
+              <SubmitButton>Enregistrer</SubmitButton>
+            </ActionForm>
+            <div className="space-y-3 text-sm text-muted">
+              <p>
+                Chaque jour, les apprenants inscrits à une formation <b>non terminée</b> et sans activité depuis le délai choisi reçoivent ce message dans leur espace (et
+                par email si les emails sont configurés), avec un lien direct vers leur formation.
+              </p>
+              <p>Au plus une relance par apprenant et par jour, espacées du même délai. Les comptes suspendus ne sont jamais relancés.</p>
+              <ActionForm action={runNudgesNowAction}>
+                <SubmitButton variant="outline" confirm={`Envoyer maintenant la relance à ${nudgeCandidates} apprenant(s) ?`}>
+                  Relancer maintenant ({nudgeCandidates})
+                </SubmitButton>
+              </ActionForm>
+            </div>
+          </div>
+        </details>
+      )}
+
       <div className="mt-6">
         <div className="min-w-0 space-y-4">
           <form className="flex flex-wrap gap-2">
-            <input
-              name="q"
-              defaultValue={sp.q}
-              placeholder="Nom, email, téléphone, ville…"
-              className={`${inputClass} h-10 max-w-xs`}
-            />
-            <select
-              name="suivi"
-              defaultValue={sp.suivi ?? ""}
-              className={`${inputClass} h-10 max-w-60`}
-            >
+            <input name="q" defaultValue={sp.q} placeholder="Nom, email, téléphone, ville…" className={`${inputClass} h-10 max-w-xs`} />
+            <select name="suivi" defaultValue={sp.suivi ?? ""} className={`${inputClass} h-10 max-w-60`}>
               <option value="">Tous les parcours</option>
               {Object.entries(suiviOptions).map(([v, l]) => (
                 <option key={v} value={v}>
@@ -417,11 +366,7 @@ export default async function LearnersPage({
                 </option>
               ))}
             </select>
-            <select
-              name="formation"
-              defaultValue={sp.formation ?? ""}
-              className={`${inputClass} h-10 max-w-60`}
-            >
+            <select name="formation" defaultValue={sp.formation ?? ""} className={`${inputClass} h-10 max-w-60`}>
               <option value="">Toutes les formations</option>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -429,20 +374,12 @@ export default async function LearnersPage({
                 </option>
               ))}
             </select>
-            <select
-              name="periode"
-              defaultValue={sp.periode ?? ""}
-              className={`${inputClass} h-10 max-w-44`}
-            >
+            <select name="periode" defaultValue={sp.periode ?? ""} className={`${inputClass} h-10 max-w-44`}>
               <option value="">Inscrits : toujours</option>
               <option value="7">Inscrits depuis 7 jours</option>
               <option value="30">Inscrits depuis 30 jours</option>
             </select>
-            <select
-              name="statut"
-              defaultValue={sp.statut ?? ""}
-              className={`${inputClass} h-10 max-w-40`}
-            >
+            <select name="statut" defaultValue={sp.statut ?? ""} className={`${inputClass} h-10 max-w-40`}>
               <option value="">Tous les statuts</option>
               <option value="actif">Actifs</option>
               <option value="suspendu">Suspendus</option>
@@ -477,28 +414,16 @@ export default async function LearnersPage({
                 </tr>
               )}
               {learners.map((u) => {
-                const avg = u.enrollments.length
-                  ? Math.round(
-                      u.enrollments.reduce((n, e) => n + e.progressPercent, 0) /
-                        u.enrollments.length,
-                    )
-                  : null;
+                const avg = u.enrollments.length ? Math.round(u.enrollments.reduce((n, e) => n + e.progressPercent, 0) / u.enrollments.length) : null;
                 const done = u.enrollments.filter((e) => e.completedAt).length;
-                const valid = u.certificates.filter(
-                  (c) => c.status === "VALID",
-                ).length;
-                const pending = u.certificates.filter(
-                  (c) => c.status === "PENDING_APPROVAL",
-                ).length;
+                const valid = u.certificates.filter((c) => c.status === "VALID").length;
+                const pending = u.certificates.filter((c) => c.status === "PENDING_APPROVAL").length;
                 const last = lastActivity(u);
                 const isNew = now - u.createdAt.getTime() < 7 * DAY;
                 return (
                   <tr key={u.id}>
                     <Td>
-                      <Link
-                        href={`/admin/apprenants/${u.id}`}
-                        className="font-medium text-navy hover:text-sky"
-                      >
+                      <Link href={`/admin/apprenants/${u.id}`} className="font-medium text-navy hover:text-sky">
                         {u.name}
                       </Link>
                       {isNew && (
@@ -509,6 +434,11 @@ export default async function LearnersPage({
                       {u.isDemo && (
                         <Badge tone="gray" className="ml-2">
                           démo
+                        </Badge>
+                      )}
+                      {u.learnerNotes.length > 0 && (
+                        <Badge tone="amber" className="ml-2">
+                          à rappeler
                         </Badge>
                       )}
                       <div className="text-xs text-muted">
@@ -522,11 +452,7 @@ export default async function LearnersPage({
                     </Td>
                     <Td>
                       {u.enrollments.length}
-                      {done ? (
-                        <div className="text-xs text-muted">
-                          {done} terminée(s)
-                        </div>
-                      ) : null}
+                      {done ? <div className="text-xs text-muted">{done} terminée(s)</div> : null}
                     </Td>
                     <Td className="min-w-32">
                       {avg === null ? (
@@ -546,15 +472,9 @@ export default async function LearnersPage({
                         </div>
                       ) : null}
                     </Td>
-                    <Td className="text-sm text-muted">
-                      {last
-                        ? formatDate(last, { dateStyle: "medium" })
-                        : "Jamais connecté"}
-                    </Td>
+                    <Td className="text-sm text-muted">{last ? formatDate(last, { dateStyle: "medium" }) : "Jamais connecté"}</Td>
                     <Td>
-                      <Badge tone={u.status === "ACTIVE" ? "green" : "red"}>
-                        {u.status === "ACTIVE" ? "Actif" : "Suspendu"}
-                      </Badge>
+                      <Badge tone={u.status === "ACTIVE" ? "green" : "red"}>{u.status === "ACTIVE" ? "Actif" : "Suspendu"}</Badge>
                     </Td>
                   </tr>
                 );
@@ -563,18 +483,12 @@ export default async function LearnersPage({
           </Table>
           <div className="flex gap-2">
             {page > 1 && (
-              <Link
-                href={qs({ page: String(page - 1) })}
-                className={buttonClass("outline", "sm")}
-              >
+              <Link href={qs({ page: String(page - 1) })} className={buttonClass("outline", "sm")}>
                 ← Précédent
               </Link>
             )}
             {page * 30 < total && (
-              <Link
-                href={qs({ page: String(page + 1) })}
-                className={buttonClass("outline", "sm")}
-              >
+              <Link href={qs({ page: String(page + 1) })} className={buttonClass("outline", "sm")}>
                 Suivant →
               </Link>
             )}

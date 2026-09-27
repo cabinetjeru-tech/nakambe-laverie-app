@@ -9,10 +9,11 @@ import { audit } from "@/lib/audit";
 import { notify } from "@/lib/notify";
 import { queueEmail, renderEmail } from "@/lib/mail";
 import { env } from "@/lib/env";
-import { getBrand } from "@/lib/settings";
 import { evaluateCertificate } from "@/lib/certificates/issue";
 import { certificateDecisionAction } from "./admin";
-import { emailSchema, formString, nameSchema, phoneSchema, type ActionState } from "@/lib/validation";
+import { emailSchema, formBool, formInt, formString, nameSchema, phoneSchema, type ActionState } from "@/lib/validation";
+import { getBrand, getEngagementSettings, saveGroup } from "@/lib/settings";
+import { runNudges } from "@/lib/engagement";
 
 // ───────────────────────────── Suivi des apprenants (administration) ─────────────────────────────
 
@@ -164,4 +165,75 @@ export async function learnerCertificateDecisionAction(certId: string, decision:
   await certificateDecisionAction(certId, decision);
   const c = await prisma.certificate.findUnique({ where: { id: certId }, select: { userId: true } });
   if (c) refresh(c.userId);
+}
+
+// ───────────────────────────── Notes internes et rappels ─────────────────────────────
+
+/** Ajoute une note interne (jamais visible par l'apprenant), avec une date de rappel facultative. */
+export async function addLearnerNoteAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const admin = await requirePermission("users.view");
+  const learner = await findLearner(formString(fd, "userId"));
+  if (!learner) return { error: "Apprenant introuvable." };
+  const body = formString(fd, "body").trim();
+  if (!body) return { error: "La note est vide." };
+  if (body.length > 3000) return { error: "Note trop longue (3 000 caractères maximum)." };
+  const rawDate = formString(fd, "followUpAt");
+  const followUpAt = rawDate ? new Date(`${rawDate}T09:00:00`) : null;
+  if (followUpAt && Number.isNaN(followUpAt.getTime())) return { error: "Date de rappel invalide." };
+  await prisma.learnerNote.create({ data: { learnerId: learner.id, authorId: admin.id, body, followUpAt } });
+  refresh(learner.id);
+  return { ok: true, message: followUpAt ? "Note enregistrée, avec rappel." : "Note enregistrée." };
+}
+
+/** Marque le rappel d'une note comme fait (ou le rouvre). */
+export async function toggleFollowUpDoneAction(noteId: string) {
+  await requirePermission("users.view");
+  const note = await prisma.learnerNote.findUnique({ where: { id: noteId } });
+  if (!note) return;
+  await prisma.learnerNote.update({ where: { id: noteId }, data: { doneAt: note.doneAt ? null : new Date() } });
+  refresh(note.learnerId);
+}
+
+/** Supprime une note : son auteur ou un administrateur habilité. */
+export async function deleteLearnerNoteAction(noteId: string) {
+  const admin = await requirePermission("users.view");
+  const note = await prisma.learnerNote.findUnique({ where: { id: noteId } });
+  if (!note) return;
+  if (note.authorId !== admin.id && !["ADMIN", "SUPERADMIN"].includes(admin.role)) return;
+  await prisma.learnerNote.delete({ where: { id: noteId } });
+  refresh(note.learnerId);
+}
+
+// ───────────────────────────── Relance automatique des inactifs ─────────────────────────────
+
+export async function saveEngagementSettingsAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const admin = await requirePermission("users.manage");
+  const current = await getEngagementSettings();
+  const parsed = z.object({
+    nudgeEnabled: z.boolean(),
+    nudgeAfterDays: z.number().int().min(2, "2 jours minimum.").max(90, "90 jours maximum."),
+    nudgeMax: z.number().int().min(1).max(10),
+    nudgeTitle: z.string().trim().min(3, "Objet trop court.").max(120),
+    nudgeBody: z.string().trim().min(10, "Message trop court.").max(1000),
+  }).safeParse({
+    nudgeEnabled: formBool(fd, "nudgeEnabled"),
+    nudgeAfterDays: formInt(fd, "nudgeAfterDays", current.nudgeAfterDays),
+    nudgeMax: formInt(fd, "nudgeMax", current.nudgeMax),
+    nudgeTitle: formString(fd, "nudgeTitle"),
+    nudgeBody: formString(fd, "nudgeBody"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Valeurs invalides." };
+  await saveGroup("engagement", parsed.data);
+  await audit(admin.id, "settings.engagement", "Setting", "engagement", { enabled: parsed.data.nudgeEnabled, days: parsed.data.nudgeAfterDays, max: parsed.data.nudgeMax });
+  refresh();
+  return { ok: true, message: parsed.data.nudgeEnabled ? "Relance automatique enregistrée et activée." : "Relance automatique désactivée." };
+}
+
+/** Envoie immédiatement les relances dues (sans attendre la tâche quotidienne). */
+export async function runNudgesNowAction(_: ActionState): Promise<ActionState> {
+  const admin = await requirePermission("users.manage");
+  const sent = await runNudges({ force: true });
+  await audit(admin.id, "learners.nudge_now", "Enrollment", null, { sent });
+  refresh();
+  return { ok: true, message: sent ? `${sent} apprenant(s) relancé(s).` : "Aucun apprenant à relancer pour le moment." };
 }
