@@ -33,6 +33,11 @@ describe("URL signées des fichiers", async () => {
     expect(verifyFileSignature("file2", exp, sig)).toBe(false);
     expect(verifyFileSignature("file1", String(Number(exp) + 10), sig)).toBe(false);
     expect(verifyFileSignature("file1", "1000", sig)).toBe(false);
+    // Un lien de consultation ne peut pas servir au téléchargement (et inversement).
+    expect(verifyFileSignature("file1", exp, sig, true)).toBe(false);
+    const dl = new URL("http://x" + signedFileUrl("file1", { ttlSeconds: 60, download: true }));
+    expect(verifyFileSignature("file1", dl.searchParams.get("exp"), dl.searchParams.get("sig"), true)).toBe(true);
+    expect(verifyFileSignature("file1", dl.searchParams.get("exp"), dl.searchParams.get("sig"))).toBe(false);
   });
 });
 

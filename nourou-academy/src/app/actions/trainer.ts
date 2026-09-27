@@ -14,6 +14,7 @@ import { notify } from "@/lib/notify";
 import { indexLesson, ingestDocument } from "@/lib/rag/ingest";
 import { deleteStoredFile } from "@/lib/storage";
 import { evaluateCertificate } from "@/lib/certificates/issue";
+import { completeCourseStructure, createCourseStructure } from "@/lib/course-template";
 import { saveLessonProgress } from "@/lib/learning/progress";
 import { generateContent, generatorKinds, type GeneratedProgram, type GeneratedQuiz } from "@/lib/ai/generator";
 import { checkQuota } from "@/lib/ai/quota";
@@ -37,6 +38,8 @@ async function courseIdOfLesson(lessonId: string) {
 
 function refresh(courseId: string) {
   revalidatePath(`/formateur/formations/${courseId}`, "layout");
+  revalidatePath("/formations/[slug]", "page");
+  revalidatePath("/formations");
 }
 
 async function uniqueSlug(title: string, excludeId?: string) {
@@ -89,6 +92,7 @@ export async function createCourseAction(_: ActionState, fd: FormData): Promise<
     data: { ...parsed.data, priceXof: parsed.data.isFree ? 0 : parsed.data.priceXof, slug: await uniqueSlug(parsed.data.title), trainerId: user.id, status: "DRAFT" },
   });
   await audit(user.id, "course.create", "Course", course.id);
+  if (formBool(fd, "useTemplate")) await createCourseStructure(course.id);
   redirect(`/formateur/formations/${course.id}?onglet=programme`);
 }
 
@@ -183,9 +187,61 @@ export async function renameModuleAction(_: ActionState, fd: FormData): Promise<
   const moduleId = formString(fd, "moduleId");
   const mod = await prisma.module.findUniqueOrThrow({ where: { id: moduleId } });
   await assertCourse(user, mod.courseId);
-  await prisma.module.update({ where: { id: moduleId }, data: { title: formString(fd, "title").trim().slice(0, 200) || mod.title } });
+  await prisma.module.update({
+    where: { id: moduleId },
+    data: { title: formString(fd, "title").trim().slice(0, 200) || mod.title, description: formString(fd, "description").trim().slice(0, 500) || null },
+  });
   refresh(mod.courseId);
-  return { ok: true };
+  return { ok: true, message: "Module enregistré." };
+}
+
+/** Complète une formation existante avec la structure type (Présentation, Introduction, Conclusion) si elle manque. */
+export async function completeStructureAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await trainer();
+  const courseId = formString(fd, "courseId");
+  await assertCourse(user, courseId);
+  const added = await completeCourseStructure(courseId);
+  refresh(courseId);
+  if (added.length === 0) return { ok: true, message: "La formation contient déjà une présentation, une introduction et une conclusion." };
+  await audit(user.id, "course.structure", "Course", courseId, { added });
+  return { ok: true, message: `Ajouté : ${added.join(", ")}. Personnalisez les leçons créées.` };
+}
+
+// ───────────────────────────── Médias de présentation ─────────────────────────────
+
+/** Vidéo de présentation hébergée ailleurs (YouTube, Vimeo ou fichier MP4). */
+export async function setTrailerUrlAction(_: ActionState, fd: FormData): Promise<ActionState> {
+  const user = await trainer();
+  const courseId = formString(fd, "courseId");
+  await assertCourse(user, courseId);
+  const url = formString(fd, "trailerUrl").trim();
+  const ok = z.string().url().max(500).safeParse(url);
+  if (!ok.success || !/^https:\/\//.test(url) || !/(youtube\.com|youtu\.be|vimeo\.com|\.mp4(\?|$)|\.webm(\?|$))/i.test(url)) {
+    return { error: "Collez un lien YouTube, Vimeo ou l'adresse https d'un fichier MP4." };
+  }
+  const before = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { trailerFileId: true } });
+  await prisma.course.update({ where: { id: courseId }, data: { trailerUrl: url, trailerFileId: null } });
+  if (before.trailerFileId) await deleteStoredFile(before.trailerFileId).catch(() => undefined);
+  refresh(courseId);
+  return { ok: true, message: "Vidéo de présentation enregistrée." };
+}
+
+export async function removeTrailerAction(courseId: string) {
+  const user = await trainer();
+  await assertCourse(user, courseId);
+  const before = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { trailerFileId: true } });
+  await prisma.course.update({ where: { id: courseId }, data: { trailerUrl: null, trailerFileId: null } });
+  if (before.trailerFileId) await deleteStoredFile(before.trailerFileId).catch(() => undefined);
+  refresh(courseId);
+}
+
+export async function removeCoverAction(courseId: string) {
+  const user = await trainer();
+  await assertCourse(user, courseId);
+  const before = await prisma.course.findUniqueOrThrow({ where: { id: courseId }, select: { imageFileId: true } });
+  await prisma.course.update({ where: { id: courseId }, data: { imageFileId: null, imageUrl: null } });
+  if (before.imageFileId) await deleteStoredFile(before.imageFileId).catch(() => undefined);
+  refresh(courseId);
 }
 
 export async function deleteModuleAction(moduleId: string) {
@@ -278,6 +334,16 @@ export async function updateLessonAction(_: ActionState, fd: FormData): Promise<
   await indexLesson(lessonId, user.id);
   refresh(courseId);
   return { ok: true, message: "Leçon enregistrée et indexée pour le tuteur IA." };
+}
+
+/** Bascule un fichier de leçon entre « support consultable en ligne » et « ressource téléchargeable ». */
+export async function toggleAssetDownloadableAction(assetId: string) {
+  const user = await trainer();
+  const asset = await prisma.lessonAsset.findUniqueOrThrow({ where: { id: assetId }, include: { lesson: { select: { module: { select: { courseId: true } } } } } });
+  await assertCourse(user, asset.lesson.module.courseId);
+  if (asset.kind !== "DOCUMENT") return; // vidéo principale et sous-titres : toujours en ligne uniquement
+  await prisma.lessonAsset.update({ where: { id: assetId }, data: { downloadable: !asset.downloadable } });
+  refresh(asset.lesson.module.courseId);
 }
 
 export async function deleteAssetAction(assetId: string) {

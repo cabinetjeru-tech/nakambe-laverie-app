@@ -152,17 +152,21 @@ export async function s3PresignedUrl(key: string, filename: string, download: bo
 }
 
 /** URL signée interne (valable `ttlSeconds`) pour un fichier privé. */
+/**
+ * URL signée à durée limitée. Le mode (consultation en ligne ou téléchargement) fait partie de la signature :
+ * un lien de consultation ne peut pas être transformé en lien de téléchargement.
+ */
 export function signedFileUrl(fileId: string, opts: { ttlSeconds?: number; download?: boolean } = {}) {
   const exp = Math.floor(Date.now() / 1000) + (opts.ttlSeconds ?? 3600);
-  const sig = hmacHex(env.fileSigningSecret, `${fileId}.${exp}`);
+  const sig = hmacHex(env.fileSigningSecret, `${fileId}.${exp}${opts.download ? ".dl" : ""}`);
   return `/api/files/${fileId}?exp=${exp}&sig=${sig}${opts.download ? "&dl=1" : ""}`;
 }
 
-export function verifyFileSignature(fileId: string, exp: string | null, sig: string | null): boolean {
+export function verifyFileSignature(fileId: string, exp: string | null, sig: string | null, download = false): boolean {
   if (!exp || !sig) return false;
   const expN = Number(exp);
   if (!Number.isFinite(expN) || expN < Math.floor(Date.now() / 1000)) return false;
-  return safeEqual(hmacHex(env.fileSigningSecret, `${fileId}.${expN}`), sig);
+  return safeEqual(hmacHex(env.fileSigningSecret, `${fileId}.${expN}${download ? ".dl" : ""}`), sig);
 }
 
 export function publicFileUrl(fileId: string | null | undefined): string | null {

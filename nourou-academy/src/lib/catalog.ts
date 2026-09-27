@@ -14,6 +14,8 @@ export const courseCardSelect = {
   durationMinutes: true,
   imageFileId: true,
   imageUrl: true,
+  trailerFileId: true,
+  trailerUrl: true,
   hasCertificate: true,
   category: { select: { name: true, slug: true } },
   trainer: { select: { id: true, name: true } },

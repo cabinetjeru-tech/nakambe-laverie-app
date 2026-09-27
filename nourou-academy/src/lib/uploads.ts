@@ -3,7 +3,7 @@
  * (le type annoncé par le navigateur et l'extension ne suffisent pas).
  */
 
-export type UploadCategory = "image" | "video" | "audio" | "document" | "subtitle" | "knowledge";
+export type UploadCategory = "image" | "video" | "audio" | "document" | "subtitle" | "knowledge" | "lessonFile";
 
 type Detected = { mime: string; ext: string } | null;
 
@@ -43,6 +43,16 @@ export function detectFileType(buf: Buffer, filename: string): Detected {
     if (ext === "pptx") return { mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", ext };
     if (ext === "xlsx") return { mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ext };
     if (ext === "zip") return { mime: "application/zip", ext };
+    if (ext === "odt") return { mime: "application/vnd.oasis.opendocument.text", ext };
+    if (ext === "odp") return { mime: "application/vnd.oasis.opendocument.presentation", ext };
+    if (ext === "ods") return { mime: "application/vnd.oasis.opendocument.spreadsheet", ext };
+    return null;
+  }
+  // Anciens formats Microsoft Office (conteneur OLE)
+  if (startsWith(buf, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])) {
+    if (ext === "ppt") return { mime: "application/vnd.ms-powerpoint", ext };
+    if (ext === "doc") return { mime: "application/msword", ext };
+    if (ext === "xls") return { mime: "application/vnd.ms-excel", ext };
     return null;
   }
   if (isProbablyText(buf)) {
@@ -66,6 +76,18 @@ const allowed: Record<UploadCategory, string[]> = {
     "application/vnd.openxmlformats-officedocument.presentationml.presentation",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "image/png", "image/jpeg", "image/webp",
+  ],
+  // Supports et ressources des leçons : tout type utile à un cours (documents, présentations, images, vidéos, audio).
+  lessonFile: [
+    "application/pdf", "text/plain", "text/markdown", "text/csv", "application/zip",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/msword", "application/vnd.ms-powerpoint", "application/vnd.ms-excel",
+    "application/vnd.oasis.opendocument.text", "application/vnd.oasis.opendocument.presentation", "application/vnd.oasis.opendocument.spreadsheet",
+    "image/png", "image/jpeg", "image/webp", "image/gif",
+    "video/mp4", "video/webm",
+    "audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4",
   ],
   knowledge: [
     "application/pdf", "text/plain", "text/markdown",

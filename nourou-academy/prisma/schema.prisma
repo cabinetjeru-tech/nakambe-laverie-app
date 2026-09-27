@@ -179,6 +179,8 @@ model Course {
   description     String
   imageFileId     String?
   imageUrl        String?
+  trailerFileId   String? // vidéo de présentation téléversée (publique)
+  trailerUrl      String? // ou lien YouTube / Vimeo / MP4
   categoryId      String?
   category        Category?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   trainerId       String
@@ -293,6 +295,7 @@ model LessonAsset {
   kind         AssetKind
   label        String
   lang         String?
+  /// false : support de cours consultable en ligne uniquement ; true : ressource téléchargeable par l'apprenant.
   downloadable Boolean    @default(true)
   createdAt    DateTime   @default(now())
 }

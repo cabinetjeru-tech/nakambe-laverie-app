@@ -1,14 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Download, FileText, HardDriveDownload, Loader2 } from "lucide-react";
+import { CheckCircle2, Download, HardDriveDownload, Loader2 } from "lucide-react";
+import { fileKind, fileKindLabels, fileSizeLabel } from "@/lib/file-kinds";
+import { FileKindIcon } from "@/components/course/file-kind-icon";
 
 export type DocItem = { id: string; label: string; size: number; mime: string; url: string; downloadUrl: string; downloadable: boolean };
 
 const OFFLINE_CACHE = "nga-offline-docs";
-
-function sizeLabel(n: number) {
-  return n > 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} Mo` : `${Math.ceil(n / 1024)} Ko`;
-}
 
 /** Supports téléchargeables : téléchargement direct et enregistrement hors ligne (Cache API). */
 export function DocumentList({ docs }: { docs: DocItem[] }) {
@@ -46,10 +44,10 @@ export function DocumentList({ docs }: { docs: DocItem[] }) {
     <ul className="divide-y divide-line rounded-2xl border border-line bg-white">
       {docs.map((d) => (
         <li key={d.id} className="flex flex-wrap items-center gap-3 p-4">
-          <FileText className="h-5 w-5 shrink-0 text-sky" aria-hidden />
+          <FileKindIcon kind={fileKind(d.mime)} />
           <div className="min-w-0 flex-1">
             <a href={d.url} target="_blank" rel="noopener" className="block truncate text-sm font-medium text-navy hover:text-sky">{d.label}</a>
-            <div className="text-xs text-muted">{sizeLabel(d.size)}</div>
+            <div className="text-xs text-muted">{fileKindLabels[fileKind(d.mime)]} · {fileSizeLabel(d.size)}</div>
           </div>
           {d.downloadable && (
             <div className="flex items-center gap-2">

@@ -3,16 +3,21 @@ import { Award, Clock, Users } from "lucide-react";
 import { formatDuration, formatXof, levelLabels } from "@/lib/format";
 import { Badge, Stars } from "../ui";
 import type { CourseCardData } from "@/lib/catalog";
+import { CardMedia } from "./card-media";
 
-const gradients = [
+export const gradients = [
   "from-[#00123a] to-[#1f3c88]",
   "from-[#0a2254] to-[#3a5fb8]",
   "from-[#00123a] to-[#ff6600]",
   "from-[#1f3c88] to-[#00123a]",
 ];
 
+export function courseGradient(title: string) {
+  return gradients[title.length % gradients.length]!;
+}
+
 export function CourseCover({ title, image, category, className = "aspect-[16/9]" }: { title: string; image: string | null; category?: string | null; className?: string }) {
-  const g = gradients[title.length % gradients.length];
+  const g = courseGradient(title);
   return (
     <div className={`relative overflow-hidden bg-gradient-to-br ${g} ${className}`}>
       {image ? (
@@ -36,7 +41,14 @@ export function CourseCard({ course }: { course: CourseCardData }) {
       href={`/formations/${course.slug}`}
       className="group flex flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-soft transition hover:-translate-y-0.5 hover:border-sky-200"
     >
-      <CourseCover title={course.title} image={course.image} category={course.category?.name} />
+      <CardMedia
+        title={course.title}
+        image={course.image}
+        category={course.category?.name}
+        gradient={courseGradient(course.title)}
+        trailerFile={course.trailerFileId ? `/api/files/${course.trailerFileId}` : null}
+        hasTrailer={Boolean(course.trailerFileId || course.trailerUrl)}
+      />
       <div className="flex flex-1 flex-col p-4">
         <h3 className="line-clamp-2 font-semibold leading-snug text-navy group-hover:text-sky">{course.title}</h3>
         {course.subtitle && <p className="mt-1 line-clamp-2 text-sm text-muted">{course.subtitle}</p>}

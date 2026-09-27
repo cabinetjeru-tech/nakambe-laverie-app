@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Download, Eye, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/session";
 import { canManageCourse } from "@/lib/access";
-import { deleteAssetAction, deleteLessonAction, deleteQuestionAction, addQuestionAction, updateAssignmentAction, updateLessonAction, updateQuizSettingsAction } from "@/app/actions/trainer";
+import { deleteAssetAction, toggleAssetDownloadableAction, deleteLessonAction, deleteQuestionAction, addQuestionAction, updateAssignmentAction, updateLessonAction, updateQuizSettingsAction } from "@/app/actions/trainer";
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { FileUploader } from "@/components/forms/file-uploader";
 import { MarkdownEditor } from "@/components/forms/markdown-editor";
 import { Badge, Card, CardBody, Checkbox, Field, Input, PageHeader, Select, Textarea, buttonClass } from "@/components/ui";
+import { fileKind, fileKindLabels, fileSizeLabel } from "@/lib/file-kinds";
+import { FileKindIcon } from "@/components/course/file-kind-icon";
 
-const kindLabel = { VIDEO: "Vidéo", SUBTITLE: "Sous-titres", DOCUMENT: "Document" };
+const kindLabel = { VIDEO: "Vidéo principale", SUBTITLE: "Sous-titres", DOCUMENT: "Document" };
+const ACCEPT_LESSON_FILES = "image/*,video/mp4,video/webm,audio/*,.pdf,.ppt,.pptx,.doc,.docx,.xls,.xlsx,.odp,.odt,.ods,.csv,.txt,.md,.zip";
 const qLabel = { SINGLE: "Choix unique", MULTIPLE: "Choix multiples", TRUE_FALSE: "Vrai / faux", SHORT: "Réponse courte", OPEN: "Réponse ouverte (correction IA / formateur)" };
 
 export default async function LessonEditor({ params }: { params: Promise<{ id: string; lessonId: string }> }) {
@@ -132,22 +135,43 @@ export default async function LessonEditor({ params }: { params: Promise<{ id: s
 
         <aside className="space-y-6">
           <Card><CardBody className="space-y-4">
-            <div className="font-semibold text-navy">Fichiers de la leçon</div>
+            <div>
+              <div className="font-semibold text-navy">Fichiers de la leçon</div>
+              <p className="text-xs text-muted">
+                <b>Supports de cours</b> : consultés en ligne dans la leçon, sans téléchargement. <b>Ressources</b> : téléchargeables par l'apprenant (bouton « Ressources »).
+              </p>
+            </div>
             <ul className="space-y-2">
               {lesson.assets.length === 0 && <li className="text-sm text-muted">Aucun fichier.</li>}
-              {lesson.assets.map((a) => (
-                <li key={a.id} className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2 text-sm">
-                  <Badge tone="gray">{kindLabel[a.kind]}</Badge>
-                  <span className="min-w-0 flex-1 truncate" title={a.label}>{a.label}</span>
-                  <span className="text-xs text-muted">{Math.ceil(a.file.size / 1024)} Ko</span>
-                  <form action={deleteAssetAction.bind(null, a.id)}><button className="text-muted hover:text-red-600" aria-label="Supprimer"><Trash2 className="h-4 w-4" /></button></form>
-                </li>
-              ))}
+              {lesson.assets.map((a) => {
+                const k = fileKind(a.file.mimeType);
+                return (
+                  <li key={a.id} className="rounded-lg bg-surface px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileKindIcon kind={k} className="h-4 w-4" />
+                      <span className="min-w-0 flex-1 truncate font-medium" title={a.label}>{a.label}</span>
+                      <form action={deleteAssetAction.bind(null, a.id)}><SubmitButton size="sm" variant="ghost" confirm="Supprimer ce fichier ?"><Trash2 className="h-4 w-4 text-red-600" /></SubmitButton></form>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                      <span>{a.kind === "DOCUMENT" ? fileKindLabels[k] : kindLabel[a.kind]} · {fileSizeLabel(a.file.size)}</span>
+                      {a.kind === "DOCUMENT" ? (
+                        <form action={toggleAssetDownloadableAction.bind(null, a.id)}>
+                          <button className="rounded-full focus-visible:outline" title="Cliquer pour changer">
+                            {a.downloadable ? <Badge tone="green"><Download className="h-3 w-3" /> Ressource téléchargeable</Badge> : <Badge tone="sky"><Eye className="h-3 w-3" /> Consultation en ligne</Badge>}
+                          </button>
+                        </form>
+                      ) : (
+                        <Badge tone="sky"><Eye className="h-3 w-3" /> Consultation en ligne</Badge>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
             {lesson.type === "VIDEO" && (
               <div>
-                <div className="mb-1 text-xs font-semibold uppercase text-muted">Vidéo (MP4 / WebM)</div>
-                <FileUploader params={{ purpose: "lesson-asset", targetId: lesson.id, kind: "VIDEO" }} accept="video/mp4,video/webm" label="Téléverser la vidéo" hint="Compressez en 720p (H.264) : environ 5 à 8 Mo par minute. Pour de gros volumes, préférez un hébergeur vidéo et collez son lien." />
+                <div className="mb-1 text-xs font-semibold uppercase text-muted">Vidéo principale (MP4 / WebM)</div>
+                <FileUploader params={{ purpose: "lesson-asset", targetId: lesson.id, kind: "VIDEO" }} accept="video/mp4,video/webm" label="Téléverser la vidéo" hint="Lue en streaming, sans téléchargement. Compressez en 720p (H.264) : 5 à 8 Mo par minute. Pour de gros volumes, collez plutôt un lien YouTube/Vimeo." />
               </div>
             )}
             {lesson.type === "VIDEO" && (
@@ -157,8 +181,24 @@ export default async function LessonEditor({ params }: { params: Promise<{ id: s
               </div>
             )}
             <div>
-              <div className="mb-1 text-xs font-semibold uppercase text-muted">Supports téléchargeables</div>
-              <FileUploader params={{ purpose: "lesson-asset", targetId: lesson.id, kind: "DOCUMENT" }} accept=".pdf,.docx,.pptx,.xlsx,.txt,.md,.zip,image/*" label="Ajouter un support" extraFields={[{ name: "label", label: "Titre", placeholder: "Titre affiché (facultatif)" }]} hint="Les PDF, DOCX, PPTX et TXT sont aussi indexés pour le tuteur IA." />
+              <div className="mb-1 text-xs font-semibold uppercase text-muted">Support de cours — consultation en ligne</div>
+              <FileUploader
+                params={{ purpose: "lesson-asset", targetId: lesson.id, kind: "DOCUMENT", downloadable: "0" }}
+                accept={ACCEPT_LESSON_FILES}
+                label="Ajouter un support"
+                extraFields={[{ name: "label", label: "Titre", placeholder: "Titre affiché (facultatif)" }]}
+                hint="Image, PDF, PowerPoint, Word, Excel, vidéo ou audio : affiché dans la leçon, sans bouton de téléchargement. Astuce : exportez vos PowerPoint en PDF pour un affichage parfait sur mobile."
+              />
+            </div>
+            <div>
+              <div className="mb-1 text-xs font-semibold uppercase text-muted">Ressource téléchargeable</div>
+              <FileUploader
+                params={{ purpose: "lesson-asset", targetId: lesson.id, kind: "DOCUMENT", downloadable: "1" }}
+                accept={ACCEPT_LESSON_FILES}
+                label="Ajouter une ressource"
+                extraFields={[{ name: "label", label: "Titre", placeholder: "Titre affiché (facultatif)" }]}
+                hint="Fiches, modèles, exercices, fichiers de travail… que l'apprenant peut télécharger. Les PDF, DOCX, PPTX et TXT alimentent aussi le tuteur IA."
+              />
             </div>
           </CardBody></Card>
           <Card className="border-red-200"><CardBody>

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  Award, BarChart3, BookOpen, CheckCircle2, Clock, FileText, Globe2, Heart, Lock, MonitorPlay, PlayCircle, ClipboardCheck,
-  PenSquare, Radio, Sparkles, Users,
+  Award, BarChart3, BookOpen, CalendarClock, CheckCircle2, Clock, FileText, FolderDown, Globe2, Heart, Lock, MonitorPlay, MonitorSmartphone, Paperclip,
+  PlayCircle, ClipboardCheck, PenSquare, Presentation, Radio, ShieldCheck, Sparkles, Users,
 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth/session";
@@ -13,7 +13,10 @@ import { formatDate, formatDateTime, formatDuration, formatXof, initials, levelL
 import { getBrand } from "@/lib/settings";
 import { publicFileUrl } from "@/lib/storage";
 import { enrollAction, submitReviewAction, toggleFavoriteAction } from "@/app/actions/learning";
-import { CourseCover } from "@/components/course/course-card";
+import { courseGradient } from "@/components/course/course-card";
+import { TrailerPreview, type Trailer } from "@/components/course/trailer-preview";
+import { ExpandAll } from "@/components/course/expand-all";
+import { videoEmbedUrl } from "@/lib/video-embed";
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
 import { Badge, Card, CardBody, Field, Select, Stars, Textarea, buttonClass } from "@/components/ui";
@@ -28,8 +31,21 @@ async function load(slug: string) {
     where: { slug },
     include: {
       category: true,
-      trainer: { select: { id: true, name: true, headline: true, bio: true, avatarFileId: true, expertise: true } },
-      modules: { orderBy: { position: "asc" }, include: { lessons: { orderBy: { position: "asc" }, select: { id: true, title: true, type: true, durationMinutes: true, isPreview: true } } } },
+      trainer: {
+        select: {
+          id: true, name: true, headline: true, bio: true, avatarFileId: true, expertise: true,
+          _count: { select: { coursesTaught: { where: { status: "PUBLISHED" } } } },
+        },
+      },
+      modules: {
+        orderBy: { position: "asc" },
+        include: {
+          lessons: {
+            orderBy: { position: "asc" },
+            select: { id: true, title: true, type: true, durationMinutes: true, isPreview: true, assets: { where: { kind: "DOCUMENT" }, select: { downloadable: true } } },
+          },
+        },
+      },
       quizzes: { where: { isFinalExam: true }, select: { id: true, passingScore: true } },
       assignments: { where: { isProject: true }, select: { id: true } },
       reviews: { where: { status: "APPROVED" }, orderBy: { createdAt: "desc" }, take: 10, include: { user: { select: { name: true } } } },
@@ -61,13 +77,36 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const subActive = user ? await hasActiveSubscription(user.id) : false;
   const free = course.isFree || course.priceXof === 0;
   const hasAccess = access !== "none";
+  const lessons = course.modules.flatMap((m) => m.lessons);
+  const videoMinutes = lessons.filter((l) => l.type === "VIDEO").reduce((n, l) => n + l.durationMinutes, 0);
+  const articles = lessons.filter((l) => l.type === "TEXT" || l.type === "DOCUMENT").length;
+  const practice = lessons.filter((l) => l.type === "QUIZ" || l.type === "ASSIGNMENT").length;
+  const supportsCount = lessons.reduce((n, l) => n + l.assets.filter((a) => !a.downloadable).length, 0);
+  const resourcesCount = lessons.reduce((n, l) => n + l.assets.filter((a) => a.downloadable).length, 0);
+  const trainerLearners = await prisma.enrollment.count({ where: { course: { trainerId: course.trainer.id } } });
+  const trailer: Trailer = course.trailerFileId
+    ? { kind: "file", src: publicFileUrl(course.trailerFileId)! }
+    : course.trailerUrl
+      ? videoEmbedUrl(course.trailerUrl, true) ? { kind: "embed", src: videoEmbedUrl(course.trailerUrl, true)! } : { kind: "file", src: course.trailerUrl }
+      : null;
+  const includes = [
+    videoMinutes > 0 && { icon: PlayCircle, text: `${formatDuration(videoMinutes)} de vidéo à la demande` },
+    articles > 0 && { icon: FileText, text: `${articles} leçon${articles > 1 ? "s" : ""} écrite${articles > 1 ? "s" : ""} et fiches de cours` },
+    supportsCount > 0 && { icon: Presentation, text: `${supportsCount} support${supportsCount > 1 ? "s" : ""} de cours consultable${supportsCount > 1 ? "s" : ""} en ligne` },
+    resourcesCount > 0 && { icon: FolderDown, text: `${resourcesCount} ressource${resourcesCount > 1 ? "s" : ""} téléchargeable${resourcesCount > 1 ? "s" : ""}` },
+    practice > 0 && { icon: ClipboardCheck, text: `${practice} quiz et exercice${practice > 1 ? "s" : ""} pratique${practice > 1 ? "s" : ""}` },
+    course.liveSessions.length > 0 && { icon: Radio, text: "Classes virtuelles en direct" },
+    { icon: MonitorSmartphone, text: "Accès sur ordinateur et smartphone" },
+    { icon: Sparkles, text: `Tuteur IA ${brand.tutorName} disponible 24h/24` },
+    course.hasCertificate && { icon: Award, text: "Certificat de réussite vérifiable (QR code)" },
+  ].filter(Boolean) as { icon: typeof PlayCircle; text: string }[];
   const packs = await prisma.pack.findMany({ where: { active: true, courses: { some: { courseId: course.id } } }, select: { slug: true, title: true, priceXof: true } });
 
   return (
     <>
       <section className="bg-navy text-white">
-        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_380px] lg:py-14">
-          <div>
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 lg:min-h-[22rem] lg:grid-cols-[1fr_380px] lg:py-14">
+          <div className="max-w-3xl">
             <nav className="text-xs text-sky-200" aria-label="Fil d'Ariane">
               <Link href="/formations" className="hover:underline">Formations</Link>
               {course.category && (
@@ -94,13 +133,21 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1"><Clock className="h-3.5 w-3.5" aria-hidden />{formatDuration(course.durationMinutes)}</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1"><BookOpen className="h-3.5 w-3.5" aria-hidden />{lessonsTotal} leçons</span>
               <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1"><Globe2 className="h-3.5 w-3.5" aria-hidden />Français</span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1"><CalendarClock className="h-3.5 w-3.5" aria-hidden />Mise à jour : {formatDate(course.updatedAt, { month: "long", year: "numeric" })}</span>
               {course.hasCertificate && <span className="inline-flex items-center gap-1 rounded-full bg-accent/20 px-3 py-1 text-accent"><Award className="h-3.5 w-3.5" aria-hidden />Certificat</span>}
             </div>
           </div>
 
+          <div className="hidden lg:block" aria-hidden />
+        </div>
+      </section>
+
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_380px]">
+        <aside className="lg:order-2 lg:-mt-[19rem]">
+          <div className="space-y-4 lg:sticky lg:top-20">
           {/* Carte d'achat */}
-          <Card className="self-start overflow-hidden text-ink lg:sticky lg:top-20">
-            <CourseCover title={course.title} image={rated?.image ?? null} />
+          <Card className="overflow-hidden text-ink shadow-xl">
+            <TrailerPreview cover={rated?.image ?? null} title={course.title} trailer={trailer} gradient={courseGradient(course.title)} />
             <CardBody className="space-y-3">
               {hasAccess ? (
                 <>
@@ -156,11 +203,13 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
                   </SubmitButton>
                 </form>
               )}
-              <ul className="space-y-1.5 border-t border-line pt-3 text-sm text-muted">
-                <li className="flex gap-2"><MonitorPlay className="h-4 w-4 shrink-0 text-sky" aria-hidden />{course.modality}</li>
-                <li className="flex gap-2"><Sparkles className="h-4 w-4 shrink-0 text-accent" aria-hidden />Tuteur IA {brand.tutorName} inclus</li>
-                {course.hasCertificate && <li className="flex gap-2"><Award className="h-4 w-4 shrink-0 text-sky" aria-hidden />Certificat vérifiable par QR code</li>}
-              </ul>
+              <div className="border-t border-line pt-3">
+                <div className="text-sm font-semibold text-navy">Cette formation comprend :</div>
+                <ul className="mt-2 space-y-1.5 text-sm text-ink">
+                  {includes.map((it) => <li key={it.text} className="flex gap-2"><it.icon className="h-4 w-4 shrink-0 text-sky" aria-hidden />{it.text}</li>)}
+                  <li className="flex gap-2 text-muted"><MonitorPlay className="h-4 w-4 shrink-0 text-sky" aria-hidden />{course.modality}</li>
+                </ul>
+              </div>
               {packs.length > 0 && !hasAccess && (
                 <div className="rounded-lg bg-accent-50 p-3 text-xs text-navy">
                   Aussi disponible dans : {packs.map((p) => <Link key={p.slug} href={`/paiement/commande?type=PACK&slug=${p.slug}`} className="font-semibold underline">{p.title} ({formatXof(p.priceXof)})</Link>)}
@@ -168,14 +217,18 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
               )}
             </CardBody>
           </Card>
-        </div>
-      </section>
-
-      <div className="mx-auto grid max-w-7xl gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-10">
+            <Card className="bg-sky-50">
+              <CardBody>
+                <div className="flex items-center gap-2 font-semibold text-navy"><Sparkles className="h-4 w-4 text-accent" aria-hidden /> Une question sur cette formation ?</div>
+                <p className="mt-1 text-sm text-muted">Utilisez le bouton « {brand.tutorName} » en bas de l'écran : il connaît le programme et vous aide à choisir.</p>
+              </CardBody>
+            </Card>
+          </div>
+        </aside>
+        <div className="min-w-0 space-y-10 lg:order-1">
           {course.objectives.length > 0 && (
             <section className="rounded-2xl border border-line p-6">
-              <h2 className="text-xl font-bold text-navy">Objectifs pédagogiques</h2>
+              <h2 className="text-xl font-bold text-navy">Ce que vous allez apprendre</h2>
               <ul className="mt-4 grid gap-3 sm:grid-cols-2">
                 {course.objectives.map((o) => (
                   <li key={o} className="flex gap-2 text-sm"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />{o}</li>
@@ -185,45 +238,54 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           )}
 
           <section>
-            <h2 className="text-xl font-bold text-navy">Description</h2>
-            <p className="mt-3 whitespace-pre-line leading-7 text-ink">{course.description}</p>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-bold text-navy">Programme détaillé</h2>
-            <p className="mt-1 text-sm text-muted">{course.modules.length} modules · {lessonsTotal} leçons · {formatDuration(course.durationMinutes)}</p>
-            <div className="mt-4 space-y-3">
-              {course.modules.map((m, i) => (
-                <details key={m.id} open={i === 0} className="group rounded-2xl border border-line bg-white">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 [&::-webkit-details-marker]:hidden">
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-wide text-sky">Module {i + 1}</div>
-                      <div className="font-semibold text-navy">{m.title}</div>
-                    </div>
-                    <span className="text-xs text-muted">{m.lessons.length} leçon{m.lessons.length > 1 ? "s" : ""}</span>
-                  </summary>
-                  <ul className="border-t border-line">
-                    {m.lessons.map((l) => {
-                      const Icon = lessonIcons[l.type];
-                      const open = hasAccess || l.isPreview;
-                      return (
-                        <li key={l.id} className="flex items-center gap-3 border-b border-line px-5 py-3 text-sm last:border-0">
-                          <Icon className="h-4 w-4 shrink-0 text-muted" aria-hidden />
-                          {open ? (
-                            <Link href={`/espace/apprendre/${course.slug}/${l.id}`} className="flex-1 text-ink hover:text-sky">{l.title}</Link>
-                          ) : (
-                            <span className="flex-1 text-ink">{l.title}</span>
-                          )}
-                          {l.isPreview && !hasAccess && <Badge tone="green">Aperçu gratuit</Badge>}
-                          {!open && <Lock className="h-3.5 w-3.5 text-muted" aria-label="Réservé aux inscrits" />}
-                          <span className="w-14 text-right text-xs text-muted">{l.durationMinutes ? `${l.durationMinutes} min` : ""}</span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </details>
-              ))}
+            <h2 className="text-xl font-bold text-navy">Contenu de la formation</h2>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm text-muted">
+              <span>{course.modules.length} section{course.modules.length > 1 ? "s" : ""} · {lessonsTotal} leçon{lessonsTotal > 1 ? "s" : ""} · durée totale {formatDuration(course.durationMinutes)}</span>
+              {course.modules.length > 1 && <ExpandAll targetId="programme" />}
             </div>
+            <div id="programme" className="mt-3 overflow-hidden rounded-2xl border border-line">
+              {course.modules.map((m, i) => {
+                const minutes = m.lessons.reduce((n, l) => n + l.durationMinutes, 0);
+                return (
+                  <details key={m.id} open={i === 0} className="group border-b border-line last:border-0">
+                    <summary className="flex cursor-pointer list-none items-center gap-3 bg-surface px-5 py-4 hover:bg-sky-50 [&::-webkit-details-marker]:hidden">
+                      <span className="text-muted transition group-open:rotate-90" aria-hidden>›</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-sky">Section {i + 1}</div>
+                        <div className="font-semibold text-navy">{m.title}</div>
+                        {m.description && <div className="mt-0.5 text-xs text-muted">{m.description}</div>}
+                      </div>
+                      <span className="shrink-0 text-right text-xs text-muted">{m.lessons.length} leçon{m.lessons.length > 1 ? "s" : ""}{minutes ? <><br />{formatDuration(minutes)}</> : null}</span>
+                    </summary>
+                    <ul className="bg-white">
+                      {m.lessons.map((l) => {
+                        const Icon = lessonIcons[l.type];
+                        const open = hasAccess || l.isPreview;
+                        const files = l.assets.length;
+                        return (
+                          <li key={l.id} className="flex items-center gap-3 border-t border-line px-5 py-3 text-sm">
+                            <Icon className="h-4 w-4 shrink-0 text-muted" aria-hidden />
+                            {open ? (
+                              <Link href={`/espace/apprendre/${course.slug}/${l.id}`} className="min-w-0 flex-1 text-ink hover:text-sky">{l.title}</Link>
+                            ) : (
+                              <span className="min-w-0 flex-1 text-ink">{l.title}</span>
+                            )}
+                            {files > 0 && <span className="inline-flex items-center gap-0.5 text-xs text-muted" title={`${files} fichier(s)`}><Paperclip className="h-3.5 w-3.5" aria-hidden />{files}</span>}
+                            {l.isPreview && !hasAccess && <Link href={`/espace/apprendre/${course.slug}/${l.id}`} className="text-xs font-semibold text-sky underline-offset-2 hover:underline">Aperçu</Link>}
+                            {!open && <Lock className="h-3.5 w-3.5 text-muted" aria-label="Réservé aux inscrits" />}
+                            <span className="w-14 shrink-0 text-right text-xs text-muted">{l.durationMinutes ? `${l.durationMinutes} min` : ""}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </details>
+                );
+              })}
+            </div>
+            <p className="mt-3 flex items-start gap-2 text-xs text-muted">
+              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-sky" aria-hidden />
+              Les vidéos et supports de cours se consultent en ligne sur la plateforme, sur ordinateur et smartphone. Seules les ressources mises à disposition par le formateur sont téléchargeables.
+            </p>
           </section>
 
           <section className="grid gap-6 md:grid-cols-2">
@@ -235,6 +297,11 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
               <h2 className="text-lg font-bold text-navy">Pour qui ?</h2>
               <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">{course.targetAudience.length ? course.targetAudience.map((p) => <li key={p}>{p}</li>) : <li>Tout public motivé.</li>}</ul>
             </div>
+          </section>
+
+          <section>
+            <h2 className="text-xl font-bold text-navy">Description</h2>
+            <p className="mt-3 whitespace-pre-line leading-7 text-ink">{course.description}</p>
           </section>
 
           {course.hasCertificate && (
@@ -265,6 +332,30 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
               </ul>
             </section>
           )}
+
+          <section>
+            <h2 className="text-xl font-bold text-navy">Votre formateur</h2>
+            <div className="mt-4 flex flex-col gap-5 rounded-2xl border border-line p-6 sm:flex-row">
+              {course.trainer.avatarFileId ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={publicFileUrl(course.trainer.avatarFileId)!} alt="" className="h-24 w-24 shrink-0 rounded-full object-cover" />
+              ) : (
+                <span className="grid h-24 w-24 shrink-0 place-items-center rounded-full bg-navy text-2xl font-bold text-white">{initials(course.trainer.name)}</span>
+              )}
+              <div className="min-w-0">
+                <Link href={`/formateurs/${course.trainer.id}`} className="text-lg font-semibold text-navy hover:text-sky">{course.trainer.name}</Link>
+                {course.trainer.headline && <div className="text-sm text-muted">{course.trainer.headline}</div>}
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                  <span className="inline-flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" aria-hidden />{course.trainer._count.coursesTaught} formation{course.trainer._count.coursesTaught > 1 ? "s" : ""}</span>
+                  <span className="inline-flex items-center gap-1"><Users className="h-3.5 w-3.5" aria-hidden />{trainerLearners} apprenant{trainerLearners > 1 ? "s" : ""}</span>
+                </div>
+                {course.trainer.bio && <p className="mt-3 line-clamp-6 whitespace-pre-line text-sm text-ink">{course.trainer.bio}</p>}
+                {course.trainer.expertise.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">{course.trainer.expertise.map((e) => <span key={e} className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs text-navy">{e}</span>)}</div>
+                )}
+              </div>
+            </div>
+          </section>
 
           <section id="avis">
             <h2 className="text-xl font-bold text-navy">Avis des apprenants</h2>
@@ -309,32 +400,6 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           </section>
         </div>
 
-        <aside className="space-y-6">
-          <Card>
-            <CardBody>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Votre formateur</h2>
-              <div className="mt-3 flex items-center gap-3">
-                {course.trainer.avatarFileId ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={publicFileUrl(course.trainer.avatarFileId)!} alt="" className="h-14 w-14 rounded-full object-cover" />
-                ) : (
-                  <span className="grid h-14 w-14 place-items-center rounded-full bg-navy font-bold text-white">{initials(course.trainer.name)}</span>
-                )}
-                <div>
-                  <Link href={`/formateurs/${course.trainer.id}`} className="font-semibold text-navy hover:text-sky">{course.trainer.name}</Link>
-                  {course.trainer.headline && <div className="text-xs text-muted">{course.trainer.headline}</div>}
-                </div>
-              </div>
-              {course.trainer.bio && <p className="mt-3 line-clamp-5 text-sm text-muted">{course.trainer.bio}</p>}
-            </CardBody>
-          </Card>
-          <Card className="bg-sky-50">
-            <CardBody>
-              <div className="flex items-center gap-2 font-semibold text-navy"><Sparkles className="h-4 w-4 text-accent" aria-hidden /> Une question sur cette formation ?</div>
-              <p className="mt-1 text-sm text-muted">Utilisez le bouton « {brand.tutorName} » en bas de l'écran : il connaît le programme et vous aide à choisir.</p>
-            </CardBody>
-          </Card>
-        </aside>
       </div>
       <TutorContext courseId={course.id} />
     </>

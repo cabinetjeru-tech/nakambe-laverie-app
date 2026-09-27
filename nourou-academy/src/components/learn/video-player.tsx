@@ -2,16 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, Gauge, Play } from "lucide-react";
 import { sendProgress } from "./offline-queue";
+import { videoEmbedUrl } from "@/lib/video-embed";
 
 type Track = { src: string; lang: string; label: string };
 
-function embedUrl(url: string): string | null {
-  const yt = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/.exec(url);
-  if (yt) return `https://www.youtube-nocookie.com/embed/${yt[1]}?rel=0`;
-  const vimeo = /vimeo\.com\/(?:video\/)?(\d+)/.exec(url);
-  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`;
-  return null;
-}
+const embedUrl = (url: string) => videoEmbedUrl(url);
 
 /**
  * Lecteur vidéo : vitesse réglable, sous-titres (WebVTT), reprise de lecture,
@@ -100,7 +95,7 @@ export function VideoPlayer({
       <div className="overflow-hidden rounded-2xl bg-black">
         {started ? (
           // eslint-disable-next-line jsx-a11y/media-has-caption
-          <video ref={ref} controls playsInline preload={lowData ? "none" : "metadata"} className="aspect-video w-full" src={src} controlsList="nodownload">
+          <video ref={ref} controls playsInline preload={lowData ? "none" : "metadata"} className="aspect-video w-full" src={src} controlsList="nodownload" disablePictureInPicture onContextMenu={(e) => e.preventDefault()}>
             {tracks.map((t, i) => <track key={t.src} kind="subtitles" src={t.src} srcLang={t.lang} label={t.label} default={i === 0} />)}
             Votre navigateur ne peut pas lire cette vidéo.
           </video>

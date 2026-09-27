@@ -1,16 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowDown, ArrowUp, Eye, FileText, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ClipboardCheck, Eye, FileText, LayoutList, PenSquare, PlayCircle, Radio, RefreshCw, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requirePermission } from "@/lib/auth/session";
 import { canManageCourse } from "@/lib/access";
 import { publicFileUrl } from "@/lib/storage";
+import { videoEmbedUrl } from "@/lib/video-embed";
 import { aiStatus } from "@/lib/ai/llm";
 import { formatDateTime } from "@/lib/format";
 import {
-  addLessonAction, addModuleAction, archiveCourseAction, deleteDocumentAction, deleteModuleAction, moveLessonAction, moveModuleAction,
-  reindexCourseAction, reindexDocumentAction, renameModuleAction, submitCourseForReviewAction, updateCertificateCriteriaAction, updateCourseAction,
-  withdrawCourseAction,
+  addLessonAction, addModuleAction, archiveCourseAction, completeStructureAction, deleteDocumentAction, deleteModuleAction, moveLessonAction, moveModuleAction,
+  reindexCourseAction, reindexDocumentAction, removeCoverAction, removeTrailerAction, renameModuleAction, setTrailerUrlAction, submitCourseForReviewAction,
+  updateCertificateCriteriaAction, updateCourseAction, withdrawCourseAction,
 } from "@/app/actions/trainer";
 import { ActionForm } from "@/components/forms/action-form";
 import { SubmitButton } from "@/components/forms/submit-button";
@@ -28,6 +29,7 @@ const tabs = [
 ] as const;
 
 const typeLabels = { VIDEO: "Vidéo", TEXT: "Texte", DOCUMENT: "Document", QUIZ: "Quiz", ASSIGNMENT: "Devoir", LIVE: "Classe virtuelle" };
+const typeIcons = { VIDEO: PlayCircle, TEXT: FileText, DOCUMENT: FileText, QUIZ: ClipboardCheck, ASSIGNMENT: PenSquare, LIVE: Radio };
 const statusLabel = { DRAFT: "Brouillon", SUBMITTED: "En validation", PUBLISHED: "Publiée", REJECTED: "À corriger", ARCHIVED: "Archivée" };
 
 export default async function CourseEditor({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ onglet?: string }> }) {
@@ -46,6 +48,7 @@ export default async function CourseEditor({ params, searchParams }: { params: P
   if (!course) notFound();
   const categories = await prisma.category.findMany({ orderBy: { position: "asc" } });
   const lessonCount = course.modules.reduce((s, m) => s + m.lessons.length, 0);
+  const emptyQuizzes = course.modules.flatMap((m) => m.lessons).filter((l) => l.type === "QUIZ" && (l.quiz?._count.questions ?? 0) === 0);
 
   return (
     <>
@@ -70,37 +73,86 @@ export default async function CourseEditor({ params, searchParams }: { params: P
               <SubmitButton>Enregistrer</SubmitButton>
             </ActionForm>
           </CardBody></Card>
-          <Card><CardBody className="space-y-3">
-            <div className="text-sm font-semibold text-navy">Image de couverture</div>
-            {(course.imageUrl || course.imageFileId) && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={course.imageUrl || publicFileUrl(course.imageFileId)!} alt="" className="aspect-video w-full rounded-xl object-cover" />
-            )}
-            <FileUploader params={{ purpose: "cover", targetId: course.id }} accept="image/png,image/jpeg,image/webp" label="Téléverser une image" hint="Format 16:9, 1280×720 conseillé, 5 Mo max. Préférez une image compressée (WebP/JPEG) pour les connexions lentes." />
-          </CardBody></Card>
+          <div className="space-y-6">
+            <Card><CardBody className="space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-navy">Image de couverture</div>
+                <p className="text-xs text-muted">Affichée dans le catalogue et en tête de la page de la formation.</p>
+              </div>
+              {(course.imageUrl || course.imageFileId) && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={course.imageUrl || publicFileUrl(course.imageFileId)!} alt="" className="aspect-video w-full rounded-xl object-cover" />
+                  <form action={removeCoverAction.bind(null, course.id)}><SubmitButton size="sm" variant="ghost" confirm="Retirer l'image de couverture ?"><Trash2 className="h-4 w-4" /> Retirer l'image</SubmitButton></form>
+                </>
+              )}
+              <FileUploader params={{ purpose: "cover", targetId: course.id }} accept="image/png,image/jpeg,image/webp" label={course.imageFileId || course.imageUrl ? "Changer l'image" : "Téléverser une image"} hint="Format 16:9, 1280×720 conseillé, 5 Mo max (JPEG ou WebP compressé)." />
+            </CardBody></Card>
+            <Card><CardBody className="space-y-3">
+              <div>
+                <div className="text-sm font-semibold text-navy">Vidéo de présentation</div>
+                <p className="text-xs text-muted">1 à 3 minutes pour donner envie : elle se lance depuis la page de la formation et en aperçu au survol dans le catalogue.</p>
+              </div>
+              {course.trailerFileId ? (
+                <video src={publicFileUrl(course.trailerFileId)!} controls preload="metadata" className="aspect-video w-full rounded-xl bg-black" />
+              ) : course.trailerUrl ? (
+                videoEmbedUrl(course.trailerUrl) ? (
+                  <iframe src={videoEmbedUrl(course.trailerUrl)!} title="Vidéo de présentation" className="aspect-video w-full rounded-xl" allow="fullscreen; picture-in-picture" />
+                ) : (
+                  <video src={course.trailerUrl} controls preload="metadata" className="aspect-video w-full rounded-xl bg-black" />
+                )
+              ) : null}
+              {(course.trailerFileId || course.trailerUrl) && (
+                <form action={removeTrailerAction.bind(null, course.id)}><SubmitButton size="sm" variant="ghost" confirm="Retirer la vidéo de présentation ?"><Trash2 className="h-4 w-4" /> Retirer la vidéo</SubmitButton></form>
+              )}
+              <FileUploader params={{ purpose: "trailer", targetId: course.id }} accept="video/mp4,video/webm" label={course.trailerFileId ? "Remplacer la vidéo" : "Téléverser une vidéo"} hint="MP4 (H.264) 720p compressé, idéalement moins de 30 Mo." />
+              <ActionForm action={setTrailerUrlAction} className="space-y-2">
+                <input type="hidden" name="courseId" value={course.id} />
+                <Field label="…ou lien YouTube / Vimeo"><Input name="trailerUrl" type="url" placeholder="https://youtu.be/…" defaultValue={course.trailerUrl ?? ""} /></Field>
+                <SubmitButton size="sm" variant="outline">Enregistrer le lien</SubmitButton>
+              </ActionForm>
+            </CardBody></Card>
+          </div>
         </div>
       )}
 
       {onglet === "programme" && (
         <div className="space-y-4">
+          <Card className="border-sky-200 bg-sky-50"><CardBody className="flex flex-wrap items-center gap-4">
+            <LayoutList className="h-8 w-8 shrink-0 text-sky" aria-hidden />
+            <div className="min-w-60 flex-1 text-sm">
+              <div className="font-semibold text-navy">Structure recommandée</div>
+              <p className="text-muted">
+                <b>Présentation</b> (bienvenue, objectifs, mode d'emploi — en aperçu gratuit) → <b>Introduction</b> → <b>modules de contenu</b> (leçons, supports,
+                quiz) → <b>Conclusion et évaluation finale</b>. Décrivez chaque module : la description s'affiche dans le programme public.
+              </p>
+            </div>
+            <ActionForm action={completeStructureAction}>
+              <input type="hidden" name="courseId" value={course.id} />
+              <SubmitButton variant="outline">Compléter avec la structure type</SubmitButton>
+            </ActionForm>
+          </CardBody></Card>
           {course.modules.map((m, mi) => (
             <Card key={m.id}>
               <CardBody>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold uppercase tracking-wide text-sky">Module {mi + 1}</span>
-                  <ActionForm action={renameModuleAction} className="flex flex-1 items-center gap-2">
+                  <ActionForm action={renameModuleAction} className="flex min-w-72 flex-1 flex-wrap items-center gap-2">
                     <input type="hidden" name="moduleId" value={m.id} />
-                    <Input name="title" defaultValue={m.title} className="font-semibold" aria-label="Titre du module" />
-                    <SubmitButton size="sm" variant="ghost">Renommer</SubmitButton>
+                    <Input name="title" defaultValue={m.title} className="min-w-52 flex-1 font-semibold" aria-label="Titre du module" />
+                    <Input name="description" defaultValue={m.description ?? ""} placeholder="Description courte du module (facultatif)" className="min-w-52 flex-1" aria-label="Description du module" maxLength={500} />
+                    <SubmitButton size="sm" variant="ghost">Enregistrer</SubmitButton>
                   </ActionForm>
                   <form action={moveModuleAction.bind(null, m.id, -1)}><button className="p-1.5 text-muted hover:text-navy" aria-label="Monter"><ArrowUp className="h-4 w-4" /></button></form>
                   <form action={moveModuleAction.bind(null, m.id, 1)}><button className="p-1.5 text-muted hover:text-navy" aria-label="Descendre"><ArrowDown className="h-4 w-4" /></button></form>
                   <form action={deleteModuleAction.bind(null, m.id)}><SubmitButton size="sm" variant="ghost" confirm="Supprimer ce module et toutes ses leçons ?"><Trash2 className="h-4 w-4 text-red-600" /></SubmitButton></form>
                 </div>
                 <ul className="mt-3 divide-y divide-line rounded-xl border border-line">
-                  {m.lessons.map((l) => (
+                  {m.lessons.map((l) => {
+                    const LIcon = typeIcons[l.type];
+                    return (
                     <li key={l.id} className="flex items-center gap-2 px-3 py-2 text-sm">
-                      <FileText className="h-4 w-4 text-muted" />
+                      <LIcon className="h-4 w-4 text-muted" />
                       <Link href={`/formateur/formations/${course.id}/lecons/${l.id}`} className="flex-1 font-medium text-navy hover:text-sky">{l.title}</Link>
                       <Badge tone="gray">{typeLabels[l.type]}</Badge>
                       {l.isPreview && <Badge tone="green">Aperçu</Badge>}
@@ -109,7 +161,8 @@ export default async function CourseEditor({ params, searchParams }: { params: P
                       <form action={moveLessonAction.bind(null, l.id, -1)}><button className="p-1 text-muted hover:text-navy" aria-label="Monter"><ArrowUp className="h-3.5 w-3.5" /></button></form>
                       <form action={moveLessonAction.bind(null, l.id, 1)}><button className="p-1 text-muted hover:text-navy" aria-label="Descendre"><ArrowDown className="h-3.5 w-3.5" /></button></form>
                     </li>
-                  ))}
+                    );
+                  })}
                   {m.lessons.length === 0 && <li className="px-3 py-3 text-sm text-muted">Aucune leçon dans ce module.</li>}
                 </ul>
                 <ActionForm action={addLessonAction} className="mt-3 flex flex-wrap items-end gap-2" resetOnSuccess>
@@ -166,6 +219,11 @@ export default async function CourseEditor({ params, searchParams }: { params: P
           {(course.status === "DRAFT" || course.status === "REJECTED") && (
             <>
               <p>Quand votre programme est prêt, soumettez la formation : l'équipe de l'académie la relit puis la publie.</p>
+              {emptyQuizzes.length > 0 && (
+                <Alert tone="warning">
+                  Quiz sans question : {emptyQuizzes.map((l) => l.title).join(", ")}. Ajoutez des questions (et cochez « Examen final » pour l'évaluation finale) ou supprimez ces leçons.
+                </Alert>
+              )}
               {lessonCount === 0 ? <Alert tone="warning">Ajoutez au moins une leçon avant de soumettre.</Alert> : (
                 <form action={submitCourseForReviewAction.bind(null, course.id)}><SubmitButton variant="accent">Soumettre à validation</SubmitButton></form>
               )}

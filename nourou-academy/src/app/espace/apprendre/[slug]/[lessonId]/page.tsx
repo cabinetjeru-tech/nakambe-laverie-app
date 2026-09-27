@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, FileText, Lock, PenSquare, PlayCircle, Radio, Sparkles, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, ClipboardCheck, FileText, FolderDown, Lock, PenSquare, PlayCircle, Radio, Sparkles, Trash2 } from "lucide-react";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { courseAccess, lessonAccess } from "@/lib/access";
 import { renderMarkdown } from "@/lib/markdown";
 import { signedFileUrl } from "@/lib/storage";
 import { getBrand } from "@/lib/settings";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatDuration } from "@/lib/format";
+import { env } from "@/lib/env";
+import { ContentViewer, type ContentItem } from "@/components/learn/content-viewer";
 import { deleteNoteAction, saveNoteAction } from "@/app/actions/learning";
 import { VideoPlayer } from "@/components/learn/video-player";
 import { CompleteButton } from "@/components/learn/complete-button";
@@ -63,8 +65,19 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
 
   const video = lesson.assets.find((a) => a.kind === "VIDEO");
   const subtitles = lesson.assets.filter((a) => a.kind === "SUBTITLE");
+  // Supports de cours : consultés en ligne dans la leçon (jamais téléchargeables).
+  const appOrigin = env.appUrl.replace(/\/$/, "");
+  const officeEnabled = /^https:\/\//.test(appOrigin) && !/localhost|127\.0\.0\.1/.test(appOrigin);
+  const supports: ContentItem[] = lesson.assets
+    .filter((a) => a.kind === "DOCUMENT" && !a.downloadable)
+    .map((a) => {
+      const url = signedFileUrl(a.fileId, { ttlSeconds: 4 * 3600 });
+      return { id: a.id, label: a.label, mime: a.file.mimeType, url, absoluteUrl: appOrigin + url };
+    });
+  const watermark = `${user.name} · ${user.email}`;
+  // Ressources téléchargeables de la leçon (réservées aux inscrits).
   const docs: DocItem[] = lesson.assets
-    .filter((a) => a.kind === "DOCUMENT")
+    .filter((a) => a.kind === "DOCUMENT" && a.downloadable)
     .map((a) => ({
       id: a.fileId,
       label: a.label,
@@ -82,15 +95,27 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
     : [];
   const lives = lesson.type === "LIVE" ? await prisma.liveSession.findMany({ where: { courseId: course.id, status: { not: "CANCELED" } }, orderBy: { startsAt: "desc" }, take: 5 }) : [];
   const Icon = icons[lesson.type];
+  const courseResources = full !== "none" ? await prisma.lessonAsset.count({ where: { kind: "DOCUMENT", downloadable: true, lesson: { module: { courseId: course.id } } } }) : 0;
+  const moduleIndex = course.modules.findIndex((m) => m.lessons.some((l) => l.id === lesson.id));
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
       <TutorContext courseId={course.id} lessonId={lesson.id} />
       <div className="min-w-0 space-y-6">
-        <div>
-          <Link href={`/formations/${course.slug}`} className="text-xs font-medium text-sky hover:underline">{course.title}</Link>
-          <h1 className="mt-1 flex items-start gap-2 text-2xl font-bold text-navy"><Icon className="mt-1 h-6 w-6 shrink-0 text-sky" aria-hidden />{lesson.title}</h1>
-          {acc.allowed && acc.reason === "preview" && <Badge tone="green" className="mt-2">Aperçu gratuit</Badge>}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-muted">
+              <Link href={`/formations/${course.slug}`} className="text-sky hover:underline">{course.title}</Link>
+              {moduleIndex >= 0 && <> · {course.modules[moduleIndex]!.title}</>}
+            </div>
+            <h1 className="mt-1 flex items-start gap-2 text-2xl font-bold text-navy"><Icon className="mt-1 h-6 w-6 shrink-0 text-sky" aria-hidden />{lesson.title}</h1>
+            {acc.allowed && acc.reason === "preview" && <Badge tone="green" className="mt-2">Aperçu gratuit</Badge>}
+          </div>
+          {full !== "none" && (
+            <Link href={`/espace/apprendre/${course.slug}/ressources`} className={buttonClass("outline", "md", "shrink-0")}>
+              <FolderDown className="h-4 w-4" aria-hidden /> Ressources{courseResources ? ` (${courseResources})` : ""}
+            </Link>
+          )}
         </div>
 
         {!acc.allowed ? (
@@ -122,9 +147,19 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
               <Card><CardBody><Markdown html={renderMarkdown(lesson.content)} /></CardBody></Card>
             )}
 
-            {docs.length > 0 && (
+            {supports.length > 0 && (
+              <section className="space-y-4">
+                <h2 className="font-semibold text-navy">Supports de cours</h2>
+                {supports.map((s) => <ContentViewer key={s.id} item={s} watermark={watermark} officeEnabled={officeEnabled} />)}
+              </section>
+            )}
+
+            {docs.length > 0 && full !== "none" && (
               <section>
-                <h2 className="mb-2 font-semibold text-navy">Supports de la leçon</h2>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h2 className="font-semibold text-navy">Ressources de cette leçon</h2>
+                  <Link href={`/espace/apprendre/${course.slug}/ressources`} className="text-xs font-medium text-sky hover:underline">Toutes les ressources de la formation →</Link>
+                </div>
                 <DocumentList docs={docs} />
               </section>
             )}
@@ -244,7 +279,8 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
             <nav className="mt-3 max-h-[65vh] space-y-3 overflow-y-auto pr-1" aria-label="Leçons">
               {course.modules.map((m, mi) => (
                 <div key={m.id}>
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Module {mi + 1} · {m.title}</div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">Section {mi + 1} · {m.title}</div>
+                  <div className="text-[11px] text-muted">{m.lessons.filter((l) => progressMap.get(l.id)?.completed).length}/{m.lessons.length} · {formatDuration(m.lessons.reduce((s, l) => s + l.durationMinutes, 0))}</div>
                   <ul className="mt-1 space-y-0.5">
                     {m.lessons.map((l) => {
                       const LIcon = icons[l.type];

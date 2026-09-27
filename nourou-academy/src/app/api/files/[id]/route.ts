@@ -23,8 +23,9 @@ export const GET = handle(async (req: Request, ctx: { params: Promise<{ id: stri
   const file = await prisma.storedFile.findUnique({ where: { id } });
   if (!file) return jsonError(404, "Fichier introuvable.");
 
+  const download = url.searchParams.get("dl") === "1";
   if (file.visibility === "PRIVATE") {
-    const signed = verifyFileSignature(id, url.searchParams.get("exp"), url.searchParams.get("sig"));
+    const signed = verifyFileSignature(id, url.searchParams.get("exp"), url.searchParams.get("sig"), download);
     if (!signed) {
       const user = await getCurrentUser();
       const staff = user && ["SUPERADMIN", "ADMIN", "ASSISTANT"].includes(user.role);
@@ -32,9 +33,8 @@ export const GET = handle(async (req: Request, ctx: { params: Promise<{ id: stri
     }
   }
 
-  const download = url.searchParams.get("dl") === "1";
   const disposition = `${download ? "attachment" : "inline"}; filename*=UTF-8''${encodeURIComponent(file.originalName)}`;
-  const cache = file.visibility === "PUBLIC" ? "public, max-age=86400" : "private, max-age=3600";
+  const cache = file.visibility === "PUBLIC" ? "public, max-age=86400" : "private, no-store";
 
   if (url.searchParams.get("format") === "vtt" && (file.mimeType === "application/x-subrip" || file.mimeType === "text/vtt")) {
     const text = (await readFileBuffer(file)).toString("utf8");

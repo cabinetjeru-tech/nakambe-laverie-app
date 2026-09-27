@@ -16,8 +16,9 @@ const csp = [
   `media-src 'self' blob: https: ${storageOrigin}`.trim(),
   "font-src 'self' data:",
   `connect-src 'self' https://${jitsiDomain} wss://${jitsiDomain} ${storageOrigin}`.trim(),
-  `frame-src 'self' https://${jitsiDomain} https://www.youtube-nocookie.com https://player.vimeo.com`,
-  "worker-src 'self'",
+  // Visionneuse Office (présentations PowerPoint, Word, Excel consultées en ligne).
+  `frame-src 'self' https://${jitsiDomain} https://www.youtube-nocookie.com https://player.vimeo.com https://view.officeapps.live.com`,
+  "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https:",
