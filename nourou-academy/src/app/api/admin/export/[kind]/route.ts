@@ -28,5 +28,27 @@ export const GET = handle(async (_req: Request, ctx: { params: Promise<{ kind: s
     const body = csv([["Apprenant", "Email", "Formation", "Source", "Statut", "Progression", "Inscrit le", "Terminé le"], ...rows.map((e) => [e.user.name, e.user.email, e.course.title, e.source, e.status, e.progressPercent, e.createdAt.toISOString(), e.completedAt?.toISOString()])]);
     return new Response(body, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="inscriptions-${new Date().toISOString().slice(0, 10)}.csv"` } });
   }
+  if (kind === "apprenants-liste") {
+    const admin = await assertPermission("users.view");
+    const users = await prisma.user.findMany({
+      where: { role: "LEARNER", status: { not: "DELETED" } },
+      orderBy: { createdAt: "desc" },
+      take: 50000,
+      select: {
+        name: true, email: true, phone: true, city: true, country: true, status: true, createdAt: true, lastLoginAt: true,
+        enrollments: { where: { status: "ACTIVE" }, select: { progressPercent: true, completedAt: true } },
+        certificates: { select: { status: true } },
+      },
+    });
+    await audit(admin.id, "export.learners_list", "User", null, { count: users.length });
+    const body = csv([["Nom", "Email", "Téléphone", "Ville", "Pays", "Statut", "Inscrit le", "Dernière connexion", "Formations", "Terminées", "Progression moyenne (%)", "Certificats délivrés", "Certificats en attente"],
+      ...users.map((u) => [
+        u.name, u.email, u.phone, u.city, u.country, u.status === "ACTIVE" ? "Actif" : "Suspendu", u.createdAt.toISOString().slice(0, 10), u.lastLoginAt?.toISOString().slice(0, 10),
+        u.enrollments.length, u.enrollments.filter((e) => e.completedAt).length,
+        u.enrollments.length ? Math.round(u.enrollments.reduce((n, e) => n + e.progressPercent, 0) / u.enrollments.length) : "",
+        u.certificates.filter((c) => c.status === "VALID").length, u.certificates.filter((c) => c.status === "PENDING_APPROVAL").length,
+      ])]);
+    return new Response(body, { headers: { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="apprenants-${new Date().toISOString().slice(0, 10)}.csv"` } });
+  }
   return jsonError(404, "Export inconnu.");
 });

@@ -3,6 +3,7 @@ import { useActionState, useEffect, useRef, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionState } from "@/lib/validation";
 import { Alert } from "../ui";
+import { LinkList } from "./link-list";
 
 /**
  * Formulaire relié à une Server Action : affiche erreurs et confirmations,
@@ -35,6 +36,7 @@ export function ActionForm({
     <form ref={ref} action={formAction} className={className}>
       {state.error && <Alert tone="error" className="mb-4">{state.error}</Alert>}
       {state.ok && state.message && <Alert tone="success" className="mb-4">{state.message}</Alert>}
+      {state.links && state.links.length > 0 && <LinkList links={state.links} />}
       {children}
     </form>
   );

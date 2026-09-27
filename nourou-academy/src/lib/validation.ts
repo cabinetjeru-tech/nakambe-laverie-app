@@ -10,7 +10,14 @@ export const phoneSchema = z
   .optional()
   .or(z.literal(""));
 
-export type ActionState = { ok?: boolean; error?: string; message?: string; fieldErrors?: Record<string, string> };
+export type ActionState = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  fieldErrors?: Record<string, string>;
+  /** Liens à transmettre (ex. liens d'activation quand les emails ne sont pas configurés). */
+  links?: { label: string; url: string }[];
+};
 
 export function zodErrors(err: z.ZodError): ActionState {
   const fieldErrors: Record<string, string> = {};

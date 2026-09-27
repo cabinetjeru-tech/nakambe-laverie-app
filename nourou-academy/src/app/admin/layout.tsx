@@ -6,6 +6,7 @@ import type { NavItem } from "@/components/layout/side-nav";
 const items: (NavItem & { perm: Permission })[] = [
   { href: "/admin", label: "Tableau de bord", icon: "Gauge", perm: "admin.access" },
   { href: "/admin/utilisateurs", label: "Utilisateurs & rôles", icon: "Users", perm: "users.view", section: "Communauté" },
+  { href: "/admin/apprenants", label: "Apprenants", icon: "GraduationCap", perm: "users.view", section: "Communauté" },
   { href: "/admin/formateurs", label: "Formateurs", icon: "Presentation", perm: "users.view", section: "Communauté" },
   { href: "/admin/avis", label: "Avis", icon: "Star", perm: "reviews.moderate", section: "Communauté" },
   { href: "/admin/tickets", label: "Assistance", icon: "LifeBuoy", perm: "tickets.manage", section: "Communauté" },

@@ -28,7 +28,13 @@ export default async function UserDetail({ params }: { params: Promise<{ id: str
   const roles: Role[] = admin.role === "SUPERADMIN" ? ["SUPERADMIN", "ADMIN", "TRAINER", "ASSISTANT", "LEARNER"] : ["TRAINER", "ASSISTANT", "LEARNER"];
   return (
     <>
-      <PageHeader title={u.name} subtitle={`${u.email}${u.phone ? ` · ${u.phone}` : ""} · inscrit le ${formatDate(u.createdAt)} · dernière connexion ${formatDateTime(u.lastLoginAt)}`} actions={<Link href="/admin/utilisateurs" className={buttonClass("outline")}>← Retour</Link>} />
+      <PageHeader title={u.name} subtitle={`${u.email}${u.phone ? ` · ${u.phone}` : ""} · inscrit le ${formatDate(u.createdAt)} · dernière connexion ${formatDateTime(u.lastLoginAt)}`} actions={
+        <div className="flex flex-wrap gap-2">
+          {u.role === "LEARNER" && <Link href={`/admin/apprenants/${u.id}`} className={buttonClass("primary")}>Fiche de suivi apprenant</Link>}
+          {u.role === "TRAINER" && <Link href={`/admin/formateurs/${u.id}`} className={buttonClass("primary")}>Fiche formateur</Link>}
+          <Link href="/admin/utilisateurs" className={buttonClass("outline")}>← Retour</Link>
+        </div>
+      } />
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-6">
           <Table>
