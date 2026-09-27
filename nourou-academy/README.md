@@ -4,7 +4,7 @@
 
 Akambi Academy, une marque de Groupe Akambi SARL : plateforme panafricaine de formation professionnelle en ligne,
 accessible sur ordinateur et smartphone, avec accompagnement pédagogique par intelligence artificielle
-(**Noura IA**, un tuteur connecté aux contenus des cours).
+(**Chafik IA**, un tuteur connecté aux contenus des cours).
 
 > Les noms techniques (`nourou-academy` pour le dossier, le projet Vercel/Supabase, le bucket `nourou`, la base
 > `nourou_academy`) sont conservés volontairement : les changer casserait le déploiement existant. Ils ne sont pas
@@ -35,7 +35,7 @@ personnelles ; favoris ; planning et classes virtuelles (Jitsi intégré, agenda
 avec QR code ; messagerie ; notifications ; paiements et factures PDF ; demandes de remboursement ; profil,
 mode faible consommation, export et suppression des données.
 
-**Noura IA** (tuteur) : accessible partout (bouton flottant) et en plein écran avec historique. Recherche hybride
+**Chafik IA** (tuteur) : accessible partout (bouton flottant) et en plein écran avec historique. Recherche hybride
 (vectorielle pgvector + plein texte français) dans les supports **des seules formations accessibles à l'apprenant**,
 citations [S1]… avec lien vers la leçon, distinction cours / connaissances générales, signalement des informations
 absentes ; adaptation au niveau ; modes « explique autrement », « plus simple », « exemples concrets »,

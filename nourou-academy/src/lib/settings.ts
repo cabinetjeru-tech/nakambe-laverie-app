@@ -47,7 +47,7 @@ export const defaultBrand: BrandSettings = {
   youtube: "",
   certificateSignatory: "La Direction pédagogique",
   certificateSignatoryTitle: "Akambi Academy — Groupe Akambi SARL",
-  tutorName: "Noura IA",
+  tutorName: "Chafik IA",
 };
 
 /** Le champ téléphone peut contenir plusieurs numéros séparés par « / », « ; » ou « , ». */

@@ -63,7 +63,7 @@ et active le **Row Level Security** sur toutes les tables (voir docs/04). Prisma
 toute nouvelle migration doit être créée avec `prisma migrate dev --create-only` puis relue pour **retirer** les
 instructions qui supprimeraient `tsv` ou les index vectoriels.
 
-## 4. Le tuteur IA (Noura IA)
+## 4. Le tuteur IA (Chafik IA)
 
 1. L'apprenant écrit (texte, voix transcrite, image ou PDF joint). Route `POST /api/tutor/chat` : session,
    limite de débit, quota journalier et budget mensuel.
