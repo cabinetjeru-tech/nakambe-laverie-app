@@ -19,15 +19,16 @@ export async function renderEmail(title: string, paragraphs: string[], cta?: { l
   const brand = await getBrand();
   const body = paragraphs.map((p) => `<p style="margin:0 0 14px;line-height:1.55">${escapeHtml(p)}</p>`).join("");
   const button = cta
-    ? `<p style="margin:22px 0"><a href="${escapeHtml(cta.href.startsWith("http") ? cta.href : env.appUrl + cta.href)}" style="background:${brand.primaryColor};color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">${escapeHtml(cta.label)}</a></p>`
+    ? `<p style="margin:22px 0"><a href="${escapeHtml(cta.href.startsWith("http") ? cta.href : env.appUrl + cta.href)}" style="background:${brand.accentColor};color:${brand.primaryColor};padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700">${escapeHtml(cta.label)}</a></p>`
     : "";
-  return `<!doctype html><html><body style="margin:0;background:#f3f6fb;font-family:Arial,Helvetica,sans-serif;color:#10213f">
+  const logo = brand.logoUrl || `${env.appUrl.replace(/\/$/, "")}/brand/akambi-logo-blanc.png`;
+  return `<!doctype html><html><body style="margin:0;background:#f6f7fb;font-family:Arial,Helvetica,sans-serif;color:#0f1a33">
 <div style="max-width:560px;margin:0 auto;padding:24px">
-<div style="background:${brand.primaryColor};color:#fff;padding:18px 22px;border-radius:12px 12px 0 0;font-weight:700;letter-spacing:.3px">${escapeHtml(brand.name)}</div>
+<div style="background:${brand.primaryColor};padding:16px 22px;border-radius:12px 12px 0 0;border-bottom:4px solid ${brand.accentColor}"><img src="${escapeHtml(logo.startsWith("http") ? logo : env.appUrl + logo)}" alt="${escapeHtml(brand.name)}" height="40" style="display:block;height:40px;width:auto;color:#fff;font-weight:700;font-size:18px"></div>
 <div style="background:#fff;padding:24px 22px;border-radius:0 0 12px 12px">
 <h1 style="font-size:20px;margin:0 0 16px">${escapeHtml(title)}</h1>${body}${button}
 </div>
-<p style="font-size:12px;color:#5b6b85;text-align:center;margin-top:16px">${escapeHtml(brand.name)} — ${escapeHtml(brand.slogan)}<br>${escapeHtml(brand.address)}</p>
+<p style="font-size:12px;color:#5a6479;text-align:center;margin-top:16px">${escapeHtml(brand.name)} — ${escapeHtml(brand.slogan)}<br>${escapeHtml(brand.address)}</p>
 </div></body></html>`;
 }
 

@@ -91,7 +91,7 @@ les statistiques affichées sont calculées depuis la base.
 | `E2E_BASE_URL=http://localhost:3000 npx vitest run --config vitest.e2e.config.mts` | Tests de bout en bout sur un serveur lancé (pages, contrôle d'accès, fichiers privés, webhooks, tuteur) |
 | `npm run db:seed` | Données initiales (idempotent) |
 | `npm run rag:reindex` | Ré-indexe toute la base de connaissances (après ajout d'une clé d'embeddings) |
-| `node scripts/generate-icons.mjs` | Régénère les icônes PWA depuis l'emblème `public/brand/akambi-emblem.png` |
+| `node scripts/generate-icons.mjs` | Régénère les icônes PWA depuis l'icône `public/brand/akambi-mark.png` |
 
 ## Ce qui nécessite vos identifiants
 
@@ -130,3 +130,10 @@ Livré et vérifié : voir les documents ci-dessus. Tâches restantes recommand�
 5. Évolutions possibles : notifications push web, traduction de l'interface (le dictionnaire i18n est prêt dans
    `src/lib/i18n`), limiteur de requêtes partagé (Redis) si plusieurs instances, transcodage vidéo HLS
    multi-débits via un hébergeur vidéo.
+
+## Identité visuelle
+
+Charte graphique : [docs/Charte-graphique-Akambi-Academy.pdf](docs/Charte-graphique-Akambi-Academy.pdf).
+Fichiers du logo dans `public/brand/` : `akambi-logo-hd.png` (principal), `akambi-logo.png` (web),
+`akambi-logo-blanc.png` (fonds sombres), `akambi-mark.png` (icône « a » + toque), `akambi-og.png` (partage sur les
+réseaux). Couleurs : bleu nuit `#00123A`, orange `#FF6600`, bleu `#1F3C88`.

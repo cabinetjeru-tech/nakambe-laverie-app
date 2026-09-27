@@ -2,13 +2,15 @@
 
 /*
  * Identité visuelle Akambi Academy
- * Les couleurs de marque sont injectées dynamiquement (paramètres d'administration)
- * via les variables --brand-* définies dans le layout racine.
+ *   Bleu nuit #00123A (structure, titres, fonds sombres)
+ *   Orange    #FF6600 (actions principales, mises en avant — texte bleu nuit dessus pour la lisibilité)
+ *   Bleu      #1F3C88 (liens, icônes, états d'information)
+ * Les couleurs sont injectées dynamiquement (paramètres d'administration) via les variables --brand-*.
  */
 :root {
-  --brand-primary: #0b2447;
-  --brand-secondary: #2f80ed;
-  --brand-accent: #e3a33b;
+  --brand-primary: #00123a;
+  --brand-secondary: #1f3c88;
+  --brand-accent: #ff6600;
 }
 
 @theme inline {
@@ -20,12 +22,12 @@
   --color-sky-200: color-mix(in oklab, var(--brand-secondary) 28%, white);
   --color-accent: var(--brand-accent);
   --color-accent-50: color-mix(in oklab, var(--brand-accent) 10%, white);
-  --color-ink: #10213f;
-  --color-muted: #5b6b85;
-  --color-line: #e3e9f2;
-  --color-surface: #f5f8fc;
+  --color-ink: #0f1a33;
+  --color-muted: #5a6479;
+  --color-line: #e3e7ef;
+  --color-surface: #f6f7fb;
   --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-  --shadow-soft: 0 1px 2px rgb(16 33 63 / 0.04), 0 8px 24px -12px rgb(16 33 63 / 0.18);
+  --shadow-soft: 0 1px 2px rgb(0 18 58 / 0.04), 0 8px 24px -12px rgb(0 18 58 / 0.18);
   --radius-xl2: 1.1rem;
 }
 

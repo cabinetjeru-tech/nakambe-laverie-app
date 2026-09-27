@@ -2,6 +2,7 @@ import "server-only";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { getBrand } from "../settings";
 import { formatDate, formatXof } from "../format";
+import { LOGO_WHITE_PNG_BASE64 } from "../brand-logo-data";
 
 function safe(t: string) {
   return t.replace(/[’‘]/g, "'").replace(/[“”«»]/g, '"').replace(/[–—]/g, "-").replace(/[^\x20-\x7E -ÿ€]/g, "");
@@ -17,11 +18,21 @@ export async function invoicePdf(inv: {
   const page = doc.addPage([595, 842]);
   const f = await doc.embedFont(StandardFonts.Helvetica);
   const b = await doc.embedFont(StandardFonts.HelveticaBold);
-  const navy = rgb(0.04, 0.14, 0.28);
+  const hex = (h: string, fb: [number, number, number]) => {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(h);
+    return m ? rgb(parseInt(m[1]!, 16) / 255, parseInt(m[2]!, 16) / 255, parseInt(m[3]!, 16) / 255) : rgb(...fb);
+  };
+  const navy = hex(brand.primaryColor, [0, 0.07, 0.23]);
+  const accent = hex(brand.accentColor, [1, 0.4, 0]);
   const text = (s: string, x: number, y: number, size = 10, font = f, color = rgb(0.1, 0.13, 0.2)) => page.drawText(safe(s), { x, y, size, font, color });
   page.drawRectangle({ x: 0, y: 772, width: 595, height: 70, color: navy });
-  text(brand.name, 40, 805, 18, b, rgb(1, 1, 1));
-  text(brand.address, 40, 788, 9, f, rgb(0.85, 0.9, 1));
+  page.drawRectangle({ x: 0, y: 769, width: 595, height: 3, color: accent });
+  const logo = await doc.embedPng(Buffer.from(LOGO_WHITE_PNG_BASE64, "base64"));
+  page.drawImage(logo, { x: 40, y: 787, width: (logo.width / logo.height) * 40, height: 40 });
+  const addr = safe(brand.address);
+  page.drawText(addr, { x: 555 - f.widthOfTextAtSize(addr, 9), y: 808, size: 9, font: f, color: rgb(0.85, 0.88, 0.95) });
+  const tel = safe(brand.phone);
+  page.drawText(tel, { x: 555 - f.widthOfTextAtSize(tel, 9), y: 794, size: 9, font: f, color: rgb(0.85, 0.88, 0.95) });
   text(inv.order.mode === "DEMO" ? "FACTURE DE DÉMONSTRATION" : inv.order.status === "REFUNDED" ? "FACTURE (REMBOURSÉE)" : "FACTURE / REÇU", 40, 735, 16, b, navy);
   text(`N° ${inv.number}`, 40, 715, 11, b);
   text(`Date : ${formatDate(inv.issuedAt)}`, 40, 700);

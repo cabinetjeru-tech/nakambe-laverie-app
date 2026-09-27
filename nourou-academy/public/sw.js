@@ -5,7 +5,7 @@
  *   gérés dans le cache "nga-offline-docs" par l'application).
  * Le tuteur IA, les paiements et la vidéo en streaming nécessitent une connexion.
  */
-const VERSION = "nga-v2";
+const VERSION = "nga-v3";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const PRECACHE = ["/hors-ligne", "/manifest.webmanifest", "/icons/icon-192.png"];

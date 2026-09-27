@@ -4,9 +4,10 @@ import QRCode from "qrcode";
 import { env } from "../env";
 import { getBrand } from "../settings";
 import { formatDate } from "../format";
+import { LOGO_WHITE_PNG_BASE64 } from "../brand-logo-data";
 
 function hexToRgb(hex: string) {
-  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex) ?? ["", "0b", "24", "47"];
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex) ?? ["", "00", "12", "3a"];
   return rgb(parseInt(m[1]!, 16) / 255, parseInt(m[2]!, 16) / 255, parseInt(m[3]!, 16) / 255);
 }
 
@@ -47,8 +48,12 @@ export async function certificatePdf(c: {
   page.drawRectangle({ x: 28, y: 28, width: width - 56, height: height - 56, borderColor: accent, borderWidth: 1 });
   page.drawRectangle({ x: 28, y: height - 110, width: width - 56, height: 82, color: primary });
 
-  centered(page, brand.name, height - 65, bold, 24, rgb(1, 1, 1));
-  centered(page, brand.slogan, height - 90, regular, 11, rgb(0.85, 0.9, 1));
+  page.drawRectangle({ x: 28, y: height - 113, width: width - 56, height: 3, color: accent });
+  const logo = await doc.embedPng(Buffer.from(LOGO_WHITE_PNG_BASE64, "base64"));
+  const logoH = 44;
+  const logoW = (logo.width / logo.height) * logoH;
+  page.drawImage(logo, { x: (width - logoW) / 2, y: height - 82, width: logoW, height: logoH });
+  centered(page, brand.slogan, height - 100, regular, 10, rgb(0.85, 0.88, 0.95));
   centered(page, "CERTIFICAT DE RÉUSSITE", height - 160, bold, 26, primary);
   centered(page, "Ce certificat atteste que", height - 200, regular, 13);
   centered(page, c.learnerName, height - 245, serif, 34, primary);
@@ -70,7 +75,7 @@ export async function certificatePdf(c: {
 
   // QR code de vérification
   const verifyUrl = `${env.appUrl}/verifier-certificat/${encodeURIComponent(c.code)}`;
-  const qr = await QRCode.toBuffer(verifyUrl, { margin: 1, width: 240, color: { dark: "#0B2447", light: "#FFFFFF" } });
+  const qr = await QRCode.toBuffer(verifyUrl, { margin: 1, width: 240, color: { dark: "#00123A", light: "#FFFFFF" } });
   const qrImg = await doc.embedPng(qr);
   page.drawImage(qrImg, { x: width - 190, y: 62, width: 95, height: 95 });
   page.drawText(safe(`ID : ${c.code}`), { x: width - 250, y: 48, size: 9, font: bold, color: primary });

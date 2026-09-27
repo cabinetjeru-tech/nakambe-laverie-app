@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function InstallPage() {
   const brand = await getBrand();
   const link = `${env.appUrl.replace(/\/$/, "")}/application`;
-  const qr = await QRCode.toString(link, { type: "svg", margin: 1, color: { dark: "#0B2447", light: "#FFFFFF" } });
+  const qr = await QRCode.toString(link, { type: "svg", margin: 1, color: { dark: "#00123A", light: "#FFFFFF" } });
   return (
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
       <div className="text-center">

@@ -1,27 +1,27 @@
 import Link from "next/link";
 import clsx from "clsx";
 
-/** Emblème officiel Akambi Academy (public/brand). Sur fond sombre, il est posé sur une pastille blanche pour rester lisible. */
-export function LogoMark({ className, light = false }: { className?: string; light?: boolean }) {
+/** Icône Akambi Academy : le « a » orange coiffé de la toque (public/brand). */
+export function LogoMark({ className }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  const img = <img src="/brand/akambi-emblem-web.png" alt="" className={clsx("shrink-0 object-contain", light ? "h-full w-full" : className)} />;
-  return light ? <span className={clsx("grid shrink-0 place-items-center rounded-xl bg-white p-1", className)}>{img}</span> : img;
+  return <img src="/brand/akambi-mark.png" alt="" className={clsx("shrink-0 object-contain", className)} />;
 }
 
+/**
+ * Logo officiel (logotype « Akambi Academy »). Version blanche sur fond sombre.
+ * Si un logo personnalisé est défini dans Paramètres › Identité, il est utilisé à la place.
+ */
 export function Logo({ name, logoUrl, href = "/", light = false }: { name: string; logoUrl?: string | null; href?: string; light?: boolean }) {
-  const [first, ...rest] = name.split(" ");
   return (
-    <Link href={href} className="flex items-center gap-2" aria-label={`${name} — accueil`}>
-      {logoUrl ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logoUrl} alt="" className="h-9 w-auto" />
-      ) : (
-        <LogoMark className={light ? "h-11 w-12" : "h-11 w-12"} light={light} />
-      )}
-      <span className="leading-none">
-        <span className={clsx("block text-[17px] font-extrabold uppercase tracking-[0.04em]", light ? "text-white" : "text-[#1747B5]")}>{first}</span>
-        <span className="mt-0.5 block text-[10.5px] font-bold uppercase tracking-[0.3em] text-accent">{rest.join(" ")}</span>
-      </span>
+    <Link href={href} className="flex items-center" aria-label={`${name} — accueil`}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src={logoUrl || (light ? "/brand/akambi-logo-blanc.png" : "/brand/akambi-logo.png")}
+        alt={name}
+        width={125}
+        height={40}
+        className="h-10 w-auto"
+      />
     </Link>
   );
 }

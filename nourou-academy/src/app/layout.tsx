@@ -19,7 +19,7 @@ export async function generateMetadata(): Promise<Metadata> {
     manifest: "/manifest.webmanifest",
     icons: { icon: "/icons/favicon-32.png", apple: "/icons/apple-touch-icon.png" },
     appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: "default" },
-    openGraph: { siteName: brand.name, locale: "fr_FR", type: "website", images: [{ url: "/brand/akambi-logo-complet.jpg", width: 1254, height: 1254, alt: brand.name }] },
+    openGraph: { siteName: brand.name, locale: "fr_FR", type: "website", images: [{ url: "/brand/akambi-og.png", width: 1200, height: 630, alt: brand.name }] },
   };
 }
 
@@ -36,9 +36,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [brand, user, jar] = await Promise.all([getBrand(), getCurrentUser(), cookies()]);
   const lowData = user?.lowDataMode || jar.get("nga_lowdata")?.value === "1";
   const style = {
-    "--brand-primary": safeColor(brand.primaryColor, "#0b2447"),
-    "--brand-secondary": safeColor(brand.secondaryColor, "#2f80ed"),
-    "--brand-accent": safeColor(brand.accentColor, "#e3a33b"),
+    "--brand-primary": safeColor(brand.primaryColor, "#00123a"),
+    "--brand-secondary": safeColor(brand.secondaryColor, "#1f3c88"),
+    "--brand-accent": safeColor(brand.accentColor, "#ff6600"),
   } as React.CSSProperties;
   return (
     <html lang={user?.locale ?? "fr"} className={jakarta.variable} style={style}>
