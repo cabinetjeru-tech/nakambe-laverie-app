@@ -1,4 +1,4 @@
-import { hasAccess } from "@/lib/access";
+import { connecte } from "@/lib/garde";
 import { detectKind, extractText } from "@/lib/extract";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 
@@ -10,7 +10,7 @@ const MAX_BYTES = 4 * 1024 * 1024; // limite de corps des fonctions Vercel : 4,5
 
 /** Extrait le texte d'un document de l'enseignant. Le fichier n'est pas conservé sur le serveur. */
 export async function POST(req: Request) {
-  if (!hasAccess(req)) return Response.json({ error: "Code d'accès requis." }, { status: 401 });
+  if (!(await connecte(req))) return Response.json({ error: "Connexion requise." }, { status: 401 });
   const rl = rateLimit(`extract:${clientIp(req)}`, 20, 60_000);
   if (!rl.ok) return Response.json({ error: `Trop de fichiers envoyés. Réessayez dans ${rl.retryAfter} s.` }, { status: 429 });
   let fd: FormData;

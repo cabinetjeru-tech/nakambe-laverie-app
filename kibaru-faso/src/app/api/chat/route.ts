@@ -1,10 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
+import { compteCourant } from "@/lib/comptes";
+import { CONTACT } from "@/lib/contact";
+import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
 import { finalCheck } from "@/lib/base/final-check";
 import { getBase } from "@/lib/library";
-import { AiUnavailableError, streamAnswer } from "@/lib/llm";
+import { aiErrorMessage, streamAnswer } from "@/lib/llm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { formatReferenceBlock, isApplicable, resolveBase, searchDocuments, type ArchivedDoc, type RefDocument } from "@/lib/search";
 
@@ -17,9 +20,17 @@ function jsonError(status: number, message: string) {
 }
 
 export async function POST(req: Request) {
-  if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");
+  // Comptes enseignants : connexion et abonnement en cours obligatoires. Sinon, code d'accès partagé.
+  let who = clientIp(req);
+  if (accountsEnabled()) {
+    const compte = await compteCourant().catch(() => null);
+    if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
+    if (compte.profil.suspendu) return jsonError(403, `Votre compte est suspendu. Contactez ${CONTACT.entreprise} au ${CONTACT.telephone}.`);
+    if (!compte.acces) return jsonError(402, "Votre abonnement n'est pas actif : abonnez-vous dans « Mon compte » pour continuer.");
+    who = compte.profil.id;
+  } else if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");
   const perMinute = Number(process.env.KIBARU_RATE_LIMIT) || 12;
-  const rl = rateLimit(`chat:${clientIp(req)}`, perMinute, 60_000);
+  const rl = rateLimit(`chat:${who}`, perMinute, 60_000);
   if (!rl.ok) return jsonError(429, `Trop de demandes rapprochées. Réessayez dans ${rl.retryAfter} s.`);
 
   let body: unknown;
@@ -117,12 +128,8 @@ export async function POST(req: Request) {
         });
         send({ type: "done", check });
       } catch (e) {
-        let message = "PÉDAGOGUE.IA n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
-        if (e instanceof AiUnavailableError) message = e.message;
-        else if (e instanceof Anthropic.RateLimitError) message = "Le service est très sollicité. Réessayez dans une minute.";
-        else if (e instanceof Anthropic.AuthenticationError) message = "La clé API configurée est invalide. Prévenez l'administrateur.";
         console.error("[chat]", (e as Error).message);
-        send({ type: "error", message });
+        send({ type: "error", message: aiErrorMessage(e) });
       } finally {
         controller.close();
       }

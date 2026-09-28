@@ -10,6 +10,26 @@ export class AiUnavailableError extends Error {
   }
 }
 
+/**
+ * Message affiché à l'enseignant selon l'erreur du service d'IA : la cause réelle (crédit, clé, accès au modèle…)
+ * pour que l'administrateur sache quoi corriger. Les erreurs de connexion ou de surcharge restent « réessayez ».
+ */
+export function aiErrorMessage(e: unknown): string {
+  const retry = "PÉDAGOGUE.IA n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
+  if (e instanceof AiUnavailableError) return e.message;
+  if (e instanceof Anthropic.AuthenticationError) return "La clé API configurée (ANTHROPIC_API_KEY) est invalide ou a été supprimée. Prévenez l'administrateur.";
+  if (e instanceof Anthropic.PermissionDeniedError) return "La clé API n'a pas l'autorisation d'utiliser ce service ou ce modèle. Prévenez l'administrateur.";
+  if (e instanceof Anthropic.NotFoundError) return `Le modèle configuré (${aiConfig().model}) n'est pas accessible avec cette clé API. Prévenez l'administrateur (variable KIBARU_MODEL).`;
+  if (e instanceof Anthropic.RateLimitError) return "Le service est très sollicité ou la limite de dépenses du compte est atteinte. Réessayez dans une minute.";
+  if (e instanceof Anthropic.BadRequestError) {
+    const detail = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message;
+    if (/credit balance|billing|purchase credits/i.test(detail))
+      return "Le crédit du compte Anthropic est épuisé ou non activé. L'administrateur doit ajouter du crédit sur platform.claude.com (Billing).";
+    return `Le service d'IA a refusé la requête (${detail.slice(0, 300)}). Prévenez l'administrateur.`;
+  }
+  return retry;
+}
+
 const EFFORTS = ["low", "medium", "high"] as const;
 type Effort = (typeof EFFORTS)[number];
 

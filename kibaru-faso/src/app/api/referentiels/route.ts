@@ -1,4 +1,4 @@
-import { hasAccess } from "@/lib/access";
+import { connecte } from "@/lib/garde";
 import { categoryLabel } from "@/lib/base/structure";
 import { getBase } from "@/lib/library";
 import { aiConfig } from "@/lib/llm";
@@ -35,7 +35,7 @@ function summary(d: DocInfo) {
 
 /** Base documentaire PÉDAGOGUE.IA (sans le texte) : ressources consultées, historique des versions, fiches en attente. */
 export async function GET(req: Request) {
-  if (!hasAccess(req)) return Response.json({ error: "Code d'accès requis." }, { status: 401 });
+  if (!(await connecte(req))) return Response.json({ error: "Connexion requise." }, { status: 401 });
   const base = await getBase().catch(() => ({ docs: [], pending: [], issues: [] }));
   const { usable, history } = resolveBase(base.docs);
   return Response.json({
