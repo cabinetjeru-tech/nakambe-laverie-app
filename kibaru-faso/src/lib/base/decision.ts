@@ -1,6 +1,7 @@
 import type { TeacherContext } from "../conversation";
 import { classify, type Category } from "../documents";
 import { identifyNeeds, isSpecialized, NEEDS, subjectFromTheme, type Need } from "./needs";
+import { parseEvalParams, type EvalParams } from "../evaluation";
 import type { ArchivedDoc, DocInfo, Excerpt, RefDocument } from "../search";
 import { canonicalClasse, normalize } from "../search";
 import type { PendingDoc } from "./load";
@@ -32,6 +33,9 @@ export type RequestProfile = {
   fiche: boolean;
   /** Matière déduite du thème, proposée à l'enseignant. */
   matiereSuggeree?: string;
+  /** Demande de devoir ou d'évaluation : Module 02 (sujet, corrigé, barème, contrôles). */
+  module02: boolean;
+  evaluation?: EvalParams;
   duree?: string;
   typeDemande: Category;
   /** Besoins identifiés (section 3), éventuellement combinés. */
@@ -40,7 +44,7 @@ export type RequestProfile = {
   origineClasse?: "message" | "contexte";
   origineMatiere?: "message" | "contexte" | "theme";
   /** Contexte minimal manquant, indispensable pour une réponse spécialisée : on le demande. */
-  missing: ("classe" | "matiere")[];
+  missing: ("classe" | "matiere" | "notions")[];
   /** Contexte pédagogique absent : le modèle fait une hypothèse raisonnable et l'annonce. */
   assumptions: string[];
   /** Question unique à poser à l'enseignant quand le contexte minimal manque. */
@@ -148,7 +152,7 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   const quickKeys = Object.keys(parseQuickRequest(needsFrom)).length;
   const detected = identifyNeeds(needsFrom);
   const needs: Need[] =
-    quickKeys >= 3 && !detected.includes("fiche_pedagogique")
+    quickKeys >= 3 && !detected.some((x) => ["fiche_pedagogique", "devoir", "interrogation", "evaluation", "progression"].includes(x))
       ? ["fiche_pedagogique", ...detected.filter((n) => n !== "autre" && n !== "remediation" && n !== "seance")]
       : detected;
   const fromTheme = !mm && !ctx.discipline?.trim() ? subjectFromTheme(message, ctx.theme, ctx.sousTheme) : undefined;
@@ -157,6 +161,9 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   const typeSeance = typeSeanceIn(ctx.typeSeance ?? "") ?? typeSeanceIn(needsFrom) ?? (ctx.typeSeance?.trim() || undefined);
   const mode = modeIn(needsFrom, ctx.mode);
   const fiche = needs.includes("fiche_pedagogique");
+  const module02 = !fiche && needs.some((x) => x === "devoir" || x === "interrogation" || x === "evaluation");
+  const evaluation = module02 ? parseEvalParams(needsFrom === message ? message : `${needsFrom}\n${message}`) : undefined;
+  const notions = evaluation?.notions ?? ctx.sousTheme ?? ctx.theme;
 
   const missing: RequestProfile["missing"] = [];
   const assumptions: string[] = [];
@@ -164,6 +171,8 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
     if (!classe) missing.push("classe");
     // Module 01 : pour une fiche, une matière seulement déduite du thème est confirmée auprès de l'enseignant.
     if (!matiere || (fiche && fromTheme)) missing.push("matiere");
+    // Module 02 : une évaluation doit porter sur des notions précises (thème, chapitre ou notions évaluées).
+    if (module02 && !notions?.trim() && !fromTheme && !/\b(sur|portant sur|concernant)\s+(l[ea']|les|des|du|un|une|la)\b/.test(normalize(needsFrom))) missing.push("notions");
     const timed = needs.some((n) => ["preparation_cours", "fiche_pedagogique", "seance", "devoir", "interrogation", "evaluation", "revision"].includes(n));
     if (timed && !duree) assumptions.push("durée non précisée : retiens une durée usuelle et indique-la");
     if ((needs.includes("preparation_cours") || fiche) && !typeSeance)
@@ -172,13 +181,21 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   }
   const besoin = fiche ? "fiche" : NEEDS[needs[0]!];
   let question: string | undefined;
-  if (missing.includes("classe") && missing.includes("matiere"))
-    question = `Pour quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale) et quelle matière souhaitez-vous cette ${besoin} ?`;
-  else if (missing.includes("classe")) question = `Pour quelle classe souhaitez-vous cette ${besoin} : 6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale ?`;
+  // Accord : « ce devoir », « cette interrogation », « cette préparation de cours »…
+  const cette = /^(exercice|devoir|barème|objectif|contenu|conseil|autre)/.test(besoin) ? "ce" : "cette";
+  if (missing.length > 1) {
+    const asks = [
+      missing.includes("classe") && "quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale)",
+      missing.includes("matiere") && (fromTheme ? `quelle matière (${fromTheme} ou une autre)` : "quelle matière"),
+      missing.includes("notions") && "sur quel(s) chapitre(s) ou notion(s)",
+    ].filter(Boolean) as string[];
+    question = `Pour ${asks.slice(0, -1).join(", ")} et ${asks[asks.length - 1]} souhaitez-vous ${cette} ${besoin} ?`;
+  } else if (missing.includes("classe")) question = `Pour quelle classe souhaitez-vous ${cette} ${besoin} : 6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale ?`;
+  else if (missing.includes("notions")) question = `Sur quel(s) chapitre(s) ou notion(s) doit porter ${cette} ${besoin} ?`;
   else if (missing.includes("matiere"))
     question = fromTheme
-      ? `Très bien. Pour quelle discipline souhaitez-vous cette ${besoin} : ${fromTheme} ou une autre matière ?`
-      : `Pour quelle matière souhaitez-vous cette ${besoin} ?`;
+      ? `Très bien. Pour quelle discipline souhaitez-vous ${cette} ${besoin} : ${fromTheme} ou une autre matière ?`
+      : `Pour quelle matière souhaitez-vous ${cette} ${besoin} ?`;
 
   return {
     pays: "Burkina Faso",
@@ -191,6 +208,8 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
     typeSeance,
     mode,
     fiche,
+    module02,
+    evaluation,
     duree,
     typeDemande: classify(needsFrom),
     needs,
@@ -381,6 +400,9 @@ export function formatDecisionBlock(d: Decision): string {
         ? `le contexte minimal manque (${p.missing.join(" et ")}). Ne produis pas encore la préparation : pose uniquement cette question, en une phrase : « ${p.question} » Tu peux ajouter une phrase indiquant ce que tu feras ensuite.`
         : INSTRUCTIONS[d.confidence]
     }`,
+    ...(p.module02 && !p.question && p.evaluation
+      ? [`Module 02 — devoirs et évaluations : actif ; type = ${p.evaluation.type ?? "non précisé (devoir surveillé par défaut)"} ; barème total = ${p.evaluation.bareme ? `sur ${p.evaluation.bareme}` : "non précisé (sur 20 par défaut, sur 10 pour une interrogation)"} ; versions = ${p.evaluation.versions}${p.evaluation.exercices ? ` ; exercices = ${p.evaluation.exercices}` : ""}${p.evaluation.notions ? ` ; notions évaluées = ${p.evaluation.notions}` : ""} ; applique la structure et les contrôles du Module 02.`]
+      : []),
     ...(p.fiche && !p.question
       ? [`Module 01 — fiche pédagogique : actif ; mode ${p.mode.toUpperCase()} ; applique la structure et les contrôles du Module 01 (recherche ciblée : ${[p.pays, p.classe, p.matiere, p.theme, p.sousTheme, p.typeSeance].filter(Boolean).join(" + ")}).`]
       : []),
@@ -401,6 +423,7 @@ export function decisionSummary(d: Decision) {
     matiereDeduite: d.profile.origineMatiere === "theme",
     besoins: d.profile.needs.map((n) => NEEDS[n]),
     fiche: d.profile.fiche,
+    module02: d.profile.module02,
     mode: d.profile.mode,
     matiereSuggeree: d.profile.matiereSuggeree ?? null,
     missing: d.profile.missing,

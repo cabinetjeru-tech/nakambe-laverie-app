@@ -22,6 +22,9 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
 - **Module 01 — Générateur de fiches pédagogiques** ([détail](docs/MODULE-01-FICHES.md)) : formulaire guidé ou
   demande libre, fiche documentée en 13 rubriques, déroulement minuté dont la **somme des durées est vérifiée
   automatiquement**, modes standard / expert / rapide, commandes « plus simple », « version 50 minutes »…
+- **Module 02 — Générateur de devoirs et évaluations** ([détail](docs/MODULE-02-EVALUATIONS.md)) : 8 types
+  d'évaluation, tableau de spécification, sujet / corrigé / barème séparés, versions A-B-C ; **contrôle automatique**
+  du total des points, du sujet sans réponse, du corrigé complet, des versions et des calculs du corrigé.
 - **Moteur de décision pédagogique** ([détail](docs/MOTEUR-DECISION-PEDAGOGIQUE.md)) : pour chaque demande,
   identification du besoin (24 catégories) et du contexte (une seule question si la classe ou la matière manque),
   recherche ciblée (`BF-6E-MATH`…), sélection des sources (autorité, pertinence, actualité, statut, version,

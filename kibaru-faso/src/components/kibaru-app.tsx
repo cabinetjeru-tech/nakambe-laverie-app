@@ -8,7 +8,8 @@ import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
-import { DISCIPLINES, FICHE_COMMANDS, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
+import { DISCIPLINES, EVAL_COMMANDS, FICHE_COMMANDS, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
+import { EvalFormDialog } from "./eval-form";
 import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
 
@@ -55,6 +56,8 @@ export function KibaruApp() {
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
   const [ficheOpen, setFicheOpen] = useState(false);
+  /** Formulaire du Module 02 ouvert, avec le type d'évaluation présélectionné. */
+  const [evalOpen, setEvalOpen] = useState<string | null>(null);
   // Rubrique de l'action rapide choisie, retenue tant que l'enseignant garde le début du texte proposé.
   const [pendingCategory, setPendingCategory] = useState<{ category: Category; prefix: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -233,6 +236,10 @@ export function KibaruApp() {
       setFicheOpen(true);
       return;
     }
+    if (t.action === "eval-form") {
+      setEvalOpen(t.evalType ?? "devoir surveillé");
+      return;
+    }
     const text = t.build(context);
     if (!currentId) setPendingCategory({ category: t.category, prefix: text.slice(0, Math.min(20, text.indexOf("[") >= 0 ? text.indexOf("[") : 20)) });
     prefill(text);
@@ -273,6 +280,21 @@ export function KibaruApp() {
         <div className="border-b border-rouge/30 bg-rouge-50 px-4 py-2 text-sm text-rouge">
           L&apos;assistant n&apos;est pas encore configuré : l&apos;administrateur doit renseigner la clé <code>ANTHROPIC_API_KEY</code>.
         </div>
+      )}
+
+      {evalOpen && (
+        <EvalFormDialog
+          context={context}
+          initialType={evalOpen}
+          onClose={() => setEvalOpen(null)}
+          onSubmit={(message, patch) => {
+            const next = { ...context, ...patch };
+            updateContext(patch);
+            setEvalOpen(null);
+            setCurrentId(null);
+            void send(message, next, { category: /interrogation|evaluation|évaluation|composition|blanc/i.test(message.split("\n")[0]!) ? "evaluation" : "devoir" });
+          }}
+        />
       )}
 
       {ficheOpen && (
@@ -316,7 +338,7 @@ export function KibaruApp() {
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-4 py-6">
               {messages.length === 0 ? (
-                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} libraryCount={status.library.length} />
+                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} onEval={() => setEvalOpen("devoir surveillé")} libraryCount={status.library.length} />
               ) : (
                 <div className="space-y-5">
                   {messages.map((m, i) =>
@@ -375,9 +397,9 @@ export function KibaruApp() {
                   )}
                   {!busy && last?.role === "assistant" && !last.error && !last.decision?.missing?.length && (
                     <div>
-                      <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : "Modifier cette production"}</div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : last.decision?.module02 ? "Commandes de l'évaluation" : "Modifier cette production"}</div>
                       <div className="flex flex-wrap gap-2">
-                        {(last.decision?.fiche ? FICHE_COMMANDS : MODIFICATIONS).map((m) => (
+                        {(last.decision?.fiche ? FICHE_COMMANDS : last.decision?.module02 ? EVAL_COMMANDS : MODIFICATIONS).map((m) => (
                           <button
                             key={m.label}
                             type="button"
@@ -436,6 +458,10 @@ export function KibaruApp() {
               PÉDAGOGUE.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.{" "}
               <button type="button" onClick={() => setFicheOpen(true)} className="font-semibold text-faso underline underline-offset-2">
                 Générateur de fiches
+              </button>{" "}
+              ·{" "}
+              <button type="button" onClick={() => setEvalOpen("devoir surveillé")} className="font-semibold text-faso underline underline-offset-2">
+                Devoirs et évaluations
               </button>
             </p>
           </form>
@@ -499,26 +525,45 @@ function AccessGate({ onGranted }: { onGranted: () => void }) {
   );
 }
 
-function Welcome({ context, onTemplate, onFiche, libraryCount }: { context: TeacherContext; onTemplate: (t: Template) => void; onFiche: () => void; libraryCount: number }) {
+function Welcome({
+  context,
+  onTemplate,
+  onFiche,
+  onEval,
+  libraryCount,
+}: {
+  context: TeacherContext;
+  onTemplate: (t: Template) => void;
+  onFiche: () => void;
+  onEval: () => void;
+  libraryCount: number;
+}) {
   const main = TEMPLATES.filter((t) => t.main);
   const others = TEMPLATES.filter((t) => !t.main);
   return (
     <div className="fade-in">
       <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
       <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
-      <button
-        type="button"
-        onClick={onFiche}
-        className="mt-4 flex w-full items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm"
-      >
-        <span aria-hidden className="text-2xl leading-none">
-          📋
-        </span>
-        <span>
-          <span className="block font-bold text-faso-dark">Générateur de fiches pédagogiques</span>
-          <span className="mt-0.5 block text-xs text-ink">Formulaire guidé : classe, discipline, thème, type de séance, durée… Fiche documentée, déroulement minuté, trace écrite, évaluation, corrigé.</span>
-        </span>
-      </button>
+      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <button type="button" onClick={onFiche} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
+          <span aria-hidden className="text-2xl leading-none">
+            📋
+          </span>
+          <span>
+            <span className="block font-bold text-faso-dark">Générateur de fiches pédagogiques</span>
+            <span className="mt-0.5 block text-xs text-ink">Fiche documentée, déroulement minuté vérifié, trace écrite, évaluation, corrigé.</span>
+          </span>
+        </button>
+        <button type="button" onClick={onEval} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
+          <span aria-hidden className="text-2xl leading-none">
+            📝
+          </span>
+          <span>
+            <span className="block font-bold text-faso-dark">Générateur de devoirs et évaluations</span>
+            <span className="mt-0.5 block text-xs text-ink">Sujet, corrigé, barème, versions A/B/C ; points et calculs vérifiés.</span>
+          </span>
+        </button>
+      </div>
       <p className="mt-4 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {main.map((t) => (
@@ -601,7 +646,8 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
     const el = key ? partRefs.current[key] : fullRef.current;
     if (!el) return;
     const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention PÉDAGOGUE.IA
-    const title = `${baseTitle} — ${label}`;
+    // Copie élève : ni mention de la plateforme dans le pied de page, ni dans le titre (imprimé en en-tête par les navigateurs).
+    const title = withFooter ? `${baseTitle} — ${label}` : [context.discipline, context.classe, label].filter(Boolean).join(" — ");
     if (kind === "print") printHtml(title, el.innerHTML, withFooter);
     else downloadWord(title, el.innerHTML, withFooter);
   };

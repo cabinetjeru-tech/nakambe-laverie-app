@@ -1,6 +1,7 @@
 import { normalize } from "../search";
 import type { Need } from "./needs";
 import type { Confidence } from "./decision";
+import { evaluationChecks, type EvalParams } from "../evaluation";
 
 /**
  * Contrôle final automatique (moteur de décision pédagogique, section 17).
@@ -22,6 +23,8 @@ export type CheckInput = {
   fiche?: boolean;
   mode?: "standard" | "expert" | "rapide";
   dureeAnnoncee?: string;
+  /** Module 02 : paramètres de l'évaluation demandée. */
+  evaluation?: EvalParams;
 };
 
 /** « 55 minutes », « 1 h 30 », « 1h30 », « 2 heures », « 90 mn », « 15' » → minutes. */
@@ -144,6 +147,7 @@ export function finalCheck(c: CheckInput): string[] {
   if (/\b(p\.|page)\s?\d+/.test(n) && c.labels.length === 0) out.push("Numéro de page cité alors qu'aucun extrait de la base n'a été consulté.");
   if (/faire participer (les )?(eleves|apprenants)/.test(n)) out.push("Formulation d'activité trop vague (« faire participer les élèves ») : à préciser.");
   if (c.fiche && !c.questionExpected && text.length > 400) out.push(...ficheChecks(c, n));
+  if (c.evaluation && !c.questionExpected && text.length > 400) out.push(...evaluationChecks(text, c.evaluation));
 
   return out;
 }

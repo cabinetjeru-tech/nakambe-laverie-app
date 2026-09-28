@@ -48,7 +48,9 @@ describe("identification du contexte (sections 4 et 5)", () => {
     expect(identifyRequest("Comment motiver mes élèves ?", {}).question).toBeUndefined();
   });
   it("demande classe et matière quand rien ne permet de les déduire", () => {
-    expect(identifyRequest("Prépare un devoir", {}).missing).toEqual(["classe", "matiere"]);
+    const p = identifyRequest("Prépare un devoir", {});
+    expect(p.missing).toEqual(["classe", "matiere", "notions"]);
+    expect(p.question).toBe("Pour quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale), quelle matière et sur quel(s) chapitre(s) ou notion(s) souhaitez-vous ce devoir ?");
   });
   it("une réponse courte complète la demande précédente ; le message le plus récent l'emporte", () => {
     const p = identifyConversation(["Prépare-moi une leçon sur les fractions.", "Classe : 6e."], {});

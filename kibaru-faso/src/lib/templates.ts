@@ -14,8 +14,10 @@ export type Template = {
   icon?: string;
   main?: boolean;
   category: Category;
-  /** « fiche-form » : ouvre le formulaire du générateur de fiches (Module 01) au lieu de pré-remplir. */
-  action?: "fiche-form";
+  /** Ouvre le formulaire du générateur de fiches (Module 01) ou d'évaluations (Module 02) au lieu de pré-remplir. */
+  action?: "fiche-form" | "eval-form";
+  /** Type d'évaluation présélectionné dans le formulaire du Module 02. */
+  evalType?: string;
   build: (c: TeacherContext) => string;
 };
 
@@ -37,6 +39,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "devoir",
+    action: "eval-form",
+    evalType: "devoir surveillé",
     label: "Un devoir",
     hint: "Sujet, corrigé et barème séparés",
     icon: "📝",
@@ -46,6 +50,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "evaluation",
+    action: "eval-form",
+    evalType: "évaluation sommative",
     label: "Une évaluation",
     hint: "Diagnostique, formative ou sommative",
     icon: "📊",
@@ -120,6 +126,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "interrogation",
+    action: "eval-form",
+    evalType: "interrogation écrite",
     label: "Interrogation écrite",
     hint: "Contrôle court de 15 à 20 minutes",
     category: "evaluation",
@@ -127,6 +135,8 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "sujet-blanc",
+    action: "eval-form",
+    evalType: "sujet blanc (examen blanc)",
     label: "Sujet blanc",
     hint: "Épreuve d'entraînement, corrigé et barème",
     category: "evaluation",
@@ -183,6 +193,18 @@ export const FICHE_COMMANDS: { label: string; prompt: string }[] = [
   { label: "Mode expert", prompt: "Mode expert : reprends cette fiche avec les choix pédagogiques, les difficultés anticipées et les erreurs fréquentes." },
   { label: "Mode rapide", prompt: "Mode rapide : reprends cette fiche en version courte." },
   { label: "Fiche imprimable", prompt: "Transforme en fiche imprimable." },
+];
+
+/** Commandes naturelles sur un devoir ou une évaluation (Module 02). */
+export const EVAL_COMMANDS: { label: string; prompt: string }[] = [
+  { label: "Version B", prompt: "Fais la version B." },
+  { label: "Plus facile", prompt: "Plus facile." },
+  { label: "Plus difficile", prompt: "Plus difficile." },
+  { label: "Ajouter un exercice", prompt: "Ajoute un exercice, en rééquilibrant le barème." },
+  { label: "Barème sur 40", prompt: "Barème sur [40]." },
+  { label: "Grille critériée", prompt: "Ajoute une grille critériée." },
+  { label: "Tableau de spécification", prompt: "Ajoute le tableau de spécification." },
+  { label: "Sujet imprimable", prompt: "Sujet imprimable." },
 ];
 
 /** Suggestions de disciplines (saisie libre possible). */
