@@ -12,11 +12,13 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
 ## Principes (configuration V2)
 
 - **Priorité absolue à la base documentaire KIBARU.** Avant chaque réponse, l'application recherche les passages
-  pertinents dans la base (`referentiels/`, déposée par l'administrateur) et dans la bibliothèque personnelle de
+  pertinents dans la base (`base-documentaire/`, déposée par l'administrateur) et dans la bibliothèque personnelle de
   l'enseignant. Les connaissances générales du modèle ne viennent qu'en dernier recours, et sont signalées comme telles.
-- **Base évolutive et versionnée.** Chaque document a sa fiche (identifiant, année, version, statut, niveau de
-  fiabilité…). Une nouvelle version remplace l'ancienne sans la supprimer ; archives, documents déclassés et
-  expirés ne sont plus consultés. Hiérarchie des sources en 5 niveaux.
+- **Base évolutive et versionnée, selon la structure documentaire officielle** : 9 catégories
+  (`01_PROGRAMMES_ET_CURRICULA` … `09_ARCHIVES`), puis pays / niveau / classe / matière / type / année / version.
+  Chaque ressource a une fiche (ID unique, statut ACTIF, PROVISOIRE, À VÉRIFIER, REMPLACÉ ou ARCHIVE, priorité,
+  dates…). Un document ancien n'est jamais obsolète par défaut, un document récent jamais applicable par défaut :
+  seul un remplacement déclaré vers une ressource ACTIVE écarte l'ancienne, qui reste dans l'historique.
 - **Jamais d'invention présentée comme officielle.** Chaque production distingue **SOURCE KIBARU** (avec renvoi
   [R1]… vers l'extrait consulté), **PROPOSITION PÉDAGOGIQUE KIBARU**, **CONNAISSANCE GÉNÉRALE** et **À VÉRIFIER**.
 - **L'enseignant reste responsable** : il vérifie, adapte et valide chaque contenu avant usage en classe.
@@ -73,9 +75,10 @@ modèle dans le même appel, au lieu d'échouer.
 
 ## Alimenter la base documentaire
 
-Déposez les programmes, guides et progressions dans `referentiels/` (formats `.md`, `.txt`, `.pdf` texte, `.docx`)
-avec leur fiche descriptive (identifiant, classes, matières, année, version, statut, niveau de fiabilité, document
-remplacé…). Mode d'emploi détaillé et gestion des versions : [`referentiels/LISEZ-MOI.md`](referentiels/LISEZ-MOI.md).
+Déposez chaque ressource dans son dossier de la structure officielle (`base-documentaire/`, formats `.pdf` texte,
+`.docx`, `.txt`, `.md`) avec sa fiche descriptive, puis lancez `npm run base:verifier` et `npm run base:catalogue`.
+Structure, métadonnées, statuts et règles de versions : [`base-documentaire/LISEZ-MOI.md`](base-documentaire/LISEZ-MOI.md).
+Catalogue à jour : [`base-documentaire/CATALOGUE.md`](base-documentaire/CATALOGUE.md).
 
 **Aucun texte officiel n'est encore intégré** : seule la fiche descriptive du guide pédagogique de mathématiques 6e
 (`BF-MATH-6E-GUIDE-001`) est présente ; le PDF lui-même reste à déposer à côté d'elle. KIBARU FASO ne doit s'appuyer
@@ -86,7 +89,7 @@ comme des propositions ou des connaissances générales.
 
 1. Importer le dépôt dans Vercel et choisir `kibaru-faso` comme **Root Directory** (framework Next.js détecté).
 2. Renseigner les variables d'environnement ci-dessus (au minimum `ANTHROPIC_API_KEY` et `KIBARU_ACCESS_CODE`).
-3. Déployer. Chaque ajout dans `referentiels/` nécessite un nouveau déploiement.
+3. Déployer. Chaque ajout dans `base-documentaire/` nécessite un nouveau déploiement.
 
 Les réponses longues (devoir complet avec corrigé) peuvent prendre une à plusieurs minutes : la durée maximale
 de la route de conversation est fixée à 300 s (`maxDuration`), ce que permettent les offres Vercel actuelles.
@@ -97,13 +100,15 @@ de la route de conversation est fixée à 300 s (`maxDuration`), ce que permette
 |---|---|
 | `npm run dev` / `build` / `start` | Développement, compilation, production (port 3100) |
 | `npm run lint` | Vérification TypeScript |
+| `npm run base:verifier` / `base:catalogue` | Contrôle de la base documentaire / génération de `CATALOGUE.md` |
 | `npm test` | Tests unitaires (recherche, versions et archives, hiérarchie des sources, métadonnées, contexte, rubriques, séparation des documents, prompt) |
 
 ## Structure
 
 ```
 kibaru-faso/
-├── referentiels/          bibliothèque de référence (documents officiels à déposer)
+├── base-documentaire/     base documentaire officielle (9 catégories, fiches, CATALOGUE.md)
+├── scripts/base.ts        vérification de la base et génération du catalogue
 ├── src/app/               page unique + routes API : chat (streaming), extract, acces, referentiels
 ├── src/components/        interface (application, rendu Markdown avec badges de transparence)
 ├── src/lib/               prompt, recherche BM25, bibliothèque, extraction PDF/DOCX, accès, export

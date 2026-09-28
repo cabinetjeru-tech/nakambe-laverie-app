@@ -1,4 +1,4 @@
-import type { LifecycleState } from "./metadata";
+import { CONSULTED, STATUT_LABELS, STATUT_WEIGHT, type Statut } from "./base/structure";
 
 /**
  * Recherche dans les documents de référence : découpage en extraits et classement BM25.
@@ -13,35 +13,41 @@ export type RefOrigin = "bibliotheque" | "enseignant";
 export type RefDocument = {
   id: string;
   title: string;
-  /** programme, guide, progression, référentiel, fiche… (libre) */
+  /** programme, guide pédagogique, progression… */
   type: string;
   origin: RefOrigin;
   /** Classes concernées ; vide = toutes. */
   classes: string[];
-  /** Disciplines concernées ; vide = toutes. */
+  /** Matières concernées ; vide = toutes. */
   disciplines: string[];
-  /** Mention d'origine lisible (ex. « MENAPLN, 2023 »), si connue. */
   source?: string;
-  /** Statut du document (en vigueur, ancien…), tel que déclaré par l'administrateur. */
-  status?: string;
+  /** Statut officiel (base documentaire). Toujours renseigné par le chargeur ; absent pour les documents de l'enseignant. */
+  statut?: Statut;
+  observations?: string;
   /** Règle d'usage propre au document, transmise au modèle avec chaque extrait. */
   notice?: string;
-  /** Identifiant stable dans la base KIBARU (ex. BF-MATH-6E-GUIDE-001). */
+  /** ID unique dans la base KIBARU (ex. BF-MATH-6E-GUIDE-001). */
   documentId?: string;
   organisme?: string;
   pays?: string;
   niveau?: string;
   year?: string;
   version?: string;
-  /** Hiérarchie des sources (configuration V2, section 7) : 1 = document officiel du ministère … 5 = connaissance générale. */
-  reliability?: number;
-  /** Cycle de vie : actif (défaut), archive, remplace, declasse. */
-  state?: LifecycleState;
-  /** Identifiants des documents que celui-ci remplace. */
+  /** Priorité (hiérarchie des sources) : 1 = document officiel du ministère … 5 = connaissance générale. */
+  priority?: number;
+  /** Catégorie de la structure officielle (01_PROGRAMMES_ET_CURRICULA…) et chemin dans la base. */
+  category?: string;
+  path?: string;
+  /** ID des ressources que celle-ci remplace / qui la remplacent. */
   supersedes?: string[];
+  supersededBy?: string[];
   integratedAt?: string;
+  verifiedAt?: string;
+  replacedAt?: string;
   updatedAt?: string;
   expiresAt?: string;
+  /** Remarque calculée lors de la résolution des versions. */
+  note?: string;
   text: string;
 };
 
@@ -153,39 +159,71 @@ export function docInfo(d: RefDocument): DocInfo {
   return info;
 }
 
-/**
- * Gestion des versions (configuration V2, sections 4, 6 et 22) : sépare les documents utilisables des archives.
- * Un document sort de la recherche s'il est archivé, déclassé ou marqué remplacé, s'il a expiré, ou si un
- * document actif déclare explicitement le remplacer (« remplace: <document_id> »). Rien n'est supprimé :
- * les archives restent listées. Aucune version n'est jamais déduite automatiquement de la ressemblance des titres.
- */
-export function partitionByLifecycle(docs: RefDocument[], today = new Date().toISOString().slice(0, 10)): { active: RefDocument[]; archived: ArchivedDoc[] } {
-  const archived: ArchivedDoc[] = [];
-  const candidates: RefDocument[] = [];
-  const stateLabel: Record<string, string> = { archive: "archivé", remplace: "marqué comme remplacé", declasse: "déclassé" };
-  for (const d of docs) {
-    if (d.state && d.state !== "actif") archived.push({ doc: docInfo(d), reason: stateLabel[d.state]! });
-    else if (d.expiresAt && d.expiresAt < today) archived.push({ doc: docInfo(d), reason: `expiré le ${d.expiresAt}` });
-    else candidates.push(d);
-  }
-  const replacedBy = new Map<string, RefDocument>();
-  for (const d of candidates) for (const id of d.supersedes ?? []) replacedBy.set(normalize(id).trim(), d);
-  const active: RefDocument[] = [];
-  for (const d of candidates) {
-    const by = d.documentId ? replacedBy.get(normalize(d.documentId).trim()) : undefined;
-    if (by && by !== d) archived.push({ doc: docInfo(d), reason: `remplacé par ${by.documentId ?? by.title}${by.version ? ` (version ${by.version})` : ""}` });
-    else active.push(d);
-  }
-  return { active, archived };
+const idKey = (id: string) => normalize(id).trim();
+
+function describeVersion(d: Pick<RefDocument, "documentId" | "title" | "version" | "statut">): string {
+  return `${d.documentId ?? d.title}${d.version ? ` (version ${d.version})` : ""}`;
 }
 
-/** Pondération selon la hiérarchie des sources : à pertinence égale, le document le plus fiable passe devant. */
-const RELIABILITY_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
+/**
+ * Résolution des versions de la base documentaire. Règles :
+ * - ne sont consultés que les statuts ACTIF, PROVISOIRE et À VÉRIFIER (et les documents de l'enseignant) ;
+ * - REMPLACÉ et ARCHIVE sont conservés dans l'historique, jamais supprimés, jamais consultés ;
+ * - un remplacement n'est appliqué que s'il est déclaré (remplace / remplace_par) ET que la nouvelle
+ *   ressource est ACTIVE. Une version plus récente mais provisoire ou à vérifier n'écarte pas l'ancienne ;
+ * - l'ancienneté seule ne rend jamais un document obsolète, et la nouveauté seule ne le rend jamais applicable :
+ *   aucune version n'est déduite de la date ni du titre ;
+ * - une date d'expiration dépassée, déclarée dans la fiche, fait passer le document dans l'historique.
+ */
+export function resolveBase(docs: RefDocument[], today = new Date().toISOString().slice(0, 10)): { usable: RefDocument[]; history: ArchivedDoc[] } {
+  const byId = new Map<string, RefDocument>();
+  for (const d of docs) if (d.documentId) byId.set(idKey(d.documentId), d);
+  const isConsulted = (d: RefDocument) => d.origin === "enseignant" || (!!d.statut && CONSULTED.includes(d.statut));
+  const expired = (d: RefDocument) => !!d.expiresAt && d.expiresAt < today;
+
+  // Relations de remplacement déclarées d'un côté ou de l'autre : ancien → nouveaux.
+  const successors = new Map<RefDocument, Set<RefDocument>>();
+  const link = (oldDoc: RefDocument | undefined, newDoc: RefDocument | undefined) => {
+    if (!oldDoc || !newDoc || oldDoc === newDoc) return;
+    if (!successors.has(oldDoc)) successors.set(oldDoc, new Set());
+    successors.get(oldDoc)!.add(newDoc);
+  };
+  for (const d of docs) {
+    for (const id of d.supersedes ?? []) link(byId.get(idKey(id)), d);
+    for (const id of d.supersededBy ?? []) link(d, byId.get(idKey(id)));
+  }
+
+  const usable: RefDocument[] = [];
+  const history: ArchivedDoc[] = [];
+  for (const d of docs) {
+    const next = [...(successors.get(d) ?? [])];
+    const activeNext = next.filter((n) => n.statut === "ACTIF" && !expired(n));
+    const when = d.replacedAt ? ` le ${d.replacedAt}` : "";
+    if (!isConsulted(d)) {
+      const by = next.length ? ` par ${next.map(describeVersion).join(", ")}` : "";
+      history.push({ doc: docInfo(d), reason: `${STATUT_LABELS[d.statut ?? "ARCHIVE"]}${d.statut === "REMPLACE" ? `${by}${when}` : ""}` });
+    } else if (expired(d)) {
+      history.push({ doc: docInfo(d), reason: `expiré le ${d.expiresAt}` });
+    } else if (activeNext.length) {
+      history.push({ doc: docInfo(d), reason: `remplacé par ${activeNext.map(describeVersion).join(", ")}${when}` });
+    } else if (next.length) {
+      // Nouvelle version déclarée mais pas encore ACTIVE : l'ancienne reste utilisable, et on le signale.
+      const pending = next.map((n) => `${describeVersion(n)}, statut ${STATUT_LABELS[n.statut ?? "A_VERIFIER"]}`).join(" ; ");
+      usable.push({ ...d, note: `Une version plus récente est déclarée (${pending}) mais n'est pas active : ce document reste la référence consultée.` });
+    } else {
+      usable.push(d);
+    }
+  }
+  return { usable, history };
+}
+
+/** Priorité (hiérarchie des sources) : à pertinence égale, le document le plus officiel passe devant. */
+const PRIORITY_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
 
 /**
- * Classe les extraits par pertinence (BM25) pour la requête.
- * Le titre, le type, l'année et la version du document comptent dans le score, pour qu'un
- * « Programme de mathématiques 6e » remonte sur une question « fractions en 6e ».
+ * Classe les extraits par pertinence (BM25) pour la requête, pondérée par la priorité et le statut.
+ * Le titre, le type, l'année et la version du document comptent dans le score. La date ne donne
+ * aucun avantage par elle-même.
  */
 export function searchDocuments(
   docs: RefDocument[],
@@ -228,7 +266,8 @@ export function searchDocuments(
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
         score += (idf * f * (k1 + 1)) / (f + k1 * (1 - b + (b * it.len) / avgLen));
       }
-      return { it, score: score * (RELIABILITY_WEIGHT[it.doc.reliability ?? 4] ?? 1) };
+      const weight = (PRIORITY_WEIGHT[it.doc.priority ?? 4] ?? 1) * (it.doc.statut ? STATUT_WEIGHT[it.doc.statut] : 1);
+      return { it, score: score * weight };
     })
     .filter((s) => s.score > 0)
     .sort((a, b2) => b2.score - a.score);
@@ -254,33 +293,37 @@ function stripTags(s: string): string {
 /** Métadonnées utiles au modèle, dans un ordre stable. */
 function describe(d: DocInfo): [string, string][] {
   const pairs: [string, string | undefined][] = [
-    ["document_id", d.documentId],
+    ["id", d.documentId],
+    ["statut", d.statut ? STATUT_LABELS[d.statut] : undefined],
+    ["priorite", d.priority ? String(d.priority) : undefined],
+    ["categorie", d.category],
     ["type", d.type],
     ["origine", d.origin],
     ["organisme", d.organisme],
     ["pays", d.pays],
+    ["niveau", d.niveau],
     ["classes", d.classes.join(", ")],
     ["matieres", d.disciplines.join(", ")],
     ["annee", d.year],
     ["version", d.version],
-    ["statut", d.status],
-    ["niveau_fiabilite", d.reliability ? String(d.reliability) : undefined],
     ["source", d.source],
-    ["mise_a_jour", d.updatedAt],
+    ["derniere_verification", d.verifiedAt],
+    ["observations", d.observations],
+    ["remarque", d.note],
   ];
   return pairs.filter((p): p is [string, string] => !!p[1]);
 }
 
 /** Bloc <documents_de_reference> inséré dans le message de l'enseignant. */
-export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt[], archived: ArchivedDoc[] = []): string {
-  const archives = archived.length
-    ? `\n<archives>\nDocuments conservés en archive, NON utilisés pour cette demande :\n${archived
+export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt[], history: ArchivedDoc[] = []): string {
+  const archives = history.length
+    ? `\n<historique>\nVersions et documents conservés dans l'historique, NON consultés pour cette demande :\n${history
         .slice(0, 30)
-        .map((a) => `- ${stripTags(a.doc.title)}${a.doc.documentId ? ` [${stripTags(a.doc.documentId)}]` : ""}${a.doc.version ? ` (version ${stripTags(a.doc.version)})` : ""} : ${stripTags(a.reason)}`)
-        .join("\n")}\n</archives>`
+        .map((a) => `- ${stripTags(a.doc.title)}${a.doc.documentId ? ` [${stripTags(a.doc.documentId)}]` : ""}${a.doc.version ? ` (version ${stripTags(a.doc.version)})` : ""}${a.doc.year ? `, ${stripTags(a.doc.year)}` : ""} : ${stripTags(a.reason)}`)
+        .join("\n")}\n</historique>`
     : "";
   if (catalogue.length === 0) {
-    return `<documents_de_reference>\nAucun document de la base documentaire KIBARU n'est disponible pour cette demande.${archives}\n</documents_de_reference>`;
+    return `<documents_de_reference>\nAucune ressource de la base documentaire KIBARU FASO n'est disponible pour cette demande.${archives}\n</documents_de_reference>`;
   }
   const shown = catalogue.slice(0, 60);
   const lines = shown.map(
@@ -291,7 +334,7 @@ export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt
     ? excerpts
         .map(
           (e) =>
-            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" ${describe(e.doc).map(([k, v]) => `${k}="${escapeAttr(v)}"`).join(" ")}>\n${e.doc.notice ? `<regle_usage>${stripTags(e.doc.notice)}</regle_usage>\n` : ""}${e.text.replace(/<\/?(extrait|documents_de_reference|archives|catalogue|regle_usage)[^>]*>/gi, "")}\n</extrait>`,
+            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" ${describe(e.doc).map(([k, v]) => `${k}="${escapeAttr(v)}"`).join(" ")}>\n${e.doc.notice ? `<regle_usage>${stripTags(e.doc.notice)}</regle_usage>\n` : ""}${e.text.replace(/<\/?(extrait|documents_de_reference|historique|catalogue|regle_usage)[^>]*>/gi, "")}\n</extrait>`,
         )
         .join("\n")
     : "Aucun extrait pertinent n'a été retrouvé dans ces documents pour cette demande.";

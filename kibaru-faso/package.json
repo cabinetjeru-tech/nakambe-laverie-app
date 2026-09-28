@@ -8,7 +8,9 @@
     "build": "next build",
     "start": "next start -p 3100",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "base:verifier": "tsx scripts/base.ts verifier",
+    "base:catalogue": "tsx scripts/base.ts catalogue"
   },
   "engines": {
     "node": ">=20"
@@ -32,6 +34,7 @@
     "@types/react-dom": "^19.3.0",
     "postcss": "^8.5.28",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.2"
   }

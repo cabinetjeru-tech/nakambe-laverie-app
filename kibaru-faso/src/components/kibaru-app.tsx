@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
 import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
 import { downloadWord, printHtml } from "@/lib/export";
+import { STATUT_LABELS, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
 import { DISCIPLINES, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
@@ -14,18 +15,24 @@ type LibraryDoc = {
   documentId: string | null;
   title: string;
   type: string;
+  category: string | null;
+  categoryLabel: string;
   classes: string[];
   disciplines: string[];
   source: string | null;
   organisme: string | null;
   year: string | null;
   version: string | null;
-  reliability: number | null;
-  status: string | null;
+  priority: number | null;
+  statut: Statut | null;
+  observations: string | null;
   notice: string | null;
+  note: string | null;
+  verifiedAt: string | null;
   reason?: string;
 };
-type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[]; archives: LibraryDoc[] };
+type PendingDoc = { path: string; documentId?: string; title: string; statut: Statut; categoryLabel: string };
+type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[] };
 
 const RELIABILITY: Record<number, string> = {
   1: "Niveau 1 — document officiel",
@@ -36,7 +43,7 @@ const RELIABILITY: Record<number, string> = {
 };
 
 export function KibaruApp() {
-  const [status, setStatus] = useState<Status>({ loading: true, required: false, granted: false, configured: true, library: [], archives: [] });
+  const [status, setStatus] = useState<Status>({ loading: true, required: false, granted: false, configured: true, library: [], history: [], pending: [] });
   const [context, setContext] = useState<TeacherContext>({});
   const [docs, setDocs] = useState<TeacherDoc[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -54,12 +61,12 @@ export function KibaruApp() {
     try {
       const a = (await (await fetch("/api/acces")).json()) as { required: boolean; granted: boolean };
       if (a.required && !a.granted) {
-        setStatus({ loading: false, required: true, granted: false, configured: true, library: [], archives: [] });
+        setStatus({ loading: false, required: true, granted: false, configured: true, library: [], history: [], pending: [] });
         return;
       }
       const r = await fetch("/api/referentiels");
-      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[]; archives: LibraryDoc[] };
-      setStatus({ loading: false, required: a.required, granted: true, configured: j.configured, library: j.documents ?? [], archives: j.archives ?? [] });
+      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[] };
+      setStatus({ loading: false, required: a.required, granted: true, configured: j.configured, library: j.documents ?? [], history: j.history ?? [], pending: j.pending ?? [] });
     } catch {
       setStatus((s) => ({ ...s, loading: false, granted: true }));
     }
@@ -258,7 +265,7 @@ export function KibaruApp() {
           className={`${sidebar ? "fixed inset-x-0 top-[53px] bottom-0 z-20 block" : "hidden"} w-full overflow-y-auto border-r border-line bg-white lg:static lg:block lg:w-80 lg:shrink-0`}
         >
           <ContextPanel context={context} onChange={updateContext} />
-          <DocumentsPanel library={status.library} archives={status.archives} docs={docs} onChange={updateDocs} context={context} />
+          <DocumentsPanel library={status.library} history={status.history} pending={status.pending} docs={docs} onChange={updateDocs} context={context} />
           <HistoryPanel
             conversations={conversations}
             currentId={currentId}
@@ -539,7 +546,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
                 {s.version ? `, version ${s.version}` : ""}
                 {s.year ? `, ${s.year}` : ""}
                 {s.source ? ` — ${s.source}` : ""}
-                {s.status ? <span className="text-rouge"> · {s.status}</span> : null} · {s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire KIBARU"}
+                {s.statut ? <span className={s.statut === "ACTIF" ? "text-faso-dark" : "text-rouge"}> · {STATUT_LABELS[s.statut as Statut] ?? s.statut}</span> : null} · {s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire KIBARU"}
               </li>
             ))}
           </ul>
@@ -569,6 +576,11 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
       )}
     </div>
   );
+}
+
+function StatutBadge({ statut }: { statut: Statut }) {
+  const cls = statut === "ACTIF" ? "badge-source" : statut === "PROVISOIRE" ? "badge-proposition" : statut === "A_VERIFIER" ? "badge-verifier" : "badge-general";
+  return <span className={`badge ${cls} !text-[9px]`}>{STATUT_LABELS[statut]}</span>;
 }
 
 function ActionButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
@@ -648,7 +660,7 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
   );
 }
 
-function DocumentsPanel({ library, archives, docs, onChange, context }: { library: LibraryDoc[]; archives: LibraryDoc[]; docs: TeacherDoc[]; onChange: (d: TeacherDoc[]) => void; context: TeacherContext }) {
+function DocumentsPanel({ library, history, pending, docs, onChange, context }: { library: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[]; docs: TeacherDoc[]; onChange: (d: TeacherDoc[]) => void; context: TeacherContext }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -685,31 +697,54 @@ function DocumentsPanel({ library, archives, docs, onChange, context }: { librar
   return (
     <Section title="Documents">
       <div className="text-xs text-muted">
-        <div className="font-semibold text-ink">Base documentaire KIBARU ({library.length})</div>
+        <div className="font-semibold text-ink">Base documentaire KIBARU FASO ({library.length})</div>
         {library.length === 0 ? (
-          <p className="mt-1">Aucun document validé n&apos;est encore intégré par l&apos;administrateur.</p>
+          <p className="mt-1">Aucune ressource consultable n&apos;est encore intégrée.</p>
         ) : (
           <>
             {(context.classe || context.discipline) && <p className="mt-1">{matching.length} applicable(s) à votre classe et discipline.</p>}
-            <ul className="mt-1 max-h-56 space-y-2 overflow-y-auto">
-              {library.map((d) => (
-                <li key={d.id} className={matching.includes(d) ? "text-ink" : "opacity-50"} title={d.notice ?? undefined}>
-                  <div>{d.title}</div>
-                  <div className="text-[11px] text-muted">
-                    {[d.type, d.documentId, d.year, d.version && `version ${d.version}`].filter(Boolean).join(" · ")}
-                  </div>
-                  {d.reliability && <div className="text-[11px] text-faso-dark">{RELIABILITY[d.reliability]}</div>}
-                  {d.status && <div className="text-[11px] text-rouge">{d.status}</div>}
+            <div className="mt-1 max-h-72 space-y-2 overflow-y-auto">
+              {[...new Set(library.map((d) => d.categoryLabel))].map((cat) => (
+                <div key={cat}>
+                  <div className="text-[11px] font-semibold uppercase tracking-wide text-muted">{cat}</div>
+                  <ul className="mt-0.5 space-y-1.5">
+                    {library
+                      .filter((d) => d.categoryLabel === cat)
+                      .map((d) => (
+                        <li key={d.id} className={matching.includes(d) ? "text-ink" : "opacity-50"} title={[d.notice, d.note].filter(Boolean).join("\n") || undefined}>
+                          <div>
+                            {d.statut && <StatutBadge statut={d.statut} />} {d.title}
+                          </div>
+                          <div className="text-[11px] text-muted">
+                            {[d.documentId, d.year, d.version && `version ${d.version}`, d.priority && `priorité ${d.priority}`].filter(Boolean).join(" · ")}
+                          </div>
+                          {d.note && <div className="text-[11px] text-rouge">{d.note}</div>}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+        {pending.length > 0 && (
+          <details className="mt-2">
+            <summary className="cursor-pointer">En attente d&apos;intégration ({pending.length})</summary>
+            <ul className="mt-1 space-y-1">
+              {pending.map((d) => (
+                <li key={d.path}>
+                  {d.title}
+                  {d.documentId ? ` [${d.documentId}]` : ""} — <span className="italic">fiche enregistrée, texte non intégré</span>
                 </li>
               ))}
             </ul>
-          </>
+          </details>
         )}
-        {archives.length > 0 && (
+        {history.length > 0 && (
           <details className="mt-2">
-            <summary className="cursor-pointer">Archives ({archives.length}) — non utilisées</summary>
+            <summary className="cursor-pointer">Historique des versions ({history.length}) — non consultées</summary>
             <ul className="mt-1 space-y-1">
-              {archives.map((d) => (
+              {history.map((d) => (
                 <li key={d.id}>
                   {d.title}
                   {d.version ? ` (version ${d.version})` : ""} — <span className="italic">{d.reason}</span>

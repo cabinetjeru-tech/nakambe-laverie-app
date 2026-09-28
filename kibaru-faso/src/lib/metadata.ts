@@ -1,59 +1,66 @@
+import { parseStatut, type Statut } from "./base/structure";
+
 /**
- * Métadonnées des documents de la base documentaire KIBARU (configuration V2, section 5),
- * au format « clé: valeur », une par ligne. Les lignes commençant par « # » sont des commentaires.
+ * Fiche descriptive d'une ressource de la base documentaire KIBARU, au format « clé: valeur », une par ligne.
+ * Les lignes commençant par « # » sont des commentaires.
  *
- *   document_id: BF-MATH-6E-GUIDE-001
- *   titre: Guide pédagogique de mathématiques — 6e
- *   organisme: Ministère de l'Éducation nationale
+ *   id: BF-MATH-6E-PROG-002
+ *   titre: Programme de mathématiques — 6e
  *   pays: Burkina Faso
- *   niveau: premier cycle
- *   classes: 6e
- *   matieres: Mathématiques
- *   type: guide pédagogique
- *   annee: 2019
- *   version: 1
- *   statut: référence pédagogique
- *   etat: actif | archive | remplace | declasse
- *   remplace: BF-MATH-6E-GUIDE-000         (identifiant du document que celui-ci remplace)
- *   fiabilite: 1 à 5                        (hiérarchie des sources, section 7)
- *   source: site du ministère
+ *   niveau: Post-primaire
+ *   classe: 6e
+ *   matiere: Mathématiques
+ *   type: programme
+ *   organisme: Ministère de l'Éducation nationale
+ *   annee: 2024
+ *   version: 2
  *   date_integration: 2026-09-28
- *   date_mise_a_jour: 2026-09-28
- *   date_expiration: 2027-08-31
- *   avertissement: règle d'usage que KIBARU doit respecter pour ce document
+ *   statut: ACTIF | PROVISOIRE | À VÉRIFIER | REMPLACÉ | ARCHIVE
+ *   source: site du ministère, référence…
+ *   priorite: 1 à 5                  (hiérarchie des sources : 1 = document officiel du ministère)
+ *   date_verification: 2026-09-28    (date de dernière vérification)
+ *   remplace: BF-MATH-6E-PROG-001    (ressource(s) que celle-ci remplace)
+ *   remplace_par: …                  (ressource(s) qui remplacent celle-ci)
+ *   date_remplacement: 2026-09-01
+ *   date_expiration: …               (facultatif)
+ *   observations: …                  (remarque libre, affichée et transmise)
+ *   avertissement: …                 (règle d'usage que KIBARU doit respecter)
  *
  * Pour un fichier .md/.txt : en tête, entre deux lignes « --- ».
  * Pour un .pdf/.docx : dans un fichier voisin « nom-du-fichier.pdf.meta ».
- * Les clés sont insensibles à la casse et aux accents (« MATIÈRE », « Document ID »… sont acceptés).
+ * Les clés sont insensibles à la casse et aux accents ; les noms de la configuration V2 restent acceptés
+ * (document_id, matieres, fiabilite, etat, date_mise_a_jour…).
  */
-
-export const LIFECYCLE_STATES = ["actif", "archive", "remplace", "declasse"] as const;
-export type LifecycleState = (typeof LIFECYCLE_STATES)[number];
 
 export type DocMeta = {
   documentId?: string;
   titre?: string;
-  organisme?: string;
   pays?: string;
   niveau?: string;
+  classes?: string[];
+  disciplines?: string[];
   type?: string;
-  classes: string[];
-  disciplines: string[];
+  organisme?: string;
   annee?: string;
   version?: string;
-  statut?: string;
-  etat?: LifecycleState;
-  remplace: string[];
-  fiabilite?: number;
-  source?: string;
   dateIntegration?: string;
+  statut?: Statut;
+  /** Valeur de statut illisible (ni l'un des cinq statuts, ni vide). */
+  statutInvalide?: string;
+  source?: string;
+  priorite?: number;
+  dateVerification?: string;
+  remplace: string[];
+  remplacePar: string[];
+  dateRemplacement?: string;
   dateMiseAJour?: string;
   dateExpiration?: string;
+  observations?: string;
   avertissement?: string;
 };
 
 export function emptyMeta(): DocMeta {
-  return { classes: [], disciplines: [], remplace: [] };
+  return { remplace: [], remplacePar: [] };
 }
 
 function normKey(k: string): string {
@@ -63,15 +70,6 @@ function normKey(k: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/['’]/g, "")
     .replace(/[\s-]+/g, "_");
-}
-
-function normState(v: string): LifecycleState | undefined {
-  const n = normKey(v);
-  if (/^(actif|active|en_vigueur|valide)/.test(n)) return "actif";
-  if (/^archiv/.test(n)) return "archive";
-  if (/^remplac/.test(n)) return "remplace";
-  if (/^declass/.test(n)) return "declasse";
-  return undefined;
 }
 
 /** Date ISO (AAAA-MM-JJ, AAAA-MM ou AAAA), ou JJ/MM/AAAA. Renvoie undefined si illisible. */
@@ -93,27 +91,24 @@ export function parseMetaBlock(block: string): DocMeta {
   const meta = emptyMeta();
   for (const line of block.split(/\r?\n/)) {
     if (/^\s*#/.test(line)) continue;
-    const m = line.match(/^\s*([\p{L}_ '’-]+?)\s*:\s*(.*)$/u);
+    const m = line.match(/^\s*([\p{L}_ '’/-]+?)\s*:\s*(.*)$/u);
     if (!m) continue;
     const key = normKey(m[1]!);
     const value = m[2]!.trim().replace(/^["']|["']$/g, "");
     if (isPlaceholder(value)) continue;
     const list = () => value.replace(/^\[|\]$/g, "").split(/[,;]/).map((v) => v.trim()).filter(Boolean);
+    const date = () => parseDate(value) ?? value;
     switch (key) {
+      case "id":
+      case "id_unique":
+      case "identifiant":
       case "document_id":
       case "documentid":
-      case "id":
-      case "identifiant":
         meta.documentId = value;
         break;
       case "titre":
       case "title":
         meta.titre = value;
-        break;
-      case "organisme":
-      case "producteur":
-      case "organisme_producteur":
-        meta.organisme = value;
         break;
       case "pays":
         meta.pays = value;
@@ -121,18 +116,25 @@ export function parseMetaBlock(block: string): DocMeta {
       case "niveau":
         meta.niveau = value;
         break;
-      case "type":
-        meta.type = value;
-        break;
       case "classe":
       case "classes":
         meta.classes = list();
         break;
-      case "discipline":
-      case "disciplines":
       case "matiere":
       case "matieres":
+      case "discipline":
+      case "disciplines":
         meta.disciplines = list();
+        break;
+      case "type":
+      case "type_de_document":
+        meta.type = value;
+        break;
+      case "organisme":
+      case "producteur":
+      case "organisme_producteur":
+      case "organisme/producteur":
+        meta.organisme = value;
         break;
       case "annee":
       case "date":
@@ -143,41 +145,64 @@ export function parseMetaBlock(block: string): DocMeta {
       case "version":
         meta.version = value;
         break;
+      case "date_integration":
+      case "date_dintegration":
+      case "integration":
+        meta.dateIntegration = date();
+        break;
       case "statut":
       case "status":
-        meta.statut = value;
-        break;
-      case "etat":
-      case "cycle_de_vie":
-        meta.etat = normState(value);
-        break;
-      case "remplace":
-      case "remplace_document":
-        meta.remplace = list();
-        break;
-      case "fiabilite":
-      case "niveau_de_fiabilite":
-      case "niveau_fiabilite": {
-        const n = Number.parseInt(value, 10);
-        if (n >= 1 && n <= 5) meta.fiabilite = n;
+      case "etat": {
+        const s = parseStatut(value);
+        if (s) meta.statut = s;
+        else if (key === "statut" || key === "status") {
+          // Ancienne fiche où « statut » était une description libre : conservée comme observation.
+          meta.statutInvalide = value;
+          meta.observations = meta.observations ? `${meta.observations} ${value}` : value;
+        }
         break;
       }
       case "source":
         meta.source = value;
         break;
-      case "date_integration":
-      case "date_dintegration":
-      case "integration":
-        meta.dateIntegration = parseDate(value) ?? value;
+      case "priorite":
+      case "fiabilite":
+      case "niveau_de_fiabilite":
+      case "niveau_fiabilite": {
+        const n = Number.parseInt(value, 10);
+        if (n >= 1 && n <= 5) meta.priorite = n;
+        break;
+      }
+      case "date_verification":
+      case "date_de_derniere_verification":
+      case "derniere_verification":
+        meta.dateVerification = date();
+        break;
+      case "remplace":
+        meta.remplace = list();
+        break;
+      case "remplace_par":
+      case "remplacee_par":
+      case "remplace_par_document":
+        meta.remplacePar = list();
+        break;
+      case "date_remplacement":
+      case "date_de_remplacement":
+        meta.dateRemplacement = date();
         break;
       case "date_mise_a_jour":
       case "date_de_derniere_mise_a_jour":
       case "mise_a_jour":
-        meta.dateMiseAJour = parseDate(value) ?? value;
+        meta.dateMiseAJour = date();
         break;
       case "date_expiration":
       case "expiration":
         meta.dateExpiration = parseDate(value);
+        break;
+      case "observations":
+      case "observation":
+      case "remarques":
+        meta.observations = meta.observations ? `${value} ${meta.observations}` : value;
         break;
       case "avertissement":
       case "attention":
@@ -186,10 +211,6 @@ export function parseMetaBlock(block: string): DocMeta {
         meta.avertissement = value;
         break;
     }
-  }
-  // Une classe indiquée seulement comme « niveau » (ex. « NIVEAU : 6e ») sert aussi de filtre de classe.
-  if (meta.classes.length === 0 && meta.niveau && /^(6e|5e|4e|3e|2nde|1[eè]re|terminale|tle)\b/i.test(meta.niveau)) {
-    meta.classes = [meta.niveau];
   }
   return meta;
 }

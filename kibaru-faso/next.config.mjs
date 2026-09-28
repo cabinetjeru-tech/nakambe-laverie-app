@@ -17,8 +17,8 @@ const csp = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  // Les documents de référence (dossier referentiels/) sont lus à l'exécution : on les embarque dans le déploiement.
-  outputFileTracingIncludes: { "/api/**": ["./referentiels/**/*"] },
+  // Les documents de référence (dossier base-documentaire/) sont lus à l'exécution : on les embarque dans le déploiement.
+  outputFileTracingIncludes: { "/api/**": ["./base-documentaire/**/*"] },
   serverExternalPackages: ["unpdf", "mammoth"],
   async headers() {
     return [

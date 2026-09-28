@@ -1,5 +1,3 @@
-import "server-only";
-
 /** Extraction du texte des documents : PDF, DOCX, TXT, Markdown. */
 
 export type SupportedKind = "pdf" | "docx" | "text";

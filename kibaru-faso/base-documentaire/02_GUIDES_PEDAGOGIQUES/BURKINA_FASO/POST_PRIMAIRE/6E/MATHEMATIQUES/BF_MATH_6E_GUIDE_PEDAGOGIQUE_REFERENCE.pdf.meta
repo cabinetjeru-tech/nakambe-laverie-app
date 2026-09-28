@@ -1,0 +1,21 @@
+# Fiche descriptive — structure documentaire officielle de KIBARU FASO.
+# Informations fournies par le porteur du projet. Le PDF n'a pas encore pu être intégré ni lu :
+# l'année, la version et la date de vérification seront renseignées après lecture (ne pas les deviner).
+# Statut À VÉRIFIER tant que le texte n'a pas été lu et que son champ d'application n'est pas confirmé.
+id: BF-MATH-6E-GUIDE-001
+titre: Guide pédagogique de mathématiques — classe de 6e
+pays: Burkina Faso
+niveau: Post-primaire
+classe: 6e
+matiere: Mathématiques
+type: guide pédagogique
+organisme: Ministère de l'Éducation nationale du Burkina Faso
+annee: à renseigner
+version: à renseigner
+date_integration: 2026-09-28
+statut: À VÉRIFIER
+source: Site du ministère — https://www.education.gov.bf/fileadmin/user_upload/storages/guide_maths_6e.pdf
+priorite: 2
+date_verification: à renseigner
+observations: Document pédagogique officiel hébergé sur le site du ministère, mais ancien : il signale lui-même des limites liées à l'ancienne organisation des contenus ; ce n'est pas nécessairement le programme en vigueur.
+avertissement: Utiliser ce document comme source pédagogique lorsque son contenu est pertinent, mais vérifier toute affirmation concernant le programme actuellement applicable à l'aide de documents plus récents lorsqu'ils sont disponibles ; ne jamais présenter une information provenant uniquement de ce document comme étant nécessairement une prescription actuelle.

@@ -1,10 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
-import { getLibrary } from "@/lib/library";
+import { getBase } from "@/lib/library";
 import { AiUnavailableError, streamAnswer } from "@/lib/llm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
-import { formatReferenceBlock, isApplicable, partitionByLifecycle, searchDocuments, type RefDocument } from "@/lib/search";
+import { formatReferenceBlock, isApplicable, resolveBase, searchDocuments, type ArchivedDoc, type RefDocument } from "@/lib/search";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,12 +34,13 @@ export async function POST(req: Request) {
   const teacherChars = parsed.data.documents.reduce((s, d) => s + d.text.length, 0);
   if (teacherChars > MAX_TEACHER_DOCS_CHARS) return jsonError(413, "Vos documents sont trop volumineux : retirez-en un ou plusieurs.");
 
-  // Documents : bibliothèque de référence + documents ajoutés par l'enseignant.
+  // Documents : base documentaire KIBARU + bibliothèque personnelle de l'enseignant.
   let library: RefDocument[] = [];
+  let pending: Awaited<ReturnType<typeof getBase>>["pending"] = [];
   try {
-    library = await getLibrary();
+    ({ docs: library, pending } = await getBase());
   } catch (e) {
-    console.error("[chat] bibliothèque indisponible :", (e as Error).message);
+    console.error("[chat] base documentaire indisponible :", (e as Error).message);
   }
   const teacherDocs: RefDocument[] = parsed.data.documents.map((d) => ({
     id: `ens:${d.id}`,
@@ -48,24 +49,32 @@ export async function POST(req: Request) {
     origin: "enseignant",
     classes: [],
     disciplines: [],
+    priority: 4,
     text: d.text,
   }));
-  // Versions : seuls les documents actifs sont consultés ; les archives restent signalées au modèle.
-  const { active, archived } = partitionByLifecycle([...library, ...teacherDocs]);
-  const catalogue = active.filter((d) => isApplicable(d, context.classe, context.discipline));
-  const archivedHere = archived.filter((a) => isApplicable({ ...a.doc, text: "" }, context.classe, context.discipline));
+  // Versions : seules les ressources consultables sont recherchées ; l'historique est seulement signalé.
+  const { usable, history: versionHistory } = resolveBase([...library, ...teacherDocs]);
+  const applies = (d: { classes: string[]; disciplines: string[] }) => isApplicable({ ...d, id: "", title: "", type: "", origin: "bibliotheque", text: "" }, context.classe, context.discipline);
+  const catalogue = usable.filter(applies);
+  const historyHere: ArchivedDoc[] = [
+    ...versionHistory.filter((h) => applies(h.doc)),
+    ...pending.filter(applies).map((p) => ({
+      doc: { id: p.path, title: p.title, type: "", origin: "bibliotheque" as const, classes: p.classes, disciplines: p.disciplines, documentId: p.documentId, statut: p.statut },
+      reason: "fiche enregistrée mais texte non encore intégré : aucun contenu consultable",
+    })),
+  ];
   const excerpts = searchDocuments(catalogue, searchQuery(history, context), { limit: 8 });
 
   // Le dernier message reçoit le contexte et les extraits ; l'historique reste inchangé (cache efficace).
   const last = history[history.length - 1]!;
-  const prefix = [formatContextBlock(context), formatReferenceBlock(catalogue, excerpts, archivedHere)].filter(Boolean).join("\n\n");
+  const prefix = [formatContextBlock(context), formatReferenceBlock(catalogue, excerpts, historyHere)].filter(Boolean).join("\n\n");
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m, i) =>
     i === history.length - 1
       ? { role: "user", content: `${prefix}\n\n<demande_enseignant>\n${last.content}\n</demande_enseignant>` }
       : { role: m.role, content: m.content },
   );
 
-  const sources = excerpts.map((e) => ({ label: e.label, title: e.doc.title, type: e.doc.type, origin: e.doc.origin, source: e.doc.source ?? null, status: e.doc.status ?? null, documentId: e.doc.documentId ?? null, version: e.doc.version ?? null, year: e.doc.year ?? null }));
+  const sources = excerpts.map((e) => ({ label: e.label, title: e.doc.title, type: e.doc.type, origin: e.doc.origin, source: e.doc.source ?? null, statut: e.doc.statut ?? null, documentId: e.doc.documentId ?? null, version: e.doc.version ?? null, year: e.doc.year ?? null }));
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

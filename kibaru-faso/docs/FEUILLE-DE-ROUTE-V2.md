@@ -9,8 +9,8 @@ Correspondance entre les 30 sections de la configuration V2 et l'application act
 | 1 | Plateformes | Partiel | Web (ordinateur, navigateur, téléphone). Installable sur l'écran d'accueil Android (application Web installable). Applications natives Android / iOS : à faire. |
 | 2 | Public, classes 6e → Terminale | Fait | Sélecteur de classe ; disciplines en saisie libre avec suggestions. |
 | 3 | Priorité à la base documentaire | Fait + Prompt | Recherche systématique dans la base avant chaque réponse ; priorités 1-2-3 dans le prompt. |
-| 4 | Base évolutive | Fait | Ajout, remplacement, archivage, déclassement, expiration de documents (`referentiels/`). |
-| 5 | Métadonnées | Fait | Toutes les rubriques sont lues depuis la fiche du document (voir `referentiels/LISEZ-MOI.md`). |
+| 4 | Base évolutive | Fait | Structure documentaire officielle en 9 catégories (`base-documentaire/`) ; ajout, remplacement, archivage, expiration ; historique conservé. |
+| 5 | Métadonnées | Fait | Fiche obligatoire (ID unique, statut, priorité, dates d'intégration, de vérification, de remplacement…), complétée par le chemin ; contrôlée par `npm run base:verifier`. |
 | 6 | Gestion des versions | Fait | `remplace:` archive l'ancienne version sans la supprimer ; les archives sont signalées au modèle mais jamais consultées. |
 | 7 | Hiérarchie des sources | Fait + Prompt | `fiabilite` 1 à 4 pondère la recherche et est transmise au modèle ; niveau 5 = connaissance générale. |
 | 8 | Transparence (4 étiquettes) | Fait | SOURCE KIBARU, PROPOSITION PÉDAGOGIQUE KIBARU, CONNAISSANCE GÉNÉRALE, À VÉRIFIER, affichées en couleur. |
@@ -27,7 +27,7 @@ Correspondance entre les 30 sections de la configuration V2 et l'application act
 | 19 | Modifier une production | Fait | 13 boutons sous chaque réponse (simplifier, développer, … résumer) ; export par les boutons Imprimer / PDF et Word. |
 | 20 | Export PDF / Word | Partiel | Impression directe ; PDF via « Enregistrer en PDF » de la fenêtre d'impression ; fichier Word (.doc, ouvert par Word et réenregistrable en .docx). Génération native PDF / DOCX : à faire. |
 | 21 | Recherche multicritère | Fait | Classe, matière, thème, type, année, version, statut ; archives exclues. |
-| 22 | Mise à jour de la base | Partiel | Par dépôt de fichiers dans `referentiels/` puis redéploiement. Interface d'administration : à faire. |
+| 22 | Mise à jour de la base | Partiel | Dépôt dans `base-documentaire/`, contrôle (`base:verifier`), catalogue (`base:catalogue`), redéploiement. Interface d'administration : à faire. |
 | 23 | Espace administrateur | À faire | Utilisateurs, établissements, documents, versions, abonnements, statistiques : nécessite comptes et base de données. |
 | 24 | Architecture | Fait | Documents → base → recherche → contexte → modèle → application → enseignant. |
 | 25 | Évolution | Fait | Aucune limite de classes ou de matières ; il suffit d'ajouter des documents. |

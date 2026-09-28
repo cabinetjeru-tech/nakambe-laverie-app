@@ -1,7 +1,8 @@
 import { hasAccess } from "@/lib/access";
-import { getLibrary } from "@/lib/library";
+import { categoryLabel } from "@/lib/base/structure";
+import { getBase } from "@/lib/library";
 import { aiConfig } from "@/lib/llm";
-import { partitionByLifecycle, type DocInfo } from "@/lib/search";
+import { resolveBase, type DocInfo } from "@/lib/search";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,27 +13,32 @@ function summary(d: DocInfo) {
     documentId: d.documentId ?? null,
     title: d.title,
     type: d.type,
+    category: d.category ?? null,
+    categoryLabel: categoryLabel(d.category),
     classes: d.classes,
     disciplines: d.disciplines,
     source: d.source ?? null,
     organisme: d.organisme ?? null,
     year: d.year ?? null,
     version: d.version ?? null,
-    reliability: d.reliability ?? null,
-    status: d.status ?? null,
+    priority: d.priority ?? null,
+    statut: d.statut ?? null,
+    observations: d.observations ?? null,
     notice: d.notice ?? null,
-    updatedAt: d.updatedAt ?? null,
+    note: d.note ?? null,
+    verifiedAt: d.verifiedAt ?? null,
   };
 }
 
-/** Base documentaire KIBARU (sans le texte) : documents actifs, archives, et état de la configuration. */
+/** Base documentaire KIBARU (sans le texte) : ressources consultées, historique des versions, fiches en attente. */
 export async function GET(req: Request) {
   if (!hasAccess(req)) return Response.json({ error: "Code d'accès requis." }, { status: 401 });
-  const docs = await getLibrary().catch(() => []);
-  const { active, archived } = partitionByLifecycle(docs);
+  const base = await getBase().catch(() => ({ docs: [], pending: [], issues: [] }));
+  const { usable, history } = resolveBase(base.docs);
   return Response.json({
     configured: aiConfig().configured,
-    documents: active.map(summary),
-    archives: archived.map((a) => ({ ...summary(a.doc), reason: a.reason })),
+    documents: usable.map(summary),
+    history: history.map((h) => ({ ...summary(h.doc), reason: h.reason })),
+    pending: base.pending.map((p) => ({ ...p, categoryLabel: categoryLabel(p.category) })),
   });
 }
