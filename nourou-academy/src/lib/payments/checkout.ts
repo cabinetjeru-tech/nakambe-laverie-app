@@ -101,12 +101,13 @@ export async function startCheckout(opts: {
   const mode: PaymentMode =
     provider.id === "demo" ? "DEMO" : provider.id === "paydunya" && settings.paydunyaMode === "test" ? "SANDBOX" : "LIVE";
   const order = await prisma.order.create({ data: { ...base, provider: provider.id, mode } });
+  const place = await prisma.user.findUnique({ where: { id: opts.user.id }, select: { city: true, country: true } });
   try {
     const res = await provider.initiate({
       reference,
       amount: q.total,
       description: q.label,
-      customer: { name: opts.user.name, email: opts.user.email, phone: opts.user.phone },
+      customer: { name: opts.user.name, email: opts.user.email, phone: opts.user.phone, city: place?.city, country: place?.country },
       returnUrl: `${env.appUrl}/paiement/${reference}`,
       cancelUrl: `${env.appUrl}/paiement/${reference}?annule=1`,
       notifyUrl: `${env.appUrl}/api/payments/webhook/${provider.id}`,

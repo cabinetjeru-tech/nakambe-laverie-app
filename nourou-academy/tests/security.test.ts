@@ -88,3 +88,12 @@ describe("validation des fichiers téléversés", async () => {
     expect(validateUpload(Buffer.alloc(2000, 65), "a.txt", "document", 1000).ok).toBe(false);
   });
 });
+
+describe("CinetPay : identité client", () => {
+  it("sépare nom et prénom et complète les champs exigés pour la carte", async () => {
+    const { customerFields } = await import("@/lib/payments/providers/cinetpay");
+    const f = customerFields({ name: "Awa Ouédraogo", email: "awa@exemple.com", phone: "+226 70 00 00 01", city: null, country: "bf" });
+    expect(f).toMatchObject({ customer_name: "Ouédraogo", customer_surname: "Awa", customer_country: "BF", customer_city: "Ouagadougou", customer_phone_number: "+22670000001" });
+    expect(customerFields({ name: "Moussa", email: "m@x.com" })).toMatchObject({ customer_name: "Moussa", customer_surname: "Moussa", customer_country: "BF" });
+  });
+});

@@ -11,6 +11,27 @@ import type { PaymentProvider } from "../types";
  */
 const API = "https://api-checkout.cinetpay.com/v2";
 
+/** Identité du client au format CinetPay (nom / prénom séparés, adresse, ville, pays ISO à 2 lettres). */
+export function customerFields(c: { name: string; email: string; phone?: string | null; city?: string | null; country?: string | null }) {
+  const parts = c.name.trim().split(/\s+/);
+  const surname = parts.length > 1 ? parts.slice(0, -1).join(" ") : parts[0] || "Client";
+  const name = parts.length > 1 ? parts[parts.length - 1]! : parts[0] || "Client";
+  const country = /^[A-Z]{2}$/.test((c.country ?? "").toUpperCase()) ? c.country!.toUpperCase() : "BF";
+  const city = c.city?.trim() || (country === "BF" ? "Ouagadougou" : "Non renseignée");
+  const phone = (c.phone ?? "").replace(/[^0-9+]/g, "");
+  return {
+    customer_name: name,
+    customer_surname: surname,
+    customer_email: c.email,
+    ...(phone ? { customer_phone_number: phone } : {}),
+    customer_address: city,
+    customer_city: city,
+    customer_country: country,
+    customer_state: country,
+    customer_zip_code: "00000",
+  };
+}
+
 /** Ordre des champs pour le calcul du jeton HMAC (x-token) des notifications CinetPay. */
 export const CINETPAY_TOKEN_FIELDS = [
   "cpm_site_id", "cpm_trans_id", "cpm_trans_date", "cpm_amount", "cpm_currency", "signature", "payment_method",
@@ -52,9 +73,8 @@ export const cinetpay: PaymentProvider = {
         return_url: input.returnUrl,
         channels: "ALL",
         lang: "fr",
-        customer_name: input.customer.name,
-        customer_email: input.customer.email,
-        customer_phone_number: input.customer.phone ?? undefined,
+        // Champs exigés par CinetPay pour le paiement par carte bancaire (valeurs par défaut si le profil est incomplet).
+        ...customerFields(input.customer),
       }),
     });
     const json = (await res.json().catch(() => ({}))) as { code?: string; message?: string; data?: { payment_url?: string } };
