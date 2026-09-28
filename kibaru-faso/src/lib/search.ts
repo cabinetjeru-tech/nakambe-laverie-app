@@ -1,3 +1,5 @@
+import type { LifecycleState } from "./metadata";
+
 /**
  * Recherche dans les documents de référence : découpage en extraits et classement BM25.
  * Fonctions pures (aucun accès disque), utilisables côté serveur et dans les tests.
@@ -24,14 +26,32 @@ export type RefDocument = {
   status?: string;
   /** Règle d'usage propre au document, transmise au modèle avec chaque extrait. */
   notice?: string;
+  /** Identifiant stable dans la base KIBARU (ex. BF-MATH-6E-GUIDE-001). */
+  documentId?: string;
+  organisme?: string;
+  pays?: string;
+  niveau?: string;
+  year?: string;
+  version?: string;
+  /** Hiérarchie des sources (configuration V2, section 7) : 1 = document officiel du ministère … 5 = connaissance générale. */
+  reliability?: number;
+  /** Cycle de vie : actif (défaut), archive, remplace, declasse. */
+  state?: LifecycleState;
+  /** Identifiants des documents que celui-ci remplace. */
+  supersedes?: string[];
+  integratedAt?: string;
+  updatedAt?: string;
+  expiresAt?: string;
   text: string;
 };
+
+export type DocInfo = Omit<RefDocument, "text">;
 
 export type Chunk = { docId: string; index: number; text: string };
 
 export type Excerpt = {
   label: string; // R1, R2…
-  doc: Pick<RefDocument, "id" | "title" | "type" | "origin" | "source" | "status" | "notice">;
+  doc: DocInfo;
   text: string;
   score: number;
 };
@@ -126,10 +146,46 @@ export function isApplicable(doc: RefDocument, classe?: string, discipline?: str
   return true;
 }
 
+export type ArchivedDoc = { doc: DocInfo; reason: string };
+
+export function docInfo(d: RefDocument): DocInfo {
+  const { text: _text, ...info } = d;
+  return info;
+}
+
+/**
+ * Gestion des versions (configuration V2, sections 4, 6 et 22) : sépare les documents utilisables des archives.
+ * Un document sort de la recherche s'il est archivé, déclassé ou marqué remplacé, s'il a expiré, ou si un
+ * document actif déclare explicitement le remplacer (« remplace: <document_id> »). Rien n'est supprimé :
+ * les archives restent listées. Aucune version n'est jamais déduite automatiquement de la ressemblance des titres.
+ */
+export function partitionByLifecycle(docs: RefDocument[], today = new Date().toISOString().slice(0, 10)): { active: RefDocument[]; archived: ArchivedDoc[] } {
+  const archived: ArchivedDoc[] = [];
+  const candidates: RefDocument[] = [];
+  const stateLabel: Record<string, string> = { archive: "archivé", remplace: "marqué comme remplacé", declasse: "déclassé" };
+  for (const d of docs) {
+    if (d.state && d.state !== "actif") archived.push({ doc: docInfo(d), reason: stateLabel[d.state]! });
+    else if (d.expiresAt && d.expiresAt < today) archived.push({ doc: docInfo(d), reason: `expiré le ${d.expiresAt}` });
+    else candidates.push(d);
+  }
+  const replacedBy = new Map<string, RefDocument>();
+  for (const d of candidates) for (const id of d.supersedes ?? []) replacedBy.set(normalize(id).trim(), d);
+  const active: RefDocument[] = [];
+  for (const d of candidates) {
+    const by = d.documentId ? replacedBy.get(normalize(d.documentId).trim()) : undefined;
+    if (by && by !== d) archived.push({ doc: docInfo(d), reason: `remplacé par ${by.documentId ?? by.title}${by.version ? ` (version ${by.version})` : ""}` });
+    else active.push(d);
+  }
+  return { active, archived };
+}
+
+/** Pondération selon la hiérarchie des sources : à pertinence égale, le document le plus fiable passe devant. */
+const RELIABILITY_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
+
 /**
  * Classe les extraits par pertinence (BM25) pour la requête.
- * Le titre du document compte dans le score, pour qu'un « Programme de mathématiques 6e »
- * remonte sur une question « fractions en 6e ».
+ * Le titre, le type, l'année et la version du document comptent dans le score, pour qu'un
+ * « Programme de mathématiques 6e » remonte sur une question « fractions en 6e ».
  */
 export function searchDocuments(
   docs: RefDocument[],
@@ -145,7 +201,7 @@ export function searchDocuments(
   type Scored = { doc: RefDocument; text: string; tf: Map<string, number>; len: number };
   const items: Scored[] = [];
   for (const doc of applicable) {
-    const titleTokens = tokenize(`${doc.title} ${doc.type}`);
+    const titleTokens = tokenize([doc.title, doc.type, doc.year, doc.version && `version ${doc.version}`].filter(Boolean).join(" "));
     for (const text of chunkText(doc.text)) {
       const toks = [...tokenize(text), ...titleTokens];
       const tf = new Map<string, number>();
@@ -172,7 +228,7 @@ export function searchDocuments(
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
         score += (idf * f * (k1 + 1)) / (f + k1 * (1 - b + (b * it.len) / avgLen));
       }
-      return { it, score };
+      return { it, score: score * (RELIABILITY_WEIGHT[it.doc.reliability ?? 4] ?? 1) };
     })
     .filter((s) => s.score > 0)
     .sort((a, b2) => b2.score - a.score);
@@ -182,12 +238,7 @@ export function searchDocuments(
   for (const { it, score } of scored) {
     if (out.length >= limit || total + it.text.length > maxChars) break;
     total += it.text.length;
-    out.push({
-      label: `R${out.length + 1}`,
-      doc: { id: it.doc.id, title: it.doc.title, type: it.doc.type, origin: it.doc.origin, source: it.doc.source, status: it.doc.status, notice: it.doc.notice },
-      text: it.text,
-      score: Math.round(score * 100) / 100,
-    });
+    out.push({ label: `R${out.length + 1}`, doc: docInfo(it.doc), text: it.text, score: Math.round(score * 100) / 100 });
   }
   return out;
 }
@@ -196,27 +247,53 @@ function escapeAttr(s: string): string {
   return s.replace(/[&"<>]/g, (c) => ({ "&": "&amp;", '"': "&quot;", "<": "&lt;", ">": "&gt;" })[c] as string);
 }
 
-/** Bloc <documents_de_reference> inséré dans le message de l'enseignant. */
 function stripTags(s: string): string {
   return s.replace(/[<>]/g, "");
 }
 
-export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt[]): string {
+/** Métadonnées utiles au modèle, dans un ordre stable. */
+function describe(d: DocInfo): [string, string][] {
+  const pairs: [string, string | undefined][] = [
+    ["document_id", d.documentId],
+    ["type", d.type],
+    ["origine", d.origin],
+    ["organisme", d.organisme],
+    ["pays", d.pays],
+    ["classes", d.classes.join(", ")],
+    ["matieres", d.disciplines.join(", ")],
+    ["annee", d.year],
+    ["version", d.version],
+    ["statut", d.status],
+    ["niveau_fiabilite", d.reliability ? String(d.reliability) : undefined],
+    ["source", d.source],
+    ["mise_a_jour", d.updatedAt],
+  ];
+  return pairs.filter((p): p is [string, string] => !!p[1]);
+}
+
+/** Bloc <documents_de_reference> inséré dans le message de l'enseignant. */
+export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt[], archived: ArchivedDoc[] = []): string {
+  const archives = archived.length
+    ? `\n<archives>\nDocuments conservés en archive, NON utilisés pour cette demande :\n${archived
+        .slice(0, 30)
+        .map((a) => `- ${stripTags(a.doc.title)}${a.doc.documentId ? ` [${stripTags(a.doc.documentId)}]` : ""}${a.doc.version ? ` (version ${stripTags(a.doc.version)})` : ""} : ${stripTags(a.reason)}`)
+        .join("\n")}\n</archives>`
+    : "";
   if (catalogue.length === 0) {
-    return "<documents_de_reference>\nAucun document de référence n'est disponible pour cette demande.\n</documents_de_reference>";
+    return `<documents_de_reference>\nAucun document de la base documentaire KIBARU n'est disponible pour cette demande.${archives}\n</documents_de_reference>`;
   }
   const shown = catalogue.slice(0, 60);
   const lines = shown.map(
-    (d) => `- ${d.title} (${d.type || "document"} ; origine=${d.origin}${d.source ? ` ; ${d.source}` : ""}${d.classes.length ? ` ; classes : ${d.classes.join(", ")}` : ""}${d.disciplines.length ? ` ; disciplines : ${d.disciplines.join(", ")}` : ""}${d.status ? ` ; statut : ${d.status}` : ""})${d.notice ? `\n  Règle d'usage : ${stripTags(d.notice)}` : ""}`,
+    (d) => `- ${stripTags(d.title)} (${describe(d).map(([k, v]) => `${k}=${stripTags(v)}`).join(" ; ")})${d.notice ? `\n  Règle d'usage : ${stripTags(d.notice)}` : ""}`,
   );
   if (catalogue.length > shown.length) lines.push(`- … et ${catalogue.length - shown.length} autre(s) document(s)`);
   const body = excerpts.length
     ? excerpts
         .map(
           (e) =>
-            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" type="${escapeAttr(e.doc.type)}" origine="${e.doc.origin}"${e.doc.source ? ` source="${escapeAttr(e.doc.source)}"` : ""}${e.doc.status ? ` statut="${escapeAttr(e.doc.status)}"` : ""}>\n${e.doc.notice ? `<regle_usage>${stripTags(e.doc.notice)}</regle_usage>\n` : ""}${e.text.replace(/<\/?(extrait|documents_de_reference)[^>]*>/gi, "")}\n</extrait>`,
+            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" ${describe(e.doc).map(([k, v]) => `${k}="${escapeAttr(v)}"`).join(" ")}>\n${e.doc.notice ? `<regle_usage>${stripTags(e.doc.notice)}</regle_usage>\n` : ""}${e.text.replace(/<\/?(extrait|documents_de_reference|archives|catalogue|regle_usage)[^>]*>/gi, "")}\n</extrait>`,
         )
         .join("\n")
     : "Aucun extrait pertinent n'a été retrouvé dans ces documents pour cette demande.";
-  return `<documents_de_reference>\n<catalogue>\n${lines.join("\n")}\n</catalogue>\n${body}\n</documents_de_reference>`;
+  return `<documents_de_reference>\n<catalogue>\n${lines.join("\n")}\n</catalogue>${archives}\n${body}\n</documents_de_reference>`;
 }

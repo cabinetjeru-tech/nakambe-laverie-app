@@ -2,7 +2,38 @@
 
 export type DocPart = { key: string; title: string; markdown: string };
 
-const HEADING = /^#{1,4}\s*\**\s*DOCUMENT\s+(\d)\s*[—–:-]+\s*(.+?)\**\s*$/gim;
+/** Un sujet est distribué aux élèves : il est exporté sans mention KIBARU. */
+export function isStudentCopy(title: string): boolean {
+  return /\bsujet\b/i.test(title) && !/corrig/i.test(title);
+}
+
+/** Rubriques du tableau de bord (configuration V2, section 11). */
+export const CATEGORIES = {
+  cours: "Mes cours",
+  devoir: "Mes devoirs",
+  corrige: "Mes corrigés",
+  evaluation: "Mes évaluations",
+  progression: "Mes progressions",
+  remediation: "Remédiation",
+  activite: "Activités",
+  autre: "Autres",
+} as const;
+export type Category = keyof typeof CATEGORIES;
+
+/** Classe une préparation d'après la première demande (quand elle ne vient pas d'une action rapide). */
+export function classify(text: string): Category {
+  const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/progression|repartition annuelle|repartition trimestrielle/.test(t)) return "progression";
+  if (/remedia|ne comprennent pas|difficultes? (a|en|de|pour)/.test(t)) return "remediation";
+  if (/devoir/.test(t)) return "devoir";
+  if (/evaluation|interrogation|controle|composition|examen blanc/.test(t)) return "evaluation";
+  if (/corrig|bareme/.test(t)) return "corrige";
+  if (/lecon|cours|seance|fiche|sequence|enseigner/.test(t)) return "cours";
+  if (/activite|situation.probleme|exercice|revision/.test(t)) return "activite";
+  return "autre";
+}
+
+const HEADING = /^#{1,4}\s*\**\s*DOCUMENT\s+(\d{1,2})\s*[—–:-]+\s*(.+?)\**\s*$/gim;
 
 export function splitDocuments(markdown: string): DocPart[] {
   const matches = [...markdown.matchAll(HEADING)];
@@ -13,7 +44,7 @@ export function splitDocuments(markdown: string): DocPart[] {
     const end = i + 1 < matches.length ? matches[i + 1]!.index! : markdown.length;
     const label = m[2]!.replace(/\*+/g, "").trim();
     const name = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
-    parts.push({ key: `doc${m[1]}`, title: name, markdown: markdown.slice(start, end).trim() });
+    parts.push({ key: `doc${i + 1}`, title: name, markdown: markdown.slice(start, end).trim() });
   });
   return parts;
 }

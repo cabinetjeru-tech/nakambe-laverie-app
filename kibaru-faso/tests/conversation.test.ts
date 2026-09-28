@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { chatRequestSchema, formatContextBlock, normalizeHistory } from "@/lib/conversation";
-import { splitDocuments } from "@/lib/documents";
+import { classify, isStudentCopy, splitDocuments } from "@/lib/documents";
 import { SYSTEM_PROMPT } from "@/lib/prompt";
 import { TEMPLATES } from "@/lib/templates";
 
@@ -49,7 +49,7 @@ describe("séparation sujet / corrigé", () => {
 
 describe("prompt système", () => {
   it("contient les règles essentielles", () => {
-    for (const s of ["KIBARU FASO", "INTERDICTION D'INVENTER", "PROPOSITION KIBARU", "À VÉRIFIER", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée"]) {
+    for (const s of ["KIBARU FASO", "INTERDICTION D'INVENTER", "PROPOSITION PÉDAGOGIQUE KIBARU", "CONNAISSANCE GÉNÉRALE", "SOURCE KIBARU", "À VÉRIFIER", "HIÉRARCHIE DES SOURCES", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée dans la base documentaire KIBARU disponible.", "30. MESSAGE DE DÉMARRAGE"]) {
       expect(SYSTEM_PROMPT).toContain(s);
     }
   });
@@ -57,5 +57,26 @@ describe("prompt système", () => {
     const lecon = TEMPLATES.find((t) => t.id === "lecon")!;
     expect(lecon.build({})).toContain("[classe]");
     expect(lecon.build({ classe: "6e", discipline: "Mathématiques", theme: "Les fractions" })).toContain("Mathématiques en 6e sur « Les fractions »");
+    expect(TEMPLATES.filter((t) => t.main).map((t) => t.label)).toEqual([
+      "Un cours", "Un devoir", "Une évaluation", "Un corrigé", "Une progression", "Une activité de remédiation", "Une activité pédagogique",
+    ]);
+  });
+});
+
+describe("tableau de bord et exports", () => {
+  it("classe les préparations par rubrique", () => {
+    expect(classify("Crée-moi un devoir de mathématiques de 4e avec corrigé")).toBe("devoir");
+    expect(classify("Rédige le corrigé de ce sujet")).toBe("corrige");
+    expect(classify("Prépare une interrogation écrite")).toBe("evaluation");
+    expect(classify("Construis la progression annuelle")).toBe("progression");
+    expect(classify("Mes élèves ne comprennent pas les fractions")).toBe("remediation");
+    expect(classify("Prépare une leçon sur Thalès")).toBe("cours");
+    expect(classify("Bonjour")).toBe("autre");
+  });
+  it("sépare plusieurs versions et reconnaît les copies élèves", () => {
+    const md = "## DOCUMENT 1 — SUJET VERSION A\na\n## DOCUMENT 2 — SUJET VERSION B\nb\n## DOCUMENT 3 — CORRIGÉ VERSION A\nc\n## DOCUMENT 10 — BARÈME\nd";
+    const parts = splitDocuments(md);
+    expect(parts.map((p) => p.title)).toEqual(["Sujet version a", "Sujet version b", "Corrigé version a", "Barème"]);
+    expect(parts.map((p) => isStudentCopy(p.title))).toEqual([true, true, false, false]);
   });
 });

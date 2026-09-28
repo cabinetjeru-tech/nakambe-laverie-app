@@ -6,10 +6,11 @@
  */
 
 import type { TeacherContext } from "./conversation";
+import type { Category } from "./documents";
 
-export type Source = { label: string; title: string; type: string; origin: "bibliotheque" | "enseignant"; source: string | null; status?: string | null };
+export type Source = { label: string; title: string; type: string; origin: "bibliotheque" | "enseignant"; source: string | null; status?: string | null; documentId?: string | null; version?: string | null; year?: string | null };
 export type StoredMessage = { role: "user" | "assistant"; content: string; sources?: Source[]; error?: boolean };
-export type Conversation = { id: string; title: string; updatedAt: number; messages: StoredMessage[] };
+export type Conversation = { id: string; title: string; category?: Category; updatedAt: number; messages: StoredMessage[] };
 export type TeacherDoc = { id: string; title: string; type: string; text: string; enabled: boolean; addedAt: number };
 
 const KEYS = { conversations: "kibaru:conversations", context: "kibaru:contexte", docs: "kibaru:documents" };

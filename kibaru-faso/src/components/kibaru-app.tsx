@@ -2,26 +2,41 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
-import { conversationTitle, splitDocuments } from "@/lib/documents";
+import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
 import { downloadWord, printHtml } from "@/lib/export";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
-import { DISCIPLINES, TEMPLATES } from "@/lib/templates";
+import { DISCIPLINES, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
 import { Markdown } from "./markdown";
 
-type LibraryDoc = { id: string; title: string; type: string; classes: string[]; disciplines: string[]; source: string | null; status: string | null; notice: string | null };
-type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[] };
+type LibraryDoc = {
+  id: string;
+  documentId: string | null;
+  title: string;
+  type: string;
+  classes: string[];
+  disciplines: string[];
+  source: string | null;
+  organisme: string | null;
+  year: string | null;
+  version: string | null;
+  reliability: number | null;
+  status: string | null;
+  notice: string | null;
+  reason?: string;
+};
+type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[]; archives: LibraryDoc[] };
 
-const FOLLOW_UPS = [
-  "Adapte cette production pour une classe faible.",
-  "Prépare une version pour les élèves avancés.",
-  "Ajoute un barème détaillé.",
-  "Rends-la plus courte et plus directe.",
-  "Continue.",
-];
+const RELIABILITY: Record<number, string> = {
+  1: "Niveau 1 — document officiel",
+  2: "Niveau 2 — programme ou guide officiellement reconnu",
+  3: "Niveau 3 — document institutionnel complémentaire",
+  4: "Niveau 4 — ressource secondaire",
+  5: "Niveau 5 — connaissance générale",
+};
 
 export function KibaruApp() {
-  const [status, setStatus] = useState<Status>({ loading: true, required: false, granted: false, configured: true, library: [] });
+  const [status, setStatus] = useState<Status>({ loading: true, required: false, granted: false, configured: true, library: [], archives: [] });
   const [context, setContext] = useState<TeacherContext>({});
   const [docs, setDocs] = useState<TeacherDoc[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -29,6 +44,8 @@ export function KibaruApp() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  // Rubrique de l'action rapide choisie, retenue tant que l'enseignant garde le début du texte proposé.
+  const [pendingCategory, setPendingCategory] = useState<{ category: Category; prefix: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -37,12 +54,12 @@ export function KibaruApp() {
     try {
       const a = (await (await fetch("/api/acces")).json()) as { required: boolean; granted: boolean };
       if (a.required && !a.granted) {
-        setStatus({ loading: false, required: true, granted: false, configured: true, library: [] });
+        setStatus({ loading: false, required: true, granted: false, configured: true, library: [], archives: [] });
         return;
       }
       const r = await fetch("/api/referentiels");
-      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[] };
-      setStatus({ loading: false, required: a.required, granted: true, configured: j.configured, library: j.documents ?? [] });
+      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[]; archives: LibraryDoc[] };
+      setStatus({ loading: false, required: a.required, granted: true, configured: j.configured, library: j.documents ?? [], archives: j.archives ?? [] });
     } catch {
       setStatus((s) => ({ ...s, loading: false, granted: true }));
     }
@@ -92,7 +109,8 @@ export function KibaruApp() {
     const base = current?.messages ?? [];
     if (!convId) {
       convId = newId();
-      const conv: Conversation = { id: convId, title: conversationTitle(content), updatedAt: Date.now(), messages: [userMsg] };
+      const conv: Conversation = { id: convId, title: conversationTitle(content), category: pendingCategory && content.startsWith(pendingCategory.prefix) ? pendingCategory.category : classify(content), updatedAt: Date.now(), messages: [userMsg] };
+      setPendingCategory(null);
       persist((list) => [conv, ...list]);
       setCurrentId(convId);
     } else {
@@ -174,12 +192,14 @@ export function KibaruApp() {
     if (busy) abortRef.current?.abort();
     setCurrentId(null);
     setInput("");
+    setPendingCategory(null);
     setSidebar(false);
     inputRef.current?.focus();
   }
 
-  function applyTemplate(build: (c: TeacherContext) => string) {
-    setInput(build(context));
+  /** Pré-remplit la zone de saisie et sélectionne le premier élément à compléter entre crochets. */
+  function prefill(text: string) {
+    setInput(text);
     setTimeout(() => {
       const el = inputRef.current;
       if (!el) return;
@@ -187,6 +207,12 @@ export function KibaruApp() {
       const i = el.value.indexOf("[");
       if (i >= 0) el.setSelectionRange(i, el.value.indexOf("]", i) + 1);
     }, 0);
+  }
+
+  function applyTemplate(t: Template) {
+    const text = t.build(context);
+    if (!currentId) setPendingCategory({ category: t.category, prefix: text.slice(0, Math.min(20, text.indexOf("[") >= 0 ? text.indexOf("[") : 20)) });
+    prefill(text);
   }
 
   if (status.loading) {
@@ -232,7 +258,7 @@ export function KibaruApp() {
           className={`${sidebar ? "fixed inset-x-0 top-[53px] bottom-0 z-20 block" : "hidden"} w-full overflow-y-auto border-r border-line bg-white lg:static lg:block lg:w-80 lg:shrink-0`}
         >
           <ContextPanel context={context} onChange={updateContext} />
-          <DocumentsPanel library={status.library} docs={docs} onChange={updateDocs} context={context} />
+          <DocumentsPanel library={status.library} archives={status.archives} docs={docs} onChange={updateDocs} context={context} />
           <HistoryPanel
             conversations={conversations}
             currentId={currentId}
@@ -270,12 +296,20 @@ export function KibaruApp() {
                     </div>
                   )}
                   {!busy && last?.role === "assistant" && !last.error && (
-                    <div className="flex flex-wrap gap-2">
-                      {FOLLOW_UPS.map((f) => (
-                        <button key={f} type="button" onClick={() => void send(f)} className="rounded-full border border-line bg-white px-3 py-1 text-xs text-ink hover:border-faso hover:text-faso">
-                          {f.replace(/\.$/, "")}
-                        </button>
-                      ))}
+                    <div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">Modifier cette production</div>
+                      <div className="flex flex-wrap gap-2">
+                        {MODIFICATIONS.map((m) => (
+                          <button
+                            key={m.label}
+                            type="button"
+                            onClick={() => (m.prompt.includes("[") ? prefill(m.prompt) : void send(m.prompt))}
+                            className="rounded-full border border-line bg-white px-3 py-1 text-xs text-ink hover:border-faso hover:text-faso"
+                          >
+                            {m.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div ref={endRef} />
@@ -384,12 +418,34 @@ function AccessGate({ onGranted }: { onGranted: () => void }) {
   );
 }
 
-function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContext; onTemplate: (b: (c: TeacherContext) => string) => void; libraryCount: number }) {
+function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContext; onTemplate: (t: Template) => void; libraryCount: number }) {
+  const main = TEMPLATES.filter((t) => t.main);
+  const others = TEMPLATES.filter((t) => !t.main);
   return (
     <div className="fade-in">
-      <h1 className="text-2xl font-bold text-faso-dark">Bonjour, que préparons-nous aujourd&apos;hui ?</h1>
-      <p className="mt-2 text-[15px] text-muted">
-        Renseignez votre classe dans le panneau « Ma classe », choisissez une action ou écrivez directement votre demande.
+      <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur KIBARU FASO</h1>
+      <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
+      <p className="mt-3 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {main.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onTemplate(t)}
+            className="flex items-start gap-3 rounded-xl border border-line bg-white p-3.5 text-left transition hover:border-faso hover:shadow-sm"
+          >
+            <span aria-hidden className="text-xl leading-none">
+              {t.icon}
+            </span>
+            <span>
+              <span className="block font-semibold text-faso-dark">{t.label}</span>
+              <span className="mt-0.5 block text-xs text-muted">{t.hint}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      <p className="mt-4 text-[15px] text-muted">
+        Indiquez simplement votre classe, votre matière et ce dont vous avez besoin — dans le panneau « Ma classe » ou directement dans votre message.
         {context.classe || context.discipline ? (
           <>
             {" "}
@@ -397,37 +453,43 @@ function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContex
           </>
         ) : null}
       </p>
-      <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {TEMPLATES.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => onTemplate(t.build)}
-            className="rounded-xl border border-line bg-white p-3.5 text-left transition hover:border-faso hover:shadow-sm"
-          >
-            <div className="font-semibold text-faso-dark">{t.label}</div>
-            <div className="mt-0.5 text-xs text-muted">{t.hint}</div>
-          </button>
-        ))}
+      <div className="mt-5">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted">Autres actions</div>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {others.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              title={t.hint}
+              onClick={() => onTemplate(t)}
+              className="rounded-full border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-faso hover:text-faso"
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="mt-6 rounded-xl border border-line bg-white p-4 text-sm leading-6">
         <div className="font-semibold">Transparence des contenus</div>
         <p className="mt-1 text-muted">Chaque production distingue :</p>
         <ul className="mt-1 space-y-1">
           <li>
-            <span className="badge badge-source">SOURCE</span> information retrouvée dans les documents de référence, avec son renvoi <span className="cite">R1</span> ;
+            <span className="badge badge-source">SOURCE KIBARU</span> information de la base documentaire, avec son renvoi <span className="cite">R1</span> ;
           </li>
           <li>
-            <span className="badge badge-proposition">PROPOSITION KIBARU</span> contenu pédagogique proposé par l&apos;intelligence artificielle ;
+            <span className="badge badge-proposition">PROPOSITION PÉDAGOGIQUE KIBARU</span> contenu conçu par l&apos;IA pour vos besoins ;
           </li>
           <li>
-            <span className="badge badge-verifier">À VÉRIFIER</span> information dont le caractère officiel n&apos;a pas pu être confirmé.
+            <span className="badge badge-general">CONNAISSANCE GÉNÉRALE</span> information issue des connaissances générales de l&apos;IA, pas de la base ;
+          </li>
+          <li>
+            <span className="badge badge-verifier">À VÉRIFIER</span> information que les documents disponibles ne permettent pas de confirmer.
           </li>
         </ul>
         <p className="mt-2 text-muted">
           {libraryCount > 0
-            ? `${libraryCount} document(s) de référence disponible(s) dans la bibliothèque.`
-            : "Aucun document de référence n'est encore chargé dans la bibliothèque : ajoutez vos programmes et guides dans « Documents de référence » pour que KIBARU FASO s'appuie dessus."}
+            ? `${libraryCount} document(s) actif(s) dans la base documentaire KIBARU.`
+            : "La base documentaire KIBARU ne contient encore aucun document : les réponses sont des propositions ou des connaissances générales, jamais des prescriptions officielles."}
         </p>
       </div>
     </div>
@@ -444,7 +506,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
   const exportPart = (kind: "print" | "word", key: string | null, label: string) => {
     const el = key ? partRefs.current[key] : fullRef.current;
     if (!el) return;
-    const withFooter = key !== "doc1"; // le sujet distribué aux élèves ne porte pas de mention KIBARU
+    const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention KIBARU
     const title = `${baseTitle} — ${label}`;
     if (kind === "print") printHtml(title, el.innerHTML, withFooter);
     else downloadWord(title, el.innerHTML, withFooter);
@@ -473,8 +535,11 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
             {message.sources.map((s) => (
               <li key={s.label}>
                 <span className="cite">{s.label}</span> {s.title}
+                {s.documentId ? ` [${s.documentId}]` : ""}
+                {s.version ? `, version ${s.version}` : ""}
+                {s.year ? `, ${s.year}` : ""}
                 {s.source ? ` — ${s.source}` : ""}
-                {s.status ? <span className="text-rouge"> · {s.status}</span> : null} · {s.origin === "enseignant" ? "document de l'enseignant" : "bibliothèque de référence"}
+                {s.status ? <span className="text-rouge"> · {s.status}</span> : null} · {s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire KIBARU"}
               </li>
             ))}
           </ul>
@@ -492,7 +557,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
           >
             {copied ? "Copié" : "Copier"}
           </ActionButton>
-          <ActionButton onClick={() => exportPart("print", null, "Document complet")}>Imprimer</ActionButton>
+          <ActionButton onClick={() => exportPart("print", null, "Document complet")}>Imprimer / PDF</ActionButton>
           <ActionButton onClick={() => exportPart("word", null, "Document complet")}>Word</ActionButton>
           {parts.map((p) => (
             <span key={p.key} className="contents">
@@ -583,7 +648,7 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
   );
 }
 
-function DocumentsPanel({ library, docs, onChange, context }: { library: LibraryDoc[]; docs: TeacherDoc[]; onChange: (d: TeacherDoc[]) => void; context: TeacherContext }) {
+function DocumentsPanel({ library, archives, docs, onChange, context }: { library: LibraryDoc[]; archives: LibraryDoc[]; docs: TeacherDoc[]; onChange: (d: TeacherDoc[]) => void; context: TeacherContext }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -618,29 +683,46 @@ function DocumentsPanel({ library, docs, onChange, context }: { library: Library
   );
 
   return (
-    <Section title="Documents de référence">
+    <Section title="Documents">
       <div className="text-xs text-muted">
-        <div className="font-semibold text-ink">Bibliothèque ({library.length})</div>
+        <div className="font-semibold text-ink">Base documentaire KIBARU ({library.length})</div>
         {library.length === 0 ? (
-          <p className="mt-1">Aucun document officiel n&apos;est encore chargé par l&apos;administrateur.</p>
+          <p className="mt-1">Aucun document validé n&apos;est encore intégré par l&apos;administrateur.</p>
         ) : (
           <>
             {(context.classe || context.discipline) && <p className="mt-1">{matching.length} applicable(s) à votre classe et discipline.</p>}
-            <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto">
+            <ul className="mt-1 max-h-56 space-y-2 overflow-y-auto">
               {library.map((d) => (
                 <li key={d.id} className={matching.includes(d) ? "text-ink" : "opacity-50"} title={d.notice ?? undefined}>
-                  {d.title} <span className="text-muted">· {d.type}</span>
+                  <div>{d.title}</div>
+                  <div className="text-[11px] text-muted">
+                    {[d.type, d.documentId, d.year, d.version && `version ${d.version}`].filter(Boolean).join(" · ")}
+                  </div>
+                  {d.reliability && <div className="text-[11px] text-faso-dark">{RELIABILITY[d.reliability]}</div>}
                   {d.status && <div className="text-[11px] text-rouge">{d.status}</div>}
                 </li>
               ))}
             </ul>
           </>
         )}
+        {archives.length > 0 && (
+          <details className="mt-2">
+            <summary className="cursor-pointer">Archives ({archives.length}) — non utilisées</summary>
+            <ul className="mt-1 space-y-1">
+              {archives.map((d) => (
+                <li key={d.id}>
+                  {d.title}
+                  {d.version ? ` (version ${d.version})` : ""} — <span className="italic">{d.reason}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
       <div className="mt-4 text-xs">
-        <div className="font-semibold text-ink">Mes documents ({docs.length})</div>
-        <p className="mt-1 text-muted">Programmes, guides, fiches… (PDF, Word, texte). Le texte est lu puis conservé sur cet appareil uniquement.</p>
+        <div className="font-semibold text-ink">Ma bibliothèque ({docs.length})</div>
+        <p className="mt-1 text-muted">Vos documents personnels (PDF, Word, texte). Ils complètent la base KIBARU sans être considérés comme validés. Le texte est conservé sur cet appareil uniquement.</p>
         <ul className="mt-2 space-y-1.5">
           {docs.map((d) => (
             <li key={d.id} className="flex items-center gap-2">
@@ -682,23 +764,46 @@ function DocumentsPanel({ library, docs, onChange, context }: { library: Library
 }
 
 function HistoryPanel({ conversations, currentId, onOpen, onDelete }: { conversations: Conversation[]; currentId: string | null; onOpen: (id: string) => void; onDelete: (id: string) => void }) {
+  const [filter, setFilter] = useState<Category | "tout">("tout");
+  const counts = new Map<Category, number>();
+  for (const c of conversations) {
+    const k = c.category ?? classify(c.title);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  const shown = filter === "tout" ? conversations : conversations.filter((c) => (c.category ?? classify(c.title)) === filter);
+  const chip = (active: boolean) =>
+    `rounded-full border px-2 py-0.5 text-[11px] ${active ? "border-faso bg-faso text-white" : "border-line text-ink hover:border-faso"}`;
   return (
     <Section title={`Mes préparations (${conversations.length})`}>
       {conversations.length === 0 ? (
-        <p className="text-xs text-muted">Vos préparations apparaîtront ici (enregistrées sur cet appareil).</p>
+        <p className="text-xs text-muted">Vos cours, devoirs, corrigés, évaluations et progressions apparaîtront ici (enregistrés sur cet appareil).</p>
       ) : (
-        <ul className="space-y-1">
-          {conversations.map((c) => (
-            <li key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm ${c.id === currentId ? "bg-faso-50" : "hover:bg-surface"}`}>
-              <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 truncate text-left" title={c.title}>
-                {c.title}
-              </button>
-              <button type="button" onClick={() => onDelete(c.id)} className="text-xs text-muted hover:text-rouge" aria-label="Supprimer">
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            <button type="button" className={chip(filter === "tout")} onClick={() => setFilter("tout")}>
+              Historique ({conversations.length})
+            </button>
+            {(Object.keys(CATEGORIES) as Category[])
+              .filter((k) => counts.get(k))
+              .map((k) => (
+                <button key={k} type="button" className={chip(filter === k)} onClick={() => setFilter(k)}>
+                  {CATEGORIES[k]} ({counts.get(k)})
+                </button>
+              ))}
+          </div>
+          <ul className="space-y-1">
+            {shown.map((c) => (
+              <li key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm ${c.id === currentId ? "bg-faso-50" : "hover:bg-surface"}`}>
+                <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 truncate text-left" title={c.title}>
+                  {c.title}
+                </button>
+                <button type="button" onClick={() => onDelete(c.id)} className="text-xs text-muted hover:text-rouge" aria-label="Supprimer">
+                  ✕
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Section>
   );

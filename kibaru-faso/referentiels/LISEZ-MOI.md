@@ -1,10 +1,10 @@
-# Bibliothèque de référence de KIBARU FASO
+# Base documentaire KIBARU FASO
 
-Déposez ici les documents officiels sur lesquels KIBARU FASO doit s'appuyer : programmes, curricula, guides
-pédagogiques, progressions officielles, référentiels, documents d'accompagnement.
+Déposez ici les documents validés sur lesquels KIBARU FASO doit s'appuyer : programmes, curricula, guides
+pédagogiques, progressions officielles, référentiels, documents d'accompagnement (configuration V2, sections 3 à 7).
 
 **N'y déposez que des documents authentiques, dont vous connaissez l'origine.** KIBARU FASO présente leur contenu
-comme « SOURCE » : un document inexact deviendrait une fausse référence officielle.
+comme « SOURCE KIBARU » : un document inexact deviendrait une fausse référence.
 
 ## Formats acceptés
 
@@ -14,42 +14,62 @@ comme « SOURCE » : un document inexact deviendrait une fausse référence offi
 
 Les sous-dossiers sont permis, par exemple `mathematiques/`, `francais/`, `svt/`.
 
-## Décrire chaque document (fortement recommandé)
+## Fiche descriptive de chaque document (section 5)
 
-Les métadonnées permettent de n'utiliser que les documents applicables à la classe et à la discipline de
-l'enseignant, et de citer correctement la source.
-
-Pour un fichier `.md` ou `.txt`, en tête du fichier :
+Pour un fichier `.md` ou `.txt`, en tête du fichier, entre deux lignes `---`. Pour un `.pdf` ou un `.docx`, dans
+un fichier voisin portant le même nom suivi de `.meta` (par exemple `programme-maths-6e.pdf.meta`), sans les `---`.
+Les lignes commençant par `#` sont des commentaires.
 
 ```
 ---
+document_id: BF-MATH-6E-PROG-002
 titre: Programme de mathématiques — classe de 6e
-type: programme officiel
+organisme: [ministère / direction émettrice]
+pays: Burkina Faso
+niveau: 6e
 classes: 6e
-disciplines: Mathématiques
-source: [Ministère / direction émettrice], [année]
-statut: [facultatif — ex. : programme en vigueur, ou document ancien à confronter aux textes récents]
-avertissement: [facultatif — règle d'usage que KIBARU doit respecter pour ce document, sur une seule ligne]
+matieres: Mathématiques
+type: programme officiel
+annee: [année de publication]
+version: [numéro ou intitulé de version]
+statut: [ex. : programme en vigueur]
+etat: actif
+remplace: BF-MATH-6E-PROG-001
+fiabilite: 1
+source: [site, service, référence du document]
+date_integration: 2026-09-28
+date_mise_a_jour: 2026-09-28
+date_expiration:
+avertissement: [facultatif — règle d'usage propre à ce document, sur une seule ligne]
 ---
 (texte du document)
 ```
 
-Pour un `.pdf` ou un `.docx`, dans un fichier voisin portant le même nom suivi de `.meta`
-(par exemple `programme-maths-6e.pdf.meta`) avec les mêmes lignes, sans les `---`.
+| Rubrique | Rôle |
+|---|---|
+| `document_id` | Identifiant unique et stable (ex. `BF-MATH-6E-GUIDE-001`). Indispensable pour gérer les versions. |
+| `classes`, `matieres` | Filtrent les documents applicables à la classe et à la discipline de l'enseignant. Plusieurs valeurs séparées par des virgules ; vide = toutes. |
+| `annee`, `version`, `statut` | Transmis au modèle et affichés à l'enseignant. |
+| `etat` | `actif` (par défaut), `archive`, `remplace` ou `declasse`. Seuls les documents actifs sont consultés. |
+| `remplace` | Identifiant(s) du ou des documents que celui-ci remplace : ils passent automatiquement en archive. |
+| `fiabilite` | Hiérarchie des sources (section 7) : 1 document officiel du ministère, 2 programme / guide officiellement reconnu, 3 document institutionnel complémentaire, 4 ressource secondaire fiable. À pertinence égale, le plus fiable passe devant. |
+| `date_expiration` | Au-delà de cette date, le document passe en archive. |
+| `avertissement` | Règle d'usage que KIBARU doit respecter pour ce document (ex. : « document ancien, ne pas présenter comme le programme en vigueur »). |
 
-`classes` et `disciplines` acceptent plusieurs valeurs séparées par des virgules. Laissez-les vides pour un
-document qui concerne toutes les classes ou toutes les disciplines (par exemple un guide général d'évaluation).
+Une valeur `à renseigner` est ignorée : n'inventez jamais une année ou une version.
 
-## Statut et règle d'usage
+## Ajouter une nouvelle version (sections 6 et 22)
 
-`statut` et `avertissement` servent à signaler un document qui ne doit pas être pris au pied de la lettre (par
-exemple un guide officiel mais ancien). Ils sont transmis au modèle avec chaque extrait du document, et le statut
-s'affiche dans l'application. KIBARU FASO continue alors d'utiliser le contenu pédagogique du document, mais classe
-en « À VÉRIFIER » toute affirmation sur le programme actuellement applicable qui ne repose que sur lui.
-
-Exemple : [`mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta`](mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta).
+1. Déposez le nouveau document avec un **nouvel** `document_id` (ex. `…-002`) et `remplace: <ancien identifiant>`.
+2. Laissez l'ancien fichier en place : il est conservé comme archive, n'est plus consulté, et KIBARU sait qu'une
+   version plus récente existe.
+3. Le remplacement n'est jamais deviné d'après les titres : il n'a lieu que si `remplace` est renseigné, pour que la
+   nouvelle version ne soit privilégiée que lorsque son statut est clairement établi.
 
 ## Prise en compte
 
 Les documents sont lus au démarrage du serveur. Après un ajout : redéployez (Vercel) ou redémarrez l'application.
 Ce fichier `LISEZ-MOI.md` n'est pas lu comme document de référence.
+
+Exemple de fiche : [`mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta`](mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta)
+(le PDF correspondant reste à déposer).

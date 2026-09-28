@@ -7,6 +7,12 @@ import type { Source } from "@/lib/store";
 /** Rendu Markdown sûr (aucun HTML brut) avec badges de transparence et appels de source [R1]. */
 
 const BADGES: Record<string, string> = {
+  "SOURCE KIBARU": "badge badge-source",
+  "PROPOSITION PÉDAGOGIQUE KIBARU": "badge badge-proposition",
+  "PROPOSITION PEDAGOGIQUE KIBARU": "badge badge-proposition",
+  "CONNAISSANCE GÉNÉRALE": "badge badge-general",
+  "CONNAISSANCE GENERALE": "badge badge-general",
+  // Étiquettes de la première configuration (conversations déjà enregistrées).
   SOURCE: "badge badge-source",
   "PROPOSITION KIBARU": "badge badge-proposition",
   "À VÉRIFIER": "badge badge-verifier",
@@ -39,7 +45,7 @@ export function Markdown({ text, sources = [] }: { text: string; sources?: Sourc
       if (m) {
         const s = sources.find((x) => x.label === m[1]);
         return (
-          <span className="cite" title={s ? `${s.title}${s.source ? ` — ${s.source}` : ""} (${s.origin === "enseignant" ? "document de l'enseignant" : "bibliothèque de référence"})` : "Source"}>
+          <span className="cite" title={s ? `${s.title}${s.source ? ` — ${s.source}` : ""} (${s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire KIBARU"})` : "Source"}>
             {m[1]}
           </span>
         );

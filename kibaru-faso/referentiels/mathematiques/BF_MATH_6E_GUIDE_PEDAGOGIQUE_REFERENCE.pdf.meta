@@ -1,7 +1,20 @@
+# Fiche descriptive — configuration V2, section 5.
+# Informations fournies par le porteur du projet. Le PDF lui-même n'a pas encore pu être intégré ni lu :
+# l'année et la version seront renseignées après lecture du document (ne pas les deviner).
+document_id: BF-MATH-6E-GUIDE-001
 titre: Guide pédagogique de mathématiques — classe de 6e
-type: guide pédagogique
+organisme: Ministère de l'Éducation nationale du Burkina Faso
+pays: Burkina Faso
+niveau: 6e
 classes: 6e
-disciplines: Mathématiques
-source: Ministère de l'Éducation nationale du Burkina Faso (document hébergé sur le site du ministère)
-statut: Document pédagogique officiel, mais ancien : il signale lui-même des limites liées à l'ancienne organisation des contenus ; ce n'est pas nécessairement le programme en vigueur
+matieres: Mathématiques
+type: guide pédagogique
+annee: à renseigner
+version: à renseigner
+statut: Référence pédagogique officielle, mais ancienne : le document signale lui-même des limites liées à l'ancienne organisation des contenus ; ce n'est pas nécessairement le programme en vigueur
+etat: actif
+fiabilite: 2
+source: Site du ministère — https://www.education.gov.bf/fileadmin/user_upload/storages/guide_maths_6e.pdf
+date_integration: 2026-09-28
+date_mise_a_jour: 2026-09-28
 avertissement: Utiliser ce document comme source pédagogique lorsque son contenu est pertinent, mais vérifier toute affirmation concernant le programme actuellement applicable à l'aide de documents plus récents lorsqu'ils sont disponibles ; ne jamais présenter une information provenant uniquement de ce document comme étant nécessairement une prescription actuelle.

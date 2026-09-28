@@ -66,11 +66,30 @@ async function load(): Promise<RefDocument[]> {
         source: meta.source,
         status: meta.statut,
         notice: meta.avertissement,
+        documentId: meta.documentId,
+        organisme: meta.organisme,
+        pays: meta.pays,
+        niveau: meta.niveau,
+        year: meta.annee,
+        version: meta.version,
+        reliability: meta.fiabilite,
+        state: meta.etat,
+        supersedes: meta.remplace,
+        integratedAt: meta.dateIntegration,
+        updatedAt: meta.dateMiseAJour,
+        expiresAt: meta.dateExpiration,
         text,
       });
     } catch (e) {
       console.error(`[referentiels] Lecture impossible de ${rel} :`, (e as Error).message);
     }
+  }
+  const ids = new Map<string, string>();
+  for (const d of docs) {
+    if (!d.documentId) continue;
+    const prev = ids.get(d.documentId);
+    if (prev) console.warn(`[referentiels] Identifiant ${d.documentId} utilisé par deux documents : ${prev} et ${d.id}`);
+    ids.set(d.documentId, d.id);
   }
   return docs;
 }

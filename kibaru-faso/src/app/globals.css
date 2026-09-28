@@ -54,6 +54,7 @@ body { @apply bg-surface text-ink antialiased; }
 .badge-source { @apply bg-faso-100 text-faso-dark; }
 .badge-proposition { @apply bg-or-50 text-[#7a5a00] ring-1 ring-or/60; }
 .badge-verifier { @apply bg-rouge-50 text-rouge; }
+.badge-general { @apply bg-[#eef2f7] text-[#34495e]; }
 .cite { @apply ml-0.5 cursor-help rounded bg-faso-50 px-1 text-[10px] font-bold text-faso-dark align-super; }
 
 .fade-in { animation: fadeIn 0.3s ease-out both; }
