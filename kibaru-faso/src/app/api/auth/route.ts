@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { codeParrainageValide } from "@/lib/abonnement";
 import { traduire } from "@/lib/auth-messages";
 import { chargerCompte } from "@/lib/comptes";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -15,7 +16,13 @@ export const dynamic = "force-dynamic";
 
 const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("connexion"), email: z.email().max(200), password: z.string().min(1).max(200) }),
-  z.object({ action: z.literal("inscription"), email: z.email().max(200), password: z.string().min(8).max(200), nom: z.string().trim().max(120).optional() }),
+  z.object({
+    action: z.literal("inscription"),
+    email: z.email().max(200),
+    password: z.string().min(8).max(200),
+    nom: z.string().trim().max(120).optional(),
+    parrain: z.string().max(20).optional(),
+  }),
   z.object({ action: z.literal("oubli"), email: z.email().max(200) }),
   z.object({ action: z.literal("nouveau"), password: z.string().min(8).max(200) }),
   z.object({ action: z.literal("deconnexion") }),
@@ -55,7 +62,7 @@ export async function POST(req: Request) {
         return Response.json({ ok: true });
       }
       case "inscription": {
-        const { data, error } = await sb.auth.signUp({ email: x.email.trim(), password: x.password, options: { data: { nom: x.nom ?? "" }, emailRedirectTo: callback } });
+        const { data, error } = await sb.auth.signUp({ email: x.email.trim(), password: x.password, options: { data: { nom: x.nom ?? "", parrain: codeParrainageValide(x.parrain) ?? "" }, emailRedirectTo: callback } });
         if (error) throw error;
         return Response.json({ ok: true, session: !!data.session });
       }

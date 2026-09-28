@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { accessRequired, hasAccess } from "@/lib/access";
-import { compteCourant, formules } from "@/lib/comptes";
+import { compteCourant, formules, parrainage } from "@/lib/comptes";
 import { paiementDisponible } from "@/lib/paiement/cinetpay";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
@@ -37,7 +37,10 @@ export async function GET(req: Request) {
       suspendu: compte.profil.suspendu,
       fin: compte.fin?.toISOString() ?? null,
       joursRestants: compte.joursRestants,
+      heuresRestantes: compte.heuresRestantes,
+      essai: compte.essai,
     },
+    parrainage: compte ? await parrainage(compte.profil).catch(() => null) : null,
     formules: offres,
     paiementDisponible: paiementDisponible(),
     paiements: compte ? await derniersPaiements(compte.profil.id) : [],

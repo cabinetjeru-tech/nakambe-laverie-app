@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       description: `PEDAGOGUE.IA ${formule.libelle}`,
       notifyUrl: `${base}/api/paiement/notification`,
       returnUrl: `${base}/?paiement=${transactionId}`,
-      client: { email: compte.profil.email, nom: compte.profil.nom, telephone: compte.profil.telephone },
+      client: { email: compte.profil.email, nom: compte.profil.nom, telephone: compte.profil.telephone, ville: compte.profil.ville },
     });
     return Response.json({ url, transactionId });
   } catch (e) {

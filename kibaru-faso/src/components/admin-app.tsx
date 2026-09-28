@@ -18,17 +18,45 @@ type Enseignant = {
   cree_le: string;
   fin: string | null;
   actif: boolean;
+  essai: boolean;
   preparations: number;
+  code_parrainage: string;
+  parrain_id: string | null;
+  filleuls: number;
+};
+type Commission = {
+  id: string;
+  parrain: string;
+  telephone: string | null;
+  filleul: string;
+  montant_fcfa: number;
+  taux: number;
+  statut: "due" | "versee" | "annulee";
+  versee_le: string | null;
+  reference_versement: string | null;
+  cree_le: string;
 };
 type Paiement = { id: string; email: string; formule_id: string; montant_fcfa: number; statut: string; moyen: string | null; transaction_id: string; cree_le: string };
 type Donnees = {
-  stats: { enseignants: number; abonnesActifs: number; preparations: number; recettesMois: number; recettesTotal: number };
+  stats: {
+    enseignants: number;
+    abonnesActifs: number;
+    enEssai: number;
+    parraines: number;
+    commissionsDues: number;
+    preparations: number;
+    recettesMois: number;
+    recettesTotal: number;
+  };
+  commissions: Commission[];
   enseignants: Enseignant[];
   paiements: Paiement[];
   formules: Formule[];
   moi: string;
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "tarifs";
+/** Objectif de lancement : 5 000 enseignants abonnés. */
+const OBJECTIF_ABONNES = 5000;
 
 const STATUTS: Record<string, string> = { reussi: "Réussi", en_attente: "En attente", echoue: "Échoué", annule: "Annulé" };
 const input = "rounded-lg border border-line px-2.5 py-1.5 text-sm focus:border-faso focus:outline-none";
@@ -76,6 +104,7 @@ export function AdminApp() {
     ["tableau", "Tableau de bord"],
     ["enseignants", `Enseignants (${d.stats.enseignants})`],
     ["paiements", "Paiements"],
+    ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
     ["tarifs", "Tarifs"],
   ];
 
@@ -110,6 +139,7 @@ export function AdminApp() {
         {onglet === "tableau" && <Tableau d={d} />}
         {onglet === "enseignants" && <Enseignants d={d} action={action} />}
         {onglet === "paiements" && <Paiements d={d} action={action} />}
+        {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
         {onglet === "tarifs" && <Tarifs d={d} action={action} />}
       </main>
     </div>
@@ -131,10 +161,23 @@ function Tableau({ d }: { d: Donnees }) {
   const recents = d.paiements.filter((p) => p.statut === "reussi").slice(0, 5);
   return (
     <div className="space-y-4">
+      <div className="rounded-xl border border-line bg-white p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold text-faso-dark">Objectif : {OBJECTIF_ABONNES.toLocaleString("fr-FR")} enseignants abonnés</h2>
+          <span className="text-sm font-semibold">
+            {s.abonnesActifs.toLocaleString("fr-FR")} / {OBJECTIF_ABONNES.toLocaleString("fr-FR")} ({((s.abonnesActifs / OBJECTIF_ABONNES) * 100).toFixed(1).replace(".", ",")} %)
+          </span>
+        </div>
+        <div className="mt-2 h-3 overflow-hidden rounded-full bg-faso-50" role="progressbar" aria-valuemin={0} aria-valuemax={OBJECTIF_ABONNES} aria-valuenow={s.abonnesActifs}>
+          <div className="h-full rounded-full bg-faso" style={{ width: `${Math.min(100, (s.abonnesActifs / OBJECTIF_ABONNES) * 100)}%` }} />
+        </div>
+      </div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Carte label="Enseignants inscrits" valeur={String(s.enseignants)} />
-        <Carte label="Abonnés actifs" valeur={String(s.abonnesActifs)} detail={s.enseignants ? `${Math.round((s.abonnesActifs / s.enseignants) * 100)} % des inscrits` : undefined} />
+        <Carte label="Enseignants inscrits" valeur={String(s.enseignants)} detail={`${s.parraines} via parrainage`} />
+        <Carte label="Abonnés payants actifs" valeur={String(s.abonnesActifs)} detail={s.enseignants ? `${Math.round((s.abonnesActifs / s.enseignants) * 100)} % des inscrits` : undefined} />
+        <Carte label="En essai gratuit (24 h)" valeur={String(s.enEssai)} detail="à convertir en abonnés" />
         <Carte label="Recettes du mois" valeur={formatFcfa(s.recettesMois)} detail={`Total : ${formatFcfa(s.recettesTotal)}`} />
+        <Carte label="Commissions à verser" valeur={formatFcfa(s.commissionsDues)} detail="onglet Parrainage" />
         <Carte label="Préparations sauvegardées" valeur={String(s.preparations)} />
       </div>
       <div className="rounded-xl border border-line bg-white p-4">
@@ -198,10 +241,13 @@ function Enseignants({ d, action }: { d: Donnees; action: (b: Record<string, unk
               </div>
               <div className="text-right">
                 <div className={e.actif || e.role === "admin" ? "font-semibold text-faso" : "text-rouge"}>
-                  {e.actif ? `Actif jusqu'au ${formatDate(e.fin!)}` : e.role === "admin" ? "Accès complet (administration)" : e.fin ? `Expiré le ${formatDate(e.fin)}` : "Jamais abonné"}
+                  {e.essai ? "🎁 En essai gratuit" : e.actif ? `Actif jusqu'au ${formatDate(e.fin!)}` : e.role === "admin" ? "Accès complet (administration)" : e.fin ? `Expiré le ${formatDate(e.fin)}` : "Jamais abonné"}
                 </div>
                 <div className="text-xs text-muted">
                   Inscrit le {formatDate(e.cree_le)} · {e.preparations} préparation{e.preparations > 1 ? "s" : ""}
+                  <br />
+                  Code {e.code_parrainage} · {e.filleuls} filleul{e.filleuls > 1 ? "s" : ""}
+                  {e.parrain_id ? ` · parrainé par ${d.enseignants.find((x) => x.id === e.parrain_id)?.email ?? "—"}` : ""}
                 </div>
               </div>
             </div>
@@ -299,6 +345,100 @@ function Paiements({ d, action }: { d: Donnees; action: (b: Record<string, unkno
           )}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+const STATUTS_COM: Record<string, string> = { due: "À verser", versee: "Versée", annulee: "Annulée" };
+
+function ParrainageAdmin({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
+  const [filtre, setFiltre] = useState<"due" | "tout">("due");
+  const liste = d.commissions.filter((c) => filtre === "tout" || c.statut === "due");
+  // Totaux à verser par parrain (un seul transfert mobile money par parrain).
+  const parParrain = new Map<string, { telephone: string | null; total: number; ids: string[] }>();
+  for (const c of d.commissions.filter((x) => x.statut === "due")) {
+    const e = parParrain.get(c.parrain) ?? { telephone: c.telephone, total: 0, ids: [] };
+    e.total += c.montant_fcfa;
+    e.ids.push(c.id);
+    parParrain.set(c.parrain, e);
+  }
+  async function verserTout(parrain: string, ids: string[]) {
+    const reference = prompt(`Référence du transfert mobile money à ${parrain} (facultatif) :`) ?? undefined;
+    for (const id of ids) await action({ action: "commission", id, statut: "versee", reference }, `Commissions de ${parrain} marquées versées`);
+  }
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted">
+        Chaque paiement réussi d&apos;un enseignant parrainé donne {d.commissions[0]?.taux ?? 20} % à son parrain, si celui-ci est abonné. Versez les montants par mobile money,
+        puis marquez-les « versés ».
+      </p>
+      {parParrain.size > 0 && (
+        <div className="rounded-xl border border-line bg-white p-3">
+          <h2 className="font-bold text-faso-dark">À verser par parrain</h2>
+          <ul className="mt-2 divide-y divide-line text-sm">
+            {[...parParrain.entries()].map(([p, e]) => (
+              <li key={p} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span>
+                  {p} · {e.telephone ?? "téléphone non renseigné"}
+                </span>
+                <span className="flex items-center gap-2">
+                  <strong>{formatFcfa(e.total)}</strong>
+                  <button type="button" onClick={() => void verserTout(p, e.ids)} className="rounded-lg bg-faso px-2 py-1 text-xs font-semibold text-white">
+                    Marquer versé
+                  </button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex gap-2">
+        <select value={filtre} onChange={(e) => setFiltre(e.target.value as typeof filtre)} className={input}>
+          <option value="due">À verser</option>
+          <option value="tout">Toutes les commissions</option>
+        </select>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-surface text-xs uppercase text-muted">
+            <tr>
+              <th className="px-3 py-2">Date</th>
+              <th className="px-3 py-2">Parrain</th>
+              <th className="px-3 py-2">Filleul</th>
+              <th className="px-3 py-2">Commission</th>
+              <th className="px-3 py-2">Statut</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {liste.map((c) => (
+              <tr key={c.id}>
+                <td className="whitespace-nowrap px-3 py-2">{formatDate(c.cree_le)}</td>
+                <td className="px-3 py-2">{c.parrain}</td>
+                <td className="px-3 py-2">{c.filleul}</td>
+                <td className="whitespace-nowrap px-3 py-2">
+                  {formatFcfa(c.montant_fcfa)} <span className="text-xs text-muted">({c.taux} %)</span>
+                </td>
+                <td className="px-3 py-2">
+                  {STATUTS_COM[c.statut]}
+                  {c.reference_versement && <span className="text-xs text-muted"> · {c.reference_versement}</span>}
+                  {c.statut === "due" && (
+                    <button type="button" onClick={() => void action({ action: "commission", id: c.id, statut: "annulee" }, "Commission annulée")} className="ml-2 text-xs text-rouge underline">
+                      Annuler
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {!liste.length && (
+              <tr>
+                <td colSpan={5} className="px-3 py-4 text-muted">
+                  Aucune commission pour le moment.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

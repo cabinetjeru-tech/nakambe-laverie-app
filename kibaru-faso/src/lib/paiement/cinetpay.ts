@@ -22,7 +22,7 @@ type Initialisation = {
   description: string;
   notifyUrl: string;
   returnUrl: string;
-  client: { email: string; nom?: string | null; telephone?: string | null };
+  client: { email: string; nom?: string | null; telephone?: string | null; ville?: string | null };
 };
 
 async function post(path: string, body: Record<string, unknown>): Promise<{ code?: string; message?: string; description?: string; data?: Record<string, unknown> }> {
@@ -35,9 +35,28 @@ async function post(path: string, body: Record<string, unknown>): Promise<{ code
   return (await res.json().catch(() => ({}))) as { code?: string; message?: string; data?: Record<string, unknown> };
 }
 
+/** Identité du client au format CinetPay (exigée pour le paiement par carte), avec valeurs par défaut. */
+export function identiteClient(c: { email: string; nom?: string | null; telephone?: string | null; ville?: string | null }) {
+  const parts = (c.nom ?? "").trim().split(/\s+/).filter(Boolean);
+  const nom = parts.length > 1 ? parts[parts.length - 1]! : parts[0] || "Enseignant";
+  const prenom = parts.length > 1 ? parts.slice(0, -1).join(" ") : "PEDAGOGUE.IA";
+  const tel = (c.telephone ?? "").replace(/[^0-9+]/g, "");
+  const ville = c.ville?.trim() || "Ouagadougou";
+  return {
+    customer_name: nom,
+    customer_surname: prenom,
+    customer_email: c.email,
+    ...(tel ? { customer_phone_number: tel } : {}),
+    customer_address: ville,
+    customer_city: ville,
+    customer_country: "BF",
+    customer_state: "BF",
+    customer_zip_code: "00000",
+  };
+}
+
 /** Crée le paiement chez CinetPay et renvoie l'adresse de la page de paiement. */
 export async function initialiserPaiement(p: Initialisation): Promise<string> {
-  const [prenom, ...reste] = (p.client.nom ?? "").trim().split(/\s+/);
   const r = await post("/payment", {
     transaction_id: p.transactionId,
     amount: p.montant,
@@ -45,13 +64,10 @@ export async function initialiserPaiement(p: Initialisation): Promise<string> {
     description: p.description.replace(/[^\p{L}\p{N} .,'-]/gu, " ").slice(0, 100),
     notify_url: p.notifyUrl,
     return_url: p.returnUrl,
-    channels: "MOBILE_MONEY",
+    // Mobile money (Orange Money, Moov Money…) et carte bancaire, selon le contrat marchand.
+    channels: process.env.CINETPAY_CHANNELS || "ALL",
     lang: "fr",
-    customer_email: p.client.email,
-    customer_name: reste.join(" ") || prenom || "Enseignant",
-    customer_surname: prenom || "PEDAGOGUE.IA",
-    customer_phone_number: p.client.telephone ?? undefined,
-    customer_country: "BF",
+    ...identiteClient(p.client),
   });
   const url = typeof r.data?.payment_url === "string" ? r.data.payment_url : undefined;
   if (r.code !== "201" || !url) throw new PaiementError(`CinetPay : ${r.description ?? r.message ?? "initialisation refusée"}`);
