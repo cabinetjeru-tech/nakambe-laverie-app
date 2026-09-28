@@ -8,6 +8,9 @@ stock, finances et statistiques.
 
 > **Autres projets de ce dépôt** : `allo-coursier/` (livraison) et **`nourou-academy/`** — NOUROU GLOBAL ACADEMY,
 > plateforme de formation en ligne avec tuteur IA (voir [nourou-academy/README.md](nourou-academy/README.md)).
+>
+> **`kibaru-faso/`** — KIBARU FASO, assistant pédagogique IA pour les enseignants du secondaire au Burkina Faso
+> (voir [kibaru-faso/README.md](kibaru-faso/README.md)).
 
 ---
 

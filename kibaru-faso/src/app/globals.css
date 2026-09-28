@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/*
+ * KIBARU FASO — couleurs inspirées du drapeau du Burkina Faso
+ *   Vert  #00843D (structure, actions principales)
+ *   Rouge #C8102E (accents, alertes)
+ *   Or    #F2B705 (étoile : mises en avant)
+ */
+@theme {
+  --color-faso: #00843d;
+  --color-faso-dark: #00592a;
+  --color-faso-50: #eaf6ef;
+  --color-faso-100: #cfeadb;
+  --color-rouge: #c8102e;
+  --color-rouge-50: #fdecee;
+  --color-or: #f2b705;
+  --color-or-50: #fff8e1;
+  --color-ink: #17202a;
+  --color-muted: #5b6573;
+  --color-line: #e2e6ea;
+  --color-surface: #f6f7f5;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+html { -webkit-text-size-adjust: 100%; }
+body { @apply bg-surface text-ink antialiased; }
+:focus-visible { outline: 2px solid var(--color-faso); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* Réponses de KIBARU FASO */
+.prose-kibaru { @apply text-[15px] leading-7 text-ink; overflow-wrap: anywhere; }
+.prose-kibaru h1 { @apply mt-2 mb-3 text-xl font-bold text-faso-dark; }
+.prose-kibaru h2 { @apply mt-6 mb-2 text-lg font-bold text-faso-dark; }
+.prose-kibaru h3 { @apply mt-5 mb-2 text-base font-semibold text-faso-dark; }
+.prose-kibaru h4 { @apply mt-4 mb-1 font-semibold; }
+.prose-kibaru p { @apply my-2; }
+.prose-kibaru ul { @apply my-2 list-disc pl-5; }
+.prose-kibaru ol { @apply my-2 list-decimal pl-5; }
+.prose-kibaru li { @apply my-0.5; }
+.prose-kibaru a { @apply font-medium text-faso underline underline-offset-2; }
+.prose-kibaru blockquote { @apply my-3 border-l-4 border-or bg-or-50 px-4 py-2; }
+.prose-kibaru hr { @apply my-5 border-line; }
+.prose-kibaru .table-wrap { @apply my-3 overflow-x-auto; }
+.prose-kibaru table { @apply w-full border-collapse text-sm; }
+.prose-kibaru th { @apply border border-line bg-faso-50 px-2 py-1.5 text-left font-semibold; }
+.prose-kibaru td { @apply border border-line px-2 py-1.5 align-top; }
+.prose-kibaru pre { @apply my-3 overflow-x-auto rounded-lg bg-surface p-3 text-[13px]; }
+.prose-kibaru code { @apply rounded bg-surface px-1 text-[13px]; }
+
+.badge { @apply inline-block rounded px-1.5 py-px text-[11px] font-bold tracking-wide align-middle; }
+.badge-source { @apply bg-faso-100 text-faso-dark; }
+.badge-proposition { @apply bg-or-50 text-[#7a5a00] ring-1 ring-or/60; }
+.badge-verifier { @apply bg-rouge-50 text-rouge; }
+.cite { @apply ml-0.5 cursor-help rounded bg-faso-50 px-1 text-[10px] font-bold text-faso-dark align-super; }
+
+.fade-in { animation: fadeIn 0.3s ease-out both; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.caret::after { content: "▍"; @apply ml-0.5 animate-pulse text-faso; }
