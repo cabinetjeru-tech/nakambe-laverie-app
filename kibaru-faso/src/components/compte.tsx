@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
 import { CONTACT } from "@/lib/contact";
-import { browserClient } from "@/lib/supabase/browser";
 
 /** Espace enseignant : connexion, inscription, mot de passe, abonnement et paiement mobile money. */
 
@@ -24,16 +23,6 @@ export type EtatCompte = { compte: CompteInfo | null; formules: Formule[]; paiem
 const inputCls = "mt-1 w-full rounded-lg border border-line px-3 py-2 focus:border-faso focus:outline-none";
 const STATUTS: Record<string, string> = { reussi: "Réussi", en_attente: "En attente", echoue: "Échoué", annule: "Annulé" };
 
-function traduire(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes("invalid login")) return "E-mail ou mot de passe incorrect.";
-  if (m.includes("email not confirmed")) return "Adresse e-mail non confirmée : ouvrez le lien reçu par e-mail.";
-  if (m.includes("already registered") || m.includes("already been registered")) return "Un compte existe déjà avec cette adresse : connectez-vous.";
-  if (m.includes("password should be") || m.includes("weak")) return "Mot de passe trop faible : au moins 8 caractères, avec lettres et chiffres.";
-  if (m.includes("rate limit") || m.includes("too many")) return "Trop de tentatives. Réessayez dans quelques minutes.";
-  if (m.includes("fetch")) return "Connexion au service impossible. Vérifiez votre connexion Internet.";
-  return message;
-}
 
 export function Logo() {
   return (
@@ -80,36 +69,29 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
     setBusy(true);
     setError(null);
     setInfo(null);
-    const sb = browserClient();
-    const callback = `${window.location.origin}/auth/callback`;
     try {
-      if (vue === "connexion") {
-        const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-        onDone();
-      } else if (vue === "inscription") {
-        if (password.length < 8) throw new Error("Mot de passe trop faible : au moins 8 caractères.");
-        const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { nom: nom.trim() }, emailRedirectTo: callback } });
-        if (error) throw error;
-        if (data.session) onDone();
-        else {
-          setInfo("Compte créé. Ouvrez le lien de confirmation envoyé à votre adresse e-mail, puis connectez-vous.");
-          setVue("connexion");
-        }
+      if ((vue === "inscription" || vue === "nouveau") && password.length < 8) throw new Error("Mot de passe trop court : au moins 8 caractères.");
+      const body: Record<string, string> =
+        vue === "connexion"
+          ? { action: "connexion", email, password }
+          : vue === "inscription"
+            ? { action: "inscription", email, password, nom }
+            : vue === "oubli"
+              ? { action: "oubli", email }
+              : { action: "nouveau", password };
+      const j = await auth(body);
+      if (vue === "inscription" && !j.session) {
+        setInfo("Compte créé. Ouvrez le lien de confirmation envoyé à votre adresse e-mail (pensez aux courriers indésirables), puis connectez-vous.");
+        setVue("connexion");
       } else if (vue === "oubli") {
-        const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${callback}?next=${encodeURIComponent("/?reinit=1")}` });
-        if (error) throw error;
         setInfo("Si un compte existe pour cette adresse, un e-mail de réinitialisation vient d'être envoyé.");
         setVue("connexion");
       } else {
-        if (password.length < 8) throw new Error("Mot de passe trop faible : au moins 8 caractères.");
-        const { error } = await sb.auth.updateUser({ password });
-        if (error) throw error;
-        window.history.replaceState(null, "", "/");
+        if (vue === "nouveau") window.history.replaceState(null, "", "/");
         onDone();
       }
     } catch (err) {
-      setError(traduire((err as Error).message));
+      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -184,8 +166,17 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
   );
 }
 
+/** Appel au serveur de l'application (jamais directement à Supabase). */
+async function auth(body: Record<string, string>): Promise<{ ok?: boolean; session?: boolean }> {
+  const r = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }).catch(() => null);
+  if (!r) throw new Error("Connexion impossible. Vérifiez votre connexion Internet et réessayez.");
+  const j = (await r.json().catch(() => ({}))) as { ok?: boolean; session?: boolean; error?: string };
+  if (!r.ok) throw new Error(j.error ?? "Opération impossible pour le moment.");
+  return j;
+}
+
 export async function deconnexion() {
-  await browserClient().auth.signOut();
+  await auth({ action: "deconnexion" }).catch(() => null);
   window.location.href = "/";
 }
 
