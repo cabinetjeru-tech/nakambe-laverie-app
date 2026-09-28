@@ -92,6 +92,21 @@ export function KibaruApp() {
 
   const current = useMemo(() => conversations.find((c) => c.id === currentId) ?? null, [conversations, currentId]);
 
+  // Bouton « retour » du navigateur ou du téléphone : une préparation ouverte ajoute une entrée d'historique,
+  // le retour ramène à l'accueil au lieu de quitter l'application.
+  useEffect(() => {
+    if (currentId && window.history.state?.conv !== currentId) window.history.pushState({ conv: currentId }, "");
+  }, [currentId]);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      abortRef.current?.abort();
+      setCurrentId((e.state as { conv?: string } | null)?.conv ?? null);
+      setSidebar(false);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [current?.messages.length, busy]);
@@ -214,6 +229,12 @@ export function KibaruApp() {
     }
   }
 
+  /** Retour à l'accueil : via l'historique quand la préparation y a été ajoutée, pour garder le bouton du navigateur cohérent. */
+  function goHome() {
+    if (window.history.state?.conv) window.history.back();
+    else newConversation();
+  }
+
   function newConversation() {
     if (busy) abortRef.current?.abort();
     setCurrentId(null);
@@ -270,6 +291,11 @@ export function KibaruApp() {
   return (
     <div className="flex h-dvh flex-col">
       <header className="flex items-center gap-2 border-b border-line bg-white px-3 py-2.5 sm:gap-3 sm:px-4">
+        {currentId && (
+          <button type="button" onClick={goHome} className="whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm font-semibold text-faso hover:border-faso" aria-label="Retour à l'accueil">
+            ← <span className="hidden sm:inline">Accueil</span>
+          </button>
+        )}
         <button
           type="button"
           className="whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm lg:hidden"
@@ -279,7 +305,7 @@ export function KibaruApp() {
         >
           Ma classe
         </button>
-        <Brand />
+        <Brand compact={!!currentId} />
         <div className="ml-auto flex items-center gap-2">
           <button type="button" onClick={newConversation} className="whitespace-nowrap rounded-lg bg-faso px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark sm:px-3">
             <span className="sm:hidden">Nouveau</span>
@@ -519,12 +545,13 @@ export function KibaruApp() {
   );
 }
 
-function Brand() {
+/** `compact` : sur petit écran, logo seul (place pour le bouton retour). */
+function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon.svg" alt="" width={32} height={32} className="h-7 w-7 shrink-0 rounded-lg sm:h-8 sm:w-8" />
-      <div className="leading-tight">
+      <div className={`leading-tight ${compact ? "hidden min-[400px]:block" : ""}`}>
         <div className="whitespace-nowrap text-[13px] font-extrabold tracking-wide text-faso-dark sm:text-[15px]">PÉDAGOGUE.IA</div>
         <div className="hidden text-[11px] text-muted sm:block">L&apos;intelligence au service de la pédagogie</div>
       </div>
