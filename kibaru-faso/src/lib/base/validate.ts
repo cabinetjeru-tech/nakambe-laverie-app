@@ -4,7 +4,7 @@ import { ARCHIVES_CATEGORY, STATUT_LABELS, type PathInfo } from "./structure";
 
 /** Contrôles de cohérence de la base documentaire (fonctions pures). */
 
-export type Issue = { level: "erreur" | "avertissement"; path: string; message: string };
+export type Issue = { level: "erreur" | "avertissement" | "info"; path: string; message: string };
 
 /** Métadonnées obligatoires de chaque ressource ; le chemin peut en fournir une partie. */
 export function missingFields(meta: DocMeta, info: PathInfo): string[] {
@@ -23,7 +23,9 @@ export function missingFields(meta: DocMeta, info: PathInfo): string[] {
     ["statut", !!meta.statut],
     ["source", !!meta.source],
     ["priorite", !!meta.priorite],
+    ["niveau_source", !!meta.niveauSource],
     ["date_verification", !!meta.dateVerification],
+    ["perimetre", !!meta.perimetre],
   ];
   return missing.filter(([, ok]) => !ok).map(([k]) => k);
 }

@@ -1,4 +1,4 @@
-import { parseStatut, type Statut } from "./base/structure";
+import { parseDocType, parseStatut, type Statut } from "./base/structure";
 
 /**
  * Fiche descriptive d'une ressource de la base documentaire KIBARU, au format « clé: valeur », une par ligne.
@@ -32,6 +32,9 @@ import { parseStatut, type Statut } from "./base/structure";
  * (document_id, matieres, fiabilite, etat, date_mise_a_jour…).
  */
 
+export const PRIORITES = ["HAUTE", "MOYENNE", "BASSE"] as const;
+export type Priorite = (typeof PRIORITES)[number];
+
 export type DocMeta = {
   documentId?: string;
   titre?: string;
@@ -41,6 +44,8 @@ export type DocMeta = {
   disciplines?: string[];
   type?: string;
   organisme?: string;
+  /** Type reconnu (PROGRAMME, GUIDE_PEDAGOGIQUE…) ou valeur brute si non reconnue. */
+  typeInvalide?: string;
   annee?: string;
   version?: string;
   dateIntegration?: string;
@@ -48,7 +53,16 @@ export type DocMeta = {
   /** Valeur de statut illisible (ni l'un des cinq statuts, ni vide). */
   statutInvalide?: string;
   source?: string;
-  priorite?: number;
+  /** URL ou référence documentaire. */
+  url?: string;
+  /** Périmètre d'utilisation (ex. « contenu pédagogique uniquement, pas le programme en vigueur »). */
+  perimetre?: string;
+  /** Hiérarchie des sources : 1 = source officielle … 5 = connaissance générale du modèle. */
+  niveauSource?: number;
+  /** Priorité de traitement dans le registre. */
+  priorite?: Priorite;
+  /** Fichier du document, relatif à la racine de la base (registre). */
+  fichier?: string;
   dateVerification?: string;
   remplace: string[];
   remplacePar: string[];
@@ -84,19 +98,37 @@ export function parseDate(v: string): string | undefined {
 
 /** Valeurs laissées « à renseigner » : ignorées plutôt que présentées comme des données. */
 function isPlaceholder(v: string): boolean {
-  return !v || /^(a|à) (renseigner|completer|compléter|preciser|préciser)|^(n\/a|inconnu|-)$/i.test(v.trim());
+  return !v || /^(a|à)[ _](renseigner|completer|compléter|preciser|préciser|verifier|vérifier)$|^(a|à) (renseigner|completer|compléter|preciser|préciser)|^(n\/a|inconnu|-|non encore integre|non encore intégré)$/i.test(v.trim());
 }
 
+/** Clé normalisée, pour le registre comme pour les fiches. */
+export { normKey };
+
 export function parseMetaBlock(block: string): DocMeta {
-  const meta = emptyMeta();
+  const pairs: [string, string][] = [];
   for (const line of block.split(/\r?\n/)) {
     if (/^\s*#/.test(line)) continue;
     const m = line.match(/^\s*([\p{L}_ '’/-]+?)\s*:\s*(.*)$/u);
-    if (!m) continue;
-    const key = normKey(m[1]!);
-    const value = m[2]!.trim().replace(/^["']|["']$/g, "");
-    if (isPlaceholder(value)) continue;
-    const list = () => value.replace(/^\[|\]$/g, "").split(/[,;]/).map((v) => v.trim()).filter(Boolean);
+    if (m) pairs.push([m[1]!, m[2]!]);
+  }
+  return parseFields(pairs);
+}
+
+/** Interprète une liste de couples (clé, valeur) : lignes d'une fiche ou colonnes d'une ligne du registre. */
+export function parseFields(pairs: [string, string][]): DocMeta {
+  const meta = emptyMeta();
+  for (const [rawKey, rawValue] of pairs) {
+    const key = normKey(rawKey);
+    const value = rawValue.trim().replace(/^(["'])([\s\S]*)\1$/, "$2");
+    const isStatus = key === "statut" || key === "status" || key === "etat";
+    if (!value || (!isStatus && isPlaceholder(value))) continue;
+    const list = (ranges = false) =>
+      value
+        .replace(/^\[|\]$/g, "")
+        // « 6e-5e » : deux classes ; un identifiant « BF-6E-MATH-001 » n'est jamais découpé.
+        .split(ranges ? /[,;]|\s+-\s+|(?<=\p{L})-(?=\d)/u : /[,;]/u)
+        .map((v) => v.trim())
+        .filter(Boolean);
     const date = () => parseDate(value) ?? value;
     switch (key) {
       case "id":
@@ -107,6 +139,7 @@ export function parseMetaBlock(block: string): DocMeta {
         meta.documentId = value;
         break;
       case "titre":
+      case "titre_officiel":
       case "title":
         meta.titre = value;
         break;
@@ -118,7 +151,7 @@ export function parseMetaBlock(block: string): DocMeta {
         break;
       case "classe":
       case "classes":
-        meta.classes = list();
+        meta.classes = list(true);
         break;
       case "matiere":
       case "matieres":
@@ -127,16 +160,25 @@ export function parseMetaBlock(block: string): DocMeta {
         meta.disciplines = list();
         break;
       case "type":
-      case "type_de_document":
-        meta.type = value;
+      case "type_de_document": {
+        const t = parseDocType(value);
+        meta.type = t ?? value;
+        if (!t) meta.typeInvalide = value;
         break;
+      }
       case "organisme":
       case "producteur":
       case "organisme_producteur":
       case "organisme/producteur":
+      case "institution":
+      case "ministere":
+      case "ministere/institution":
+      case "ministere/institution_productrice":
+      case "institution_productrice":
         meta.organisme = value;
         break;
       case "annee":
+      case "annee_de_publication":
       case "date":
       case "date_publication":
       case "date_de_publication":
@@ -147,15 +189,17 @@ export function parseMetaBlock(block: string): DocMeta {
         break;
       case "date_integration":
       case "date_dintegration":
+      case "date_dintegration_dans_kibaru":
       case "integration":
         meta.dateIntegration = date();
         break;
       case "statut":
       case "status":
       case "etat": {
-        const s = parseStatut(value);
-        if (s) meta.statut = s;
-        else if (key === "statut" || key === "status") {
+        if (isPlaceholder(value) && !/v[eé]rifier/i.test(value)) break;
+        const st = parseStatut(value);
+        if (st) meta.statut = st;
+        else if (key !== "etat") {
           // Ancienne fiche où « statut » était une description libre : conservée comme observation.
           meta.statutInvalide = value;
           meta.observations = meta.observations ? `${meta.observations} ${value}` : value;
@@ -165,12 +209,31 @@ export function parseMetaBlock(block: string): DocMeta {
       case "source":
         meta.source = value;
         break;
-      case "priorite":
+      case "url":
+      case "url_reference":
+      case "reference":
+      case "url_ou_reference":
+      case "url_ou_reference_documentaire":
+        meta.url = value;
+        break;
+      case "perimetre":
+      case "perimetre_dutilisation":
+        meta.perimetre = value;
+        break;
+      case "niveau_source":
+      case "niveau_de_source":
       case "fiabilite":
       case "niveau_de_fiabilite":
       case "niveau_fiabilite": {
         const n = Number.parseInt(value, 10);
-        if (n >= 1 && n <= 5) meta.priorite = n;
+        if (n >= 1 && n <= 5) meta.niveauSource = n;
+        break;
+      }
+      case "priorite": {
+        const n = Number.parseInt(value, 10);
+        const p = normKey(value).toUpperCase();
+        if (n >= 1 && n <= 5) meta.niveauSource = n; // ancienne écriture : priorité = hiérarchie des sources
+        else if ((PRIORITES as readonly string[]).includes(p)) meta.priorite = p as Priorite;
         break;
       }
       case "date_verification":
@@ -179,11 +242,13 @@ export function parseMetaBlock(block: string): DocMeta {
         meta.dateVerification = date();
         break;
       case "remplace":
+      case "document_remplace":
         meta.remplace = list();
         break;
       case "remplace_par":
       case "remplacee_par":
       case "remplace_par_document":
+      case "document_de_remplacement":
         meta.remplacePar = list();
         break;
       case "date_remplacement":
@@ -209,6 +274,10 @@ export function parseMetaBlock(block: string): DocMeta {
       case "regle":
       case "regle_dusage":
         meta.avertissement = value;
+        break;
+      case "fichier":
+      case "chemin":
+        meta.fichier = value.replace(/^\/+/, "");
         break;
     }
   }

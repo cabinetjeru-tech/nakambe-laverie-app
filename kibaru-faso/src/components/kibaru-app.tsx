@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
 import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
 import { downloadWord, printHtml } from "@/lib/export";
-import { STATUT_LABELS, type Statut } from "@/lib/base/structure";
+import type { DecisionSummary } from "@/lib/base/decision";
+import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
 import { DISCIPLINES, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
@@ -23,7 +24,8 @@ type LibraryDoc = {
   organisme: string | null;
   year: string | null;
   version: string | null;
-  priority: number | null;
+  sourceLevel: number | null;
+  priority: string | null;
   statut: Statut | null;
   observations: string | null;
   notice: string | null;
@@ -141,6 +143,7 @@ export function KibaruApp() {
     abortRef.current = controller;
     let answer = "";
     let sources: Source[] = [];
+    let decision: DecisionSummary | undefined;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -172,22 +175,25 @@ export function KibaruApp() {
         buffer = lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          const ev = JSON.parse(line) as { type: string; text?: string; message?: string; sources?: Source[] };
-          if (ev.type === "meta") sources = ev.sources ?? [];
+          const ev = JSON.parse(line) as { type: string; text?: string; message?: string; sources?: Source[]; decision?: DecisionSummary };
+          if (ev.type === "meta") {
+            sources = ev.sources ?? [];
+            decision = ev.decision;
+          }
           else if (ev.type === "delta") answer += ev.text ?? "";
           else if (ev.type === "error") throw new Error(ev.message);
         }
         if (Date.now() - lastPaint > 80) {
           lastPaint = Date.now();
-          setAssistant({ role: "assistant", content: answer, sources });
+          setAssistant({ role: "assistant", content: answer, sources, decision });
         }
       }
-      setAssistant({ role: "assistant", content: answer, sources });
+      setAssistant({ role: "assistant", content: answer, sources, decision });
     } catch (e) {
       if ((e as Error).name === "AbortError") {
-        setAssistant({ role: "assistant", content: answer ? `${answer}\n\n_(Production interrompue.)_` : "_(Production interrompue.)_", sources });
+        setAssistant({ role: "assistant", content: answer ? `${answer}\n\n_(Production interrompue.)_` : "_(Production interrompue.)_", sources, decision });
       } else {
-        setAssistant({ role: "assistant", content: `${answer ? `${answer}\n\n` : ""}**Erreur :** ${(e as Error).message}`, sources, error: !answer });
+        setAssistant({ role: "assistant", content: `${answer ? `${answer}\n\n` : ""}**Erreur :** ${(e as Error).message}`, sources, decision, error: !answer });
       }
     } finally {
       setBusy(false);
@@ -481,21 +487,21 @@ function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContex
         <p className="mt-1 text-muted">Chaque production distingue :</p>
         <ul className="mt-1 space-y-1">
           <li>
-            <span className="badge badge-source">SOURCE KIBARU</span> information de la base documentaire, avec son renvoi <span className="cite">R1</span> ;
+            <span className="badge badge-source">SOURCE KIBARU</span> information issue d&apos;une ressource intégrée de la base, avec son renvoi <span className="cite">R1</span> ;
           </li>
           <li>
-            <span className="badge badge-proposition">PROPOSITION PÉDAGOGIQUE KIBARU</span> contenu conçu par l&apos;IA pour vos besoins ;
+            <span className="badge badge-proposition">PROPOSITION KIBARU</span> production pédagogique de l&apos;IA, à partir des sources disponibles ;
           </li>
           <li>
             <span className="badge badge-general">CONNAISSANCE GÉNÉRALE</span> information issue des connaissances générales de l&apos;IA, pas de la base ;
           </li>
           <li>
-            <span className="badge badge-verifier">À VÉRIFIER</span> information que les documents disponibles ne permettent pas de confirmer.
+            <span className="badge badge-verifier">À VÉRIFIER</span> information sans confirmation documentaire suffisante.
           </li>
         </ul>
         <p className="mt-2 text-muted">
           {libraryCount > 0
-            ? `${libraryCount} document(s) actif(s) dans la base documentaire KIBARU.`
+            ? `${libraryCount} ressource(s) consultable(s) dans la base documentaire KIBARU. Au-dessus de chaque réponse, la « confiance documentaire » indique sur quoi elle s'appuie.`
             : "La base documentaire KIBARU ne contient encore aucun document : les réponses sont des propositions ou des connaissances générales, jamais des prescriptions officielles."}
         </p>
       </div>
@@ -521,6 +527,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
 
   return (
     <div className="fade-in rounded-2xl border border-line bg-white px-4 py-3 shadow-[0_1px_2px_rgb(0_0_0/0.03)] sm:px-5">
+      {message.decision && <DecisionBar d={message.decision} />}
       <div ref={fullRef} className={`prose-kibaru ${streaming ? "caret" : ""}`}>
         <Markdown text={message.content} sources={message.sources} />
       </div>
@@ -575,6 +582,27 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
         </div>
       )}
     </div>
+  );
+}
+
+const CONFIDENCE_STYLE: Record<string, string> = {
+  ELEVEE: "bg-faso-50 text-faso-dark ring-faso/30",
+  MOYENNE: "bg-or-50 text-[#7a5a00] ring-or/50",
+  FAIBLE: "bg-rouge-50 text-rouge ring-rouge/30",
+  AUCUNE: "bg-surface text-muted ring-line",
+};
+
+/** Résultat du moteur de décision documentaire pour cette réponse. */
+function DecisionBar({ d }: { d: DecisionSummary }) {
+  const scope = [d.classe, d.matiere].filter(Boolean).join(" · ") || "périmètre non précisé";
+  return (
+    <details className={`mb-3 rounded-lg px-3 py-1.5 text-xs ring-1 ${CONFIDENCE_STYLE[d.confidence] ?? CONFIDENCE_STYLE.AUCUNE}`}>
+      <summary className="cursor-pointer">
+        <span className="font-bold">Confiance documentaire : {d.label}</span> <span className="opacity-80">— {scope} · {d.actives} ressource(s) ACTIVE(S){d.pending.length ? ` · ${d.pending.length} non encore intégrée(s)` : ""}</span>
+      </summary>
+      <p className="mt-1 text-ink">{d.explanation.charAt(0).toUpperCase() + d.explanation.slice(1)}.</p>
+      {d.pending.length > 0 && <p className="mt-0.5 text-muted">Ressources du registre NON ENCORE INTÉGRÉES : {d.pending.join(", ")}.</p>}
+    </details>
   );
 }
 
@@ -716,7 +744,7 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
                             {d.statut && <StatutBadge statut={d.statut} />} {d.title}
                           </div>
                           <div className="text-[11px] text-muted">
-                            {[d.documentId, d.year, d.version && `version ${d.version}`, d.priority && `priorité ${d.priority}`].filter(Boolean).join(" · ")}
+                            {[d.documentId, typeLabel(d.type), d.year, d.version && `version ${d.version}`, d.sourceLevel && `source niveau ${d.sourceLevel}`].filter(Boolean).join(" · ")}
                           </div>
                           {d.note && <div className="text-[11px] text-rouge">{d.note}</div>}
                         </li>
@@ -729,12 +757,12 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
         )}
         {pending.length > 0 && (
           <details className="mt-2">
-            <summary className="cursor-pointer">En attente d&apos;intégration ({pending.length})</summary>
+            <summary className="cursor-pointer">Registre : {pending.length} ressource(s) NON ENCORE INTÉGRÉE(S)</summary>
             <ul className="mt-1 space-y-1">
               {pending.map((d) => (
                 <li key={d.path}>
-                  {d.title}
-                  {d.documentId ? ` [${d.documentId}]` : ""} — <span className="italic">fiche enregistrée, texte non intégré</span>
+                  <span className="font-mono text-[10px]">{d.documentId}</span> {d.title}
+                  <span className="text-muted"> · {STATUT_LABELS[d.statut]}</span>
                 </li>
               ))}
             </ul>

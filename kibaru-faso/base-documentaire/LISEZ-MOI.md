@@ -15,7 +15,8 @@ base-documentaire/
 ├── 07_REFERENTIELS_ET_TEXTES_OFFICIELS
 ├── 08_RESSOURCES_COMPLEMENTAIRES
 ├── 09_ARCHIVES
-└── CATALOGUE.md          (généré : npm run base:catalogue)
+├── REGISTRE_MAITRE.csv   registre maître de toutes les ressources (source centrale des métadonnées)
+└── CATALOGUE.md          vue générée : npm run base:catalogue
 ```
 
 Dans chaque catégorie :
@@ -45,33 +46,63 @@ Exemple :
 Les niveaux après la matière sont facultatifs. Le chemin sert de valeur par défaut ; **la fiche descriptive reste
 prioritaire**, et tout désaccord entre les deux est signalé par `npm run base:verifier`.
 
+## Registre maître — `REGISTRE_MAITRE.csv`
+
+Le registre maître est le **catalogue central** de KIBARU FASO : une ligne par ressource, qu'elle soit intégrée
+(document déposé) ou **NON ENCORE INTÉGRÉE** (connue, mais texte non disponible). Il s'ouvre dans Excel ou LibreOffice
+(séparateur `;`, UTF-8). Ses valeurs l'emportent sur la fiche du document et sur son emplacement ; tout désaccord est
+signalé par `npm run base:verifier`.
+
+Colonnes (métadonnées obligatoires) : ID ; Titre officiel ; Pays ; Ministère/Institution productrice ; Niveau ;
+Classe ; Matière ; Type de document ; Année de publication ; Version ; Date d'intégration dans KIBARU ; Source ;
+URL ou référence documentaire ; Statut ; Niveau de source ; Priorité ; Date de dernière vérification ;
+Document remplacé ; Document de remplacement ; Observations ; Périmètre d'utilisation ; Fichier ; Avertissement.
+
+- **ID** : format `BF-[CLASSE]-[MATIERE]-[NUMERO]` — classes `6E 5E 4E 3E 2NDE 1ERE TERM`, matières `MATH FR HIST GEO SVT
+  PHYS ANG ALL ESP AR PHILO EPS ECM INFO ECO` (ex. `BF-6E-MATH-001`, `BF-2NDE-MATH-001`, `BF-TERM-PHYS-001`). Unique.
+  Une ressource couvrant plusieurs classes prend le code de la première (ex. `BF-6E-FR-001` pour « 6e-5e »).
+- **Classe** : `6e`, `6e-5e`, `4e, 3e`…
+- **Type de document** : `PROGRAMME`, `CURRICULUM`, `GUIDE_PEDAGOGIQUE`, `MANUEL`, `REFERENTIEL`, `PROGRESSION`,
+  `FICHE_PEDAGOGIQUE`, `EVALUATION`, `EXAMEN`, `TEXTE_OFFICIEL`, `NOTE_DE_SERVICE`, `CIRCULAIRE`, `RESSOURCE_COMPLEMENTAIRE`.
+- **Statut** : voir ci-dessous. **Niveau de source** : hiérarchie 1 à 5 (ci-dessous). **Priorité** : `Haute`, `Moyenne`
+  ou `Basse` — priorité de traitement (intégration, vérification).
+- **Fichier** : chemin du document dans la structure, une fois déposé. Vide ou introuvable → NON ENCORE INTÉGRÉ.
+- **Année, version, dates** : laissez « À vérifier » ou vide tant qu'elles ne sont pas lues sur le document. Ne jamais
+  les deviner.
+
+Le registre initial ne certifie pas l'actualité des documents : les statuts sont mis à jour après vérification
+documentaire. Pour les classes et types encore non couverts (3e, 2nde, 1ère, Terminale…), on n'ajoute une ligne que
+lorsqu'une ressource réelle est identifiée — jamais de ligne artificielle. `CATALOGUE.md` affiche la couverture par
+classe et type, avec « NON ENCORE INTÉGRÉ » là où rien n'est encore identifié.
+
 ## Formats
 
 `.pdf` (contenant du texte ; un scan en image ne peut pas être lu), `.docx`, `.txt`, `.md`.
 
-## Fiche descriptive (obligatoire pour chaque ressource)
+## Fiche descriptive du document (facultative si la ressource est au registre)
 
 Pour un `.pdf` ou un `.docx` : fichier voisin de même nom suivi de `.meta` (ex. `guide.pdf.meta`).
 Pour un `.md` ou un `.txt` : en tête du fichier, entre deux lignes `---`.
 Les lignes commençant par `#` sont des commentaires.
 
 ```
-id: BF-MATH-6E-PROG-002
+id: BF-6E-MATH-002
 titre: Programme de mathématiques — classe de 6e
 pays: Burkina Faso
 niveau: Post-primaire
 classe: 6e
 matiere: Mathématiques
-type: programme
+type: PROGRAMME
 organisme: [ministère / direction émettrice]
 annee: 2024
 version: 2
 date_integration: 2026-09-28
 statut: ACTIF
 source: [site, service, référence exacte]
-priorite: 1
+niveau_source: 1
+priorite: Haute
 date_verification: 2026-09-28
-remplace: BF-MATH-6E-PROG-001
+remplace: BF-6E-MATH-001
 date_remplacement: 2026-09-28
 observations: [facultatif]
 avertissement: [facultatif — règle d'usage que KIBARU doit respecter]
@@ -79,14 +110,17 @@ avertissement: [facultatif — règle d'usage que KIBARU doit respecter]
 
 | Métadonnée | Obligatoire | Rôle |
 |---|---|---|
-| `id` | oui | ID unique et stable. Convention : `PAYS-MATIÈRE-CLASSE-TYPE-NUMÉRO` (ex. `BF-MATH-6E-GUIDE-001`). Deux ressources ne partagent jamais un ID. |
+| `id` | oui | ID unique au format `BF-[CLASSE]-[MATIERE]-[NUMERO]`. Il relie le document à sa ligne du registre. |
 | `titre`, `pays`, `niveau`, `classe`, `matiere`, `type` | oui | Identification et champ d'application (le chemin peut fournir pays → type). |
 | `organisme` | oui | Organisme ou producteur. |
 | `annee`, `version` | oui | Date et version (le chemin peut les fournir). |
 | `date_integration` | oui | Date d'entrée dans la base KIBARU. |
 | `statut` | oui | Voir ci-dessous. **Sans statut, la ressource est traitée comme À VÉRIFIER — jamais comme ACTIVE.** |
 | `source` | oui | Provenance exacte (site, service, référence). |
-| `priorite` | oui | Hiérarchie des sources : 1 document officiel du ministère, 2 programme / guide officiellement reconnu, 3 document institutionnel complémentaire, 4 ressource secondaire fiable. |
+| `niveau_source` | oui | Hiérarchie des sources : 1 sources officielles (ministère, directions générales, institutions habilitées, textes réglementaires) ; 2 documents curriculaires officiels (programmes, curricula, référentiels, guides validés) ; 3 ressources institutionnelles complémentaires ; 4 ressources pédagogiques fiables non officielles ; 5 connaissances générales du modèle. |
+| `priorite` | oui | Haute, Moyenne ou Basse (priorité de traitement). |
+| `perimetre` | oui | Périmètre d'utilisation (ce pour quoi la ressource peut servir). |
+| `url` | si disponible | URL ou référence documentaire. |
 | `date_verification` | oui | Date de la dernière vérification humaine de la ressource. |
 | `remplace` / `remplace_par` | si besoin | ID de la ou des ressources remplacées / remplaçantes. |
 | `date_remplacement` | si besoin | Date du remplacement. |
@@ -98,11 +132,14 @@ Une valeur `à renseigner` est ignorée : **n'inventez jamais** une année, une 
 
 | Statut | Consulté par KIBARU ? | Traitement |
 |---|---|---|
-| `ACTIF` | oui | Référence utilisable. Seule une ressource ACTIVE, officielle et pertinente peut fonder une affirmation sur les programmes ou orientations du Burkina Faso. |
-| `PROVISOIRE` | oui | Présentée comme provisoire, jamais comme définitive. |
-| `À VÉRIFIER` | oui | Peut être citée, mais ce qui en provient reste « À VÉRIFIER » et ne confirme aucune prescription. |
-| `REMPLACÉ` | non | Conservée dans l'historique. |
-| `ARCHIVE` | non | Conservée dans l'historique (de préférence rangée dans `09_ARCHIVES`). |
+| `ACTIF` | oui | Actuellement confirmée comme utilisable dans son périmètre. Seule une ressource ACTIVE, officielle et pertinente peut fonder une affirmation sur les programmes ou orientations du Burkina Faso. |
+| `À_VÉRIFIER` | oui | Officielle ou sérieuse, mais actualité, portée ou applicabilité actuelle insuffisamment confirmées. Citée comme « source officielle historique » ; ce qui en provient reste « À VÉRIFIER ». |
+| `PROVISOIRE` | oui | Intégrée temporairement en attendant validation ; présentée comme provisoire. |
+| `REMPLACÉ` | non | Officiellement remplacée par une autre ressource ; conservée dans l'historique. |
+| `ARCHIVE` | non | Conservée pour l'historique, jamais référence principale (de préférence rangée dans `09_ARCHIVES`). |
+
+**Officiel ≠ automatiquement actuel** : une ressource officielle ancienne n'est jamais présentée comme le programme
+en vigueur sans ressource ACTIVE qui le confirme.
 
 À pertinence égale, KIBARU privilégie la priorité la plus officielle, puis ACTIF avant PROVISOIRE avant À VÉRIFIER.
 
@@ -121,20 +158,29 @@ Une valeur `à renseigner` est ignorée : **n'inventez jamais** une année, une 
 
 ## Ajouter une nouvelle version, pas à pas
 
-1. Déposez le nouveau fichier dans son dossier `…/ANNÉE/VERSION/`, avec sa fiche : nouvel `id`, `remplace:` = ancien
-   ID, `statut: PROVISOIRE` ou `À VÉRIFIER` tant que son application officielle n'est pas confirmée.
-2. Une fois l'application confirmée : `statut: ACTIF`, `date_verification` et `date_remplacement` à jour. Sur
-   l'ancienne fiche : `statut: REMPLACÉ` et `remplace_par:` = nouvel ID. Ne supprimez pas l'ancienne.
+1. Ajoutez une ligne au registre : nouvel ID, « Document remplacé » = ancien ID, statut `PROVISOIRE` ou `À_VÉRIFIER` tant
+   que son application officielle n'est pas confirmée ; déposez le fichier dans `…/ANNÉE/VERSION/` et renseignez « Fichier ».
+2. Une fois l'application confirmée : statut `ACTIF`, date de vérification et date de remplacement à jour. Sur la ligne
+   de l'ancienne ressource : statut `REMPLACÉ` et « Document de remplacement » = nouvel ID. Ne supprimez jamais la ligne.
 3. `npm run base:verifier`, puis `npm run base:catalogue`, puis redéployez.
+
+## Moteur de décision documentaire
+
+Avant chaque réponse, l'application : 1. identifie pays, niveau, classe, matière, thème et type de demande (la demande
+écrite l'emporte sur le contexte de la classe) ; 2. recense les ressources du registre pour ce périmètre ; 3. filtre
+les ressources consultables et pertinentes ; 4. repère les versions concurrentes ; 5. applique les remplacements
+déclarés ; 6. évalue la **confiance documentaire** — ÉLEVÉE (ressource ACTIVE de niveau 1 ou 2), MOYENNE (ACTIVE non
+officielle ou PROVISOIRE), FAIBLE (seulement À VÉRIFIER ou documents personnels), AUCUNE ; 7. transmet au modèle la
+consigne correspondante. La confiance est affichée à l'enseignant au-dessus de chaque réponse.
 
 ## Outils
 
 | Commande | Rôle |
 |---|---|
 | `npm run base:verifier` | Contrôle : métadonnées manquantes, statuts illisibles, ID en double, remplacements vers des ID inconnus, fiche en désaccord avec son dossier, fichier hors structure, fiche sans document. |
-| `npm run base:catalogue` | Régénère `CATALOGUE.md` : ressources consultables par catégorie, fiches en attente, historique des versions, filiations, contrôles. |
+| `npm run base:catalogue` | Régénère `CATALOGUE.md` : tableau maître, couverture par classe, ressources consultables, dossiers de dépôt des ressources NON ENCORE INTÉGRÉES, historique des versions, contrôles. |
 
-Une fiche `.meta` déposée sans son document est enregistrée « en attente d'intégration » : elle apparaît dans le
-catalogue et dans l'application, mais aucun contenu n'en est consulté.
+Une ressource du registre (ou une fiche `.meta`) sans document est NON ENCORE INTÉGRÉE : elle apparaît dans le
+catalogue, dans l'application et dans la décision documentaire, mais aucun contenu n'en est consulté.
 
-Les fichiers `LISEZ-MOI.md` et `CATALOGUE.md` ne sont jamais lus comme des ressources.
+Les fichiers `LISEZ-MOI.md`, `CATALOGUE.md` et `REGISTRE_MAITRE.csv` ne sont jamais lus comme des ressources.

@@ -42,14 +42,14 @@ Date de remplacement: 2026-09-01`);
       niveau: "Post-primaire",
       classes: ["6e"],
       disciplines: ["Mathématiques"],
-      type: "programme",
+      type: "PROGRAMME",
       organisme: "Ministère",
       annee: "2025",
       version: "2",
       dateIntegration: "2026-09-28",
       statut: "A_VERIFIER",
       source: "site du ministère",
-      priorite: 1,
+      niveauSource: 1,
       dateVerification: "2026-09-28",
       remplace: ["BF-MATH-6E-PROG-001"],
       dateRemplacement: "2026-09-01",
@@ -59,7 +59,8 @@ Date de remplacement: 2026-09-01`);
     const st = (v: string) => parseMetaBlock(`statut: ${v}`).statut;
     expect(["ACTIF", "Provisoire", "à vérifier", "REMPLACÉ", "archive"].map(st)).toEqual(["ACTIF", "PROVISOIRE", "A_VERIFIER", "REMPLACE", "ARCHIVE"]);
     expect(parseMetaBlock("etat: declasse").statut).toBe("ARCHIVE");
-    expect(parseMetaBlock("fiabilite: 2").priorite).toBe(2);
+    expect(parseMetaBlock("fiabilite: 2").niveauSource).toBe(2);
+    expect(parseMetaBlock("priorite: Haute").priorite).toBe("HAUTE");
   });
   it("un statut libre n'est pas deviné : il est gardé en observation", () => {
     const m = parseMetaBlock("statut: document ancien");
@@ -67,10 +68,11 @@ Date de remplacement: 2026-09-01`);
     expect(m.statutInvalide).toBe("document ancien");
     expect(m.observations).toBe("document ancien");
   });
-  it("ignore les valeurs « à renseigner » et une priorité hors échelle", () => {
-    const m = parseMetaBlock("annee: à renseigner\nversion: À préciser\npriorite: 9");
+  it("ignore les valeurs « à renseigner » / « à vérifier » et un niveau de source hors échelle", () => {
+    const m = parseMetaBlock("annee: à renseigner\nversion: À vérifier\nniveau_source: 9\nstatut: À_VÉRIFIER");
     expect(m.annee).toBeUndefined();
     expect(m.version).toBeUndefined();
-    expect(m.priorite).toBeUndefined();
+    expect(m.niveauSource).toBeUndefined();
+    expect(m.statut).toBe("A_VERIFIER");
   });
 });

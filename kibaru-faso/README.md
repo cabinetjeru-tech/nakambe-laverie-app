@@ -19,8 +19,12 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
   Chaque ressource a une fiche (ID unique, statut ACTIF, PROVISOIRE, À VÉRIFIER, REMPLACÉ ou ARCHIVE, priorité,
   dates…). Un document ancien n'est jamais obsolète par défaut, un document récent jamais applicable par défaut :
   seul un remplacement déclaré vers une ressource ACTIVE écarte l'ancienne, qui reste dans l'historique.
+- **Registre maître et moteur de décision documentaire.** Toutes les ressources sont inscrites au registre (ID
+  `BF-[CLASSE]-[MATIERE]-[NUMERO]`). Avant chaque réponse, l'application identifie classe et matière, recense les
+  ressources, compare les versions, applique les remplacements et évalue une **confiance documentaire** (élevée,
+  moyenne, faible, aucune), transmise au modèle et affichée à l'enseignant. Officiel ≠ automatiquement actuel.
 - **Jamais d'invention présentée comme officielle.** Chaque production distingue **SOURCE KIBARU** (avec renvoi
-  [R1]… vers l'extrait consulté), **PROPOSITION PÉDAGOGIQUE KIBARU**, **CONNAISSANCE GÉNÉRALE** et **À VÉRIFIER**.
+  [R1]… vers l'extrait consulté), **PROPOSITION KIBARU**, **CONNAISSANCE GÉNÉRALE** et **À VÉRIFIER**.
 - **L'enseignant reste responsable** : il vérifie, adapte et valide chaque contenu avant usage en classe.
 
 Le prompt système complet se trouve dans [`src/lib/prompt.ts`](src/lib/prompt.ts) : la configuration V2 du
@@ -75,13 +79,15 @@ modèle dans le même appel, au lieu d'échouer.
 
 ## Alimenter la base documentaire
 
-Déposez chaque ressource dans son dossier de la structure officielle (`base-documentaire/`, formats `.pdf` texte,
+Inscrivez chaque ressource au **registre maître** (`base-documentaire/REGISTRE_MAITRE.csv`), déposez son document dans
+son dossier de la structure officielle (`base-documentaire/`, formats `.pdf` texte,
 `.docx`, `.txt`, `.md`) avec sa fiche descriptive, puis lancez `npm run base:verifier` et `npm run base:catalogue`.
 Structure, métadonnées, statuts et règles de versions : [`base-documentaire/LISEZ-MOI.md`](base-documentaire/LISEZ-MOI.md).
 Catalogue à jour : [`base-documentaire/CATALOGUE.md`](base-documentaire/CATALOGUE.md).
 
-**Aucun texte officiel n'est encore intégré** : seule la fiche descriptive du guide pédagogique de mathématiques 6e
-(`BF-MATH-6E-GUIDE-001`) est présente ; le PDF lui-même reste à déposer à côté d'elle. KIBARU FASO ne doit s'appuyer
+**Aucun texte officiel n'est encore intégré.** Le registre maître (`base-documentaire/REGISTRE_MAITRE.csv`) recense
+21 guides pédagogiques du post-primaire (6e à 3e), tous « À VÉRIFIER » et NON ENCORE INTÉGRÉS : leurs documents restent
+à déposer. KIBARU FASO ne doit s'appuyer
 que sur des textes authentiques, dont l'origine est connue. Tant que la base est vide, les réponses sont présentées
 comme des propositions ou des connaissances générales.
 

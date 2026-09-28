@@ -49,7 +49,10 @@ describe("séparation sujet / corrigé", () => {
 
 describe("prompt système", () => {
   it("contient les règles essentielles", () => {
-    for (const s of ["KIBARU FASO", "INTERDICTION D'INVENTER", "PROPOSITION PÉDAGOGIQUE KIBARU", "CONNAISSANCE GÉNÉRALE", "SOURCE KIBARU", "À VÉRIFIER", "HIÉRARCHIE DES SOURCES", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée dans la base documentaire KIBARU disponible.", "30. MESSAGE DE DÉMARRAGE"]) {
+    for (const s of ["KIBARU FASO", "INTERDICTION D'INVENTER", "PROPOSITION PÉDAGOGIQUE KIBARU", "CONNAISSANCE GÉNÉRALE", "SOURCE KIBARU", "À VÉRIFIER", "HIÉRARCHIE DES SOURCES", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée dans la base documentaire KIBARU disponible.", "30. MESSAGE DE DÉMARRAGE",
+      "Cette information n'est pas actuellement confirmée dans la base documentaire KIBARU disponible.",
+      "Je peux néanmoins vous proposer une activité pédagogique générale, clairement présentée comme une proposition KIBARU et non comme une prescription officielle.",
+      "Deux ressources de la base KIBARU présentent des informations différentes.", "officiel ≠ automatiquement actuel", "**PROPOSITION KIBARU**", "<decision_documentaire>", "BF-[CLASSE]-[MATIERE]-[NUMERO]"]) {
       expect(SYSTEM_PROMPT).toContain(s);
     }
   });

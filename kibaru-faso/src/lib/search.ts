@@ -1,4 +1,4 @@
-import { CONSULTED, STATUT_LABELS, STATUT_WEIGHT, type Statut } from "./base/structure";
+import { CONSULTED, STATUT_LABELS, STATUT_WEIGHT, subjectCodes, typeLabel, type Statut } from "./base/structure";
 
 /**
  * Recherche dans les documents de référence : découpage en extraits et classement BM25.
@@ -33,8 +33,13 @@ export type RefDocument = {
   niveau?: string;
   year?: string;
   version?: string;
-  /** Priorité (hiérarchie des sources) : 1 = document officiel du ministère … 5 = connaissance générale. */
-  priority?: number;
+  /** Hiérarchie des sources : 1 = source officielle … 5 = connaissance générale du modèle. */
+  sourceLevel?: number;
+  /** Priorité de traitement dans le registre (HAUTE, MOYENNE, BASSE). */
+  priority?: string;
+  url?: string;
+  /** Périmètre d'utilisation déclaré. */
+  perimeter?: string;
   /** Catégorie de la structure officielle (01_PROGRAMMES_ET_CURRICULA…) et chemin dans la base. */
   category?: string;
   path?: string;
@@ -136,18 +141,15 @@ export function canonicalClasse(s: string): string {
   return s.trim();
 }
 
-/** Un document est applicable s'il ne restreint pas la classe/discipline, ou s'il inclut celle demandée. */
-export function isApplicable(doc: RefDocument, classe?: string, discipline?: string): boolean {
+/** Un document est applicable s'il ne restreint pas la classe/matière, ou s'il inclut celle demandée. */
+export function isApplicable(doc: Pick<RefDocument, "classes" | "disciplines">, classe?: string, discipline?: string): boolean {
   if (classe && doc.classes.length > 0) {
     const c = canonicalClasse(classe);
     if (!doc.classes.some((dc) => canonicalClasse(dc) === c)) return false;
   }
   if (discipline && doc.disciplines.length > 0) {
-    const d = normalize(discipline).trim();
-    if (!doc.disciplines.some((dd) => {
-      const n = normalize(dd).trim();
-      return n === d || n.includes(d) || d.includes(n);
-    })) return false;
+    const wanted = subjectCodes(discipline);
+    if (!doc.disciplines.some((dd) => [...subjectCodes(dd)].some((c) => wanted.has(c)))) return false;
   }
   return true;
 }
@@ -217,8 +219,8 @@ export function resolveBase(docs: RefDocument[], today = new Date().toISOString(
   return { usable, history };
 }
 
-/** Priorité (hiérarchie des sources) : à pertinence égale, le document le plus officiel passe devant. */
-const PRIORITY_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
+/** Hiérarchie des sources : à pertinence égale, le document le plus officiel passe devant. */
+const LEVEL_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
 
 /**
  * Classe les extraits par pertinence (BM25) pour la requête, pondérée par la priorité et le statut.
@@ -266,7 +268,7 @@ export function searchDocuments(
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
         score += (idf * f * (k1 + 1)) / (f + k1 * (1 - b + (b * it.len) / avgLen));
       }
-      const weight = (PRIORITY_WEIGHT[it.doc.priority ?? 4] ?? 1) * (it.doc.statut ? STATUT_WEIGHT[it.doc.statut] : 1);
+      const weight = (LEVEL_WEIGHT[it.doc.sourceLevel ?? 4] ?? 1) * (it.doc.statut ? STATUT_WEIGHT[it.doc.statut] : 1);
       return { it, score: score * weight };
     })
     .filter((s) => s.score > 0)
@@ -295,9 +297,9 @@ function describe(d: DocInfo): [string, string][] {
   const pairs: [string, string | undefined][] = [
     ["id", d.documentId],
     ["statut", d.statut ? STATUT_LABELS[d.statut] : undefined],
-    ["priorite", d.priority ? String(d.priority) : undefined],
+    ["niveau_source", d.sourceLevel ? String(d.sourceLevel) : undefined],
     ["categorie", d.category],
-    ["type", d.type],
+    ["type", d.type ? typeLabel(d.type) : undefined],
     ["origine", d.origin],
     ["organisme", d.organisme],
     ["pays", d.pays],
@@ -307,6 +309,8 @@ function describe(d: DocInfo): [string, string][] {
     ["annee", d.year],
     ["version", d.version],
     ["source", d.source],
+    ["url", d.url],
+    ["perimetre", d.perimeter],
     ["derniere_verification", d.verifiedAt],
     ["observations", d.observations],
     ["remarque", d.note],

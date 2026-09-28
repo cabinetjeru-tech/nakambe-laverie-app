@@ -29,7 +29,7 @@ describe("structure officielle", () => {
       niveau: "Post-primaire",
       classes: ["6e"],
       matieres: ["Mathématiques"],
-      type: "programme",
+      type: "PROGRAMME",
       annee: "2024",
       version: "2",
       problems: [],
@@ -37,7 +37,7 @@ describe("structure officielle", () => {
   });
   it("accepte un chemin partiel et signale les écarts", () => {
     const p = parsePath("02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/SECONDAIRE/TLE/PHILOSOPHIE/guide.md");
-    expect(p).toMatchObject({ type: "guide pédagogique", classes: ["Terminale"], matieres: ["Philosophie"], problems: [] });
+    expect(p).toMatchObject({ type: "GUIDE_PEDAGOGIQUE", classes: ["Terminale"], matieres: ["Philosophie"], problems: [] });
     expect(parsePath("divers/guide.md").problems[0]).toContain("hors des 9 catégories");
     expect(parsePath("04_PROGRESSIONS/BURKINA_FASO/POST_PRIMAIRE/SIXIEME/x.md").problems[0]).toContain("classe « SIXIEME » non reconnue");
     expect(parsePath("08_RESSOURCES_COMPLEMENTAIRES/BURKINA_FASO/TOUS_NIVEAUX/TOUTES_CLASSES/TOUTES_MATIERES/x.md")).toMatchObject({ classes: [], matieres: [] });
@@ -51,7 +51,7 @@ describe("structure officielle", () => {
 describe("contrôles", () => {
   it("liste les métadonnées obligatoires manquantes, en tenant compte du chemin", () => {
     const info = parsePath("01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/POST_PRIMAIRE/6E/MATHEMATIQUES/PROGRAMME/2024/V1/p.md");
-    expect(missingFields(parseMetaBlock("id: X\ntitre: T"), info)).toEqual(["organisme", "date_integration", "statut", "source", "priorite", "date_verification"]);
+    expect(missingFields(parseMetaBlock("id: X\ntitre: T"), info)).toEqual(["organisme", "date_integration", "statut", "source", "priorite", "niveau_source", "date_verification", "perimetre"]);
   });
   it("signale une fiche en contradiction avec son dossier", () => {
     const info = parsePath("01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/POST_PRIMAIRE/6E/MATHEMATIQUES/p.md");

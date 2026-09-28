@@ -26,7 +26,7 @@ Correspondance entre les 30 sections de la configuration V2 et l'application act
 | 18 | Conception pas à pas | Fait + Prompt | Action « Construire pas à pas » ; le modèle pose au plus trois questions. |
 | 19 | Modifier une production | Fait | 13 boutons sous chaque réponse (simplifier, développer, … résumer) ; export par les boutons Imprimer / PDF et Word. |
 | 20 | Export PDF / Word | Partiel | Impression directe ; PDF via « Enregistrer en PDF » de la fenêtre d'impression ; fichier Word (.doc, ouvert par Word et réenregistrable en .docx). Génération native PDF / DOCX : à faire. |
-| 21 | Recherche multicritère | Fait | Classe, matière, thème, type, année, version, statut ; archives exclues. |
+| 21 | Recherche multicritère | Fait | Moteur de décision documentaire en 7 étapes (identification, recensement, filtrage, versions, remplacements, confiance, consigne) ; registre maître `REGISTRE_MAITRE.csv`. |
 | 22 | Mise à jour de la base | Partiel | Dépôt dans `base-documentaire/`, contrôle (`base:verifier`), catalogue (`base:catalogue`), redéploiement. Interface d'administration : à faire. |
 | 23 | Espace administrateur | À faire | Utilisateurs, établissements, documents, versions, abonnements, statistiques : nécessite comptes et base de données. |
 | 24 | Architecture | Fait | Documents → base → recherche → contexte → modèle → application → enseignant. |

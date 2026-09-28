@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
+import { decide, decisionSummary, formatDecisionBlock, identifyRequest } from "@/lib/base/decision";
 import { getBase } from "@/lib/library";
 import { AiUnavailableError, streamAnswer } from "@/lib/llm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -49,12 +50,14 @@ export async function POST(req: Request) {
     origin: "enseignant",
     classes: [],
     disciplines: [],
-    priority: 4,
+    sourceLevel: 4,
     text: d.text,
   }));
   // Versions : seules les ressources consultables sont recherchées ; l'historique est seulement signalé.
   const { usable, history: versionHistory } = resolveBase([...library, ...teacherDocs]);
-  const applies = (d: { classes: string[]; disciplines: string[] }) => isApplicable({ ...d, id: "", title: "", type: "", origin: "bibliotheque", text: "" }, context.classe, context.discipline);
+  // Moteur de décision, étape 1 : périmètre de la demande (la demande écrite l'emporte sur le contexte).
+  const profile = identifyRequest(history[history.length - 1]!.content, context);
+  const applies = (d: { classes: string[]; disciplines: string[] }) => isApplicable(d, profile.classe, profile.matiere);
   const catalogue = usable.filter(applies);
   const historyHere: ArchivedDoc[] = [
     ...versionHistory.filter((h) => applies(h.doc)),
@@ -64,10 +67,12 @@ export async function POST(req: Request) {
     })),
   ];
   const excerpts = searchDocuments(catalogue, searchQuery(history, context), { limit: 8 });
+  // Étapes 2 à 6 : ressources du périmètre, versions, remplacements, confiance documentaire.
+  const decision = decide(profile, catalogue, excerpts, versionHistory.filter((h) => applies(h.doc)), pending.filter(applies));
 
   // Le dernier message reçoit le contexte et les extraits ; l'historique reste inchangé (cache efficace).
   const last = history[history.length - 1]!;
-  const prefix = [formatContextBlock(context), formatReferenceBlock(catalogue, excerpts, historyHere)].filter(Boolean).join("\n\n");
+  const prefix = [formatContextBlock(context), formatDecisionBlock(decision), formatReferenceBlock(catalogue, excerpts, historyHere)].filter(Boolean).join("\n\n");
   const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m, i) =>
     i === history.length - 1
       ? { role: "user", content: `${prefix}\n\n<demande_enseignant>\n${last.content}\n</demande_enseignant>` }
@@ -79,7 +84,7 @@ export async function POST(req: Request) {
   const stream = new ReadableStream({
     async start(controller) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
-      send({ type: "meta", sources, libraryCount: catalogue.length });
+      send({ type: "meta", sources, libraryCount: catalogue.length, decision: decisionSummary(decision) });
       try {
         const gen = streamAnswer(messages);
         let r = await gen.next();

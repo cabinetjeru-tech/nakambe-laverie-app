@@ -41,6 +41,17 @@ describe("chunkText", () => {
   });
 });
 
+describe("isApplicable — correspondance des matières", () => {
+  it("rapproche les intitulés du registre de ceux de l'enseignant", () => {
+    const phys = doc({ text: "x", classes: ["4e", "3e"], disciplines: ["Sciences physiques"] });
+    expect(isApplicable(phys, "3e", "Physique-Chimie")).toBe(true);
+    expect(isApplicable(phys, "3e", "Éducation physique et sportive")).toBe(false);
+    const hist = doc({ text: "x", disciplines: ["Histoire"] });
+    expect(isApplicable(hist, undefined, "Histoire-Géographie")).toBe(true);
+    expect(isApplicable(hist, undefined, "Géographie")).toBe(false);
+  });
+});
+
 describe("isApplicable", () => {
   const d = doc({ text: "x", classes: ["6e", "5e"], disciplines: ["Mathématiques"] });
   it("filtre par classe et discipline", () => {
@@ -83,10 +94,10 @@ describe("formatReferenceBlock", () => {
 
 describe("règle d'usage et métadonnées transmises", () => {
   it("accompagnent chaque extrait et figurent au catalogue", () => {
-    const d = doc({ title: "Guide 6e", documentId: "BF-X-001", statut: "A_VERIFIER", priority: 2, notice: "Ne pas présenter comme <prescription> actuelle", text: "fractions" });
+    const d = doc({ title: "Guide 6e", documentId: "BF-X-001", statut: "A_VERIFIER", sourceLevel: 2, notice: "Ne pas présenter comme <prescription> actuelle", text: "fractions" });
     const [e] = searchDocuments([d], "fractions");
     const block = formatReferenceBlock([d], [e!]);
-    expect(block).toContain('id="BF-X-001" statut="À VÉRIFIER" priorite="2"');
+    expect(block).toContain('id="BF-X-001" statut="À VÉRIFIER" niveau_source="2"');
     expect(block).toContain("<regle_usage>Ne pas présenter comme prescription actuelle</regle_usage>");
     expect(block).toContain("Règle d'usage : Ne pas présenter");
   });
@@ -147,12 +158,12 @@ describe("résolution des versions", () => {
 
 describe("choix des sources", () => {
   it("à pertinence égale : priorité la plus officielle d'abord", () => {
-    const secondaire = doc({ id: "s", title: "Fiche", priority: 4, text: "les fractions en 6e" });
-    const officiel = doc({ id: "o", title: "Fiche", priority: 1, text: "les fractions en 6e" });
+    const secondaire = doc({ id: "s", title: "Fiche", sourceLevel: 4, text: "les fractions en 6e" });
+    const officiel = doc({ id: "o", title: "Fiche", sourceLevel: 1, text: "les fractions en 6e" });
     expect(searchDocuments([secondaire, officiel], "fractions").map((e) => e.doc.id)).toEqual(["o", "s"]);
   });
   it("à pertinence et priorité égales : ACTIF avant PROVISOIRE avant À VÉRIFIER", () => {
-    const docs = (["A_VERIFIER", "ACTIF", "PROVISOIRE"] as const).map((statut) => doc({ id: statut, statut, priority: 2, title: "Fiche", text: "les fractions en 6e" }));
+    const docs = (["A_VERIFIER", "ACTIF", "PROVISOIRE"] as const).map((statut) => doc({ id: statut, statut, sourceLevel: 2, title: "Fiche", text: "les fractions en 6e" }));
     expect(searchDocuments(docs, "fractions").map((e) => e.doc.id)).toEqual(["ACTIF", "PROVISOIRE", "A_VERIFIER"]);
   });
   it("la date ne donne aucun avantage par elle-même", () => {
