@@ -5,11 +5,13 @@
  *   classes: 6e, 5e
  *   disciplines: Mathématiques
  *   source: MENAPLN, 2023
+ *   statut: programme en vigueur | document ancien, à confronter aux textes récents…
+ *   avertissement: règle d'usage que KIBARU doit respecter pour ce document (une seule ligne)
  * Pour un fichier .md/.txt : en tête, entre deux lignes « --- ».
  * Pour un .pdf/.docx : dans un fichier voisin « nom-du-fichier.pdf.meta ».
  */
 
-export type DocMeta = { titre?: string; type?: string; classes: string[]; disciplines: string[]; source?: string };
+export type DocMeta = { titre?: string; type?: string; classes: string[]; disciplines: string[]; source?: string; statut?: string; avertissement?: string };
 
 export function parseMetaBlock(block: string): DocMeta {
   const meta: DocMeta = { classes: [], disciplines: [] };
@@ -24,6 +26,8 @@ export function parseMetaBlock(block: string): DocMeta {
     else if (key === "classes" || key === "classe") meta.classes = list();
     else if (key === "disciplines" || key === "discipline") meta.disciplines = list();
     else if (key === "source") meta.source = value;
+    else if (key === "statut" || key === "status") meta.statut = value;
+    else if (key === "avertissement" || key === "attention" || key === "regle") meta.avertissement = value;
   }
   return meta;
 }

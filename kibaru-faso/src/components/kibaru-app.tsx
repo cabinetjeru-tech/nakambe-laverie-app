@@ -9,7 +9,7 @@ import { newId, store, type Conversation, type Source, type StoredMessage, type 
 import { DISCIPLINES, TEMPLATES } from "@/lib/templates";
 import { Markdown } from "./markdown";
 
-type LibraryDoc = { id: string; title: string; type: string; classes: string[]; disciplines: string[]; source: string | null };
+type LibraryDoc = { id: string; title: string; type: string; classes: string[]; disciplines: string[]; source: string | null; status: string | null; notice: string | null };
 type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[] };
 
 const FOLLOW_UPS = [
@@ -473,7 +473,8 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
             {message.sources.map((s) => (
               <li key={s.label}>
                 <span className="cite">{s.label}</span> {s.title}
-                {s.source ? ` — ${s.source}` : ""} · {s.origin === "enseignant" ? "document de l'enseignant" : "bibliothèque de référence"}
+                {s.source ? ` — ${s.source}` : ""}
+                {s.status ? <span className="text-rouge"> · {s.status}</span> : null} · {s.origin === "enseignant" ? "document de l'enseignant" : "bibliothèque de référence"}
               </li>
             ))}
           </ul>
@@ -627,8 +628,9 @@ function DocumentsPanel({ library, docs, onChange, context }: { library: Library
             {(context.classe || context.discipline) && <p className="mt-1">{matching.length} applicable(s) à votre classe et discipline.</p>}
             <ul className="mt-1 max-h-40 space-y-1 overflow-y-auto">
               {library.map((d) => (
-                <li key={d.id} className={matching.includes(d) ? "text-ink" : "opacity-50"}>
+                <li key={d.id} className={matching.includes(d) ? "text-ink" : "opacity-50"} title={d.notice ?? undefined}>
                   {d.title} <span className="text-muted">· {d.type}</span>
+                  {d.status && <div className="text-[11px] text-rouge">{d.status}</div>}
                 </li>
               ))}
             </ul>

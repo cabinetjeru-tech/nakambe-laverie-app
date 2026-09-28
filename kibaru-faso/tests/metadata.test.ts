@@ -14,3 +14,11 @@ describe("métadonnées", () => {
     expect(parseMetaBlock("Classe: Terminale\ndiscipline: Philosophie").classes).toEqual(["Terminale"]);
   });
 });
+
+describe("statut et règle d'usage", () => {
+  it("lit le statut et l'avertissement", () => {
+    const m = parseMetaBlock("statut: ancien\navertissement: ne pas présenter comme prescription actuelle");
+    expect(m.statut).toBe("ancien");
+    expect(m.avertissement).toBe("ne pas présenter comme prescription actuelle");
+  });
+});

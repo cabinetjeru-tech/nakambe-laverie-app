@@ -11,6 +11,6 @@ export async function GET(req: Request) {
   const docs = await getLibrary().catch(() => []);
   return Response.json({
     configured: aiConfig().configured,
-    documents: docs.map((d) => ({ id: d.id, title: d.title, type: d.type, classes: d.classes, disciplines: d.disciplines, source: d.source ?? null })),
+    documents: docs.map((d) => ({ id: d.id, title: d.title, type: d.type, classes: d.classes, disciplines: d.disciplines, source: d.source ?? null, status: d.status ?? null, notice: d.notice ?? null })),
   });
 }

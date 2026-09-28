@@ -20,6 +20,10 @@ export type RefDocument = {
   disciplines: string[];
   /** Mention d'origine lisible (ex. « MENAPLN, 2023 »), si connue. */
   source?: string;
+  /** Statut du document (en vigueur, ancien…), tel que déclaré par l'administrateur. */
+  status?: string;
+  /** Règle d'usage propre au document, transmise au modèle avec chaque extrait. */
+  notice?: string;
   text: string;
 };
 
@@ -27,7 +31,7 @@ export type Chunk = { docId: string; index: number; text: string };
 
 export type Excerpt = {
   label: string; // R1, R2…
-  doc: Pick<RefDocument, "id" | "title" | "type" | "origin" | "source">;
+  doc: Pick<RefDocument, "id" | "title" | "type" | "origin" | "source" | "status" | "notice">;
   text: string;
   score: number;
 };
@@ -180,7 +184,7 @@ export function searchDocuments(
     total += it.text.length;
     out.push({
       label: `R${out.length + 1}`,
-      doc: { id: it.doc.id, title: it.doc.title, type: it.doc.type, origin: it.doc.origin, source: it.doc.source },
+      doc: { id: it.doc.id, title: it.doc.title, type: it.doc.type, origin: it.doc.origin, source: it.doc.source, status: it.doc.status, notice: it.doc.notice },
       text: it.text,
       score: Math.round(score * 100) / 100,
     });
@@ -193,20 +197,24 @@ function escapeAttr(s: string): string {
 }
 
 /** Bloc <documents_de_reference> inséré dans le message de l'enseignant. */
+function stripTags(s: string): string {
+  return s.replace(/[<>]/g, "");
+}
+
 export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt[]): string {
   if (catalogue.length === 0) {
     return "<documents_de_reference>\nAucun document de référence n'est disponible pour cette demande.\n</documents_de_reference>";
   }
   const shown = catalogue.slice(0, 60);
   const lines = shown.map(
-    (d) => `- ${d.title} (${d.type || "document"} ; origine=${d.origin}${d.source ? ` ; ${d.source}` : ""}${d.classes.length ? ` ; classes : ${d.classes.join(", ")}` : ""}${d.disciplines.length ? ` ; disciplines : ${d.disciplines.join(", ")}` : ""})`,
+    (d) => `- ${d.title} (${d.type || "document"} ; origine=${d.origin}${d.source ? ` ; ${d.source}` : ""}${d.classes.length ? ` ; classes : ${d.classes.join(", ")}` : ""}${d.disciplines.length ? ` ; disciplines : ${d.disciplines.join(", ")}` : ""}${d.status ? ` ; statut : ${d.status}` : ""})${d.notice ? `\n  Règle d'usage : ${stripTags(d.notice)}` : ""}`,
   );
   if (catalogue.length > shown.length) lines.push(`- … et ${catalogue.length - shown.length} autre(s) document(s)`);
   const body = excerpts.length
     ? excerpts
         .map(
           (e) =>
-            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" type="${escapeAttr(e.doc.type)}" origine="${e.doc.origin}"${e.doc.source ? ` source="${escapeAttr(e.doc.source)}"` : ""}>\n${e.text.replace(/<\/?(extrait|documents_de_reference)[^>]*>/gi, "")}\n</extrait>`,
+            `<extrait etiquette="${e.label}" titre="${escapeAttr(e.doc.title)}" type="${escapeAttr(e.doc.type)}" origine="${e.doc.origin}"${e.doc.source ? ` source="${escapeAttr(e.doc.source)}"` : ""}${e.doc.status ? ` statut="${escapeAttr(e.doc.status)}"` : ""}>\n${e.doc.notice ? `<regle_usage>${stripTags(e.doc.notice)}</regle_usage>\n` : ""}${e.text.replace(/<\/?(extrait|documents_de_reference)[^>]*>/gi, "")}\n</extrait>`,
         )
         .join("\n")
     : "Aucun extrait pertinent n'a été retrouvé dans ces documents pour cette demande.";

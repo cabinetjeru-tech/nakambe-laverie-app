@@ -9,6 +9,8 @@ const doc = (p: Partial<RefDocument> & { text: string }): RefDocument => ({
   classes: p.classes ?? [],
   disciplines: p.disciplines ?? [],
   source: p.source,
+  status: p.status,
+  notice: p.notice,
   text: p.text,
 });
 
@@ -78,5 +80,16 @@ describe("formatReferenceBlock", () => {
     const block = formatReferenceBlock([d], [{ label: "R1", doc: d, text: d.text, score: 1 }]);
     expect(block.match(/<\/documents_de_reference>/g)).toHaveLength(1);
     expect(block).toContain('titre="Titre &quot;piégé&quot;"');
+  });
+});
+
+describe("règle d'usage d'un document", () => {
+  it("accompagne chaque extrait et figure au catalogue", () => {
+    const d = doc({ title: "Guide 6e", status: "ancien", notice: "Ne pas présenter comme <prescription> actuelle", text: "fractions" });
+    const [e] = searchDocuments([d], "fractions");
+    const block = formatReferenceBlock([d], [e!]);
+    expect(block).toContain('statut="ancien"');
+    expect(block).toContain("<regle_usage>Ne pas présenter comme prescription actuelle</regle_usage>");
+    expect(block).toContain("Règle d'usage : Ne pas présenter");
   });
 });

@@ -63,7 +63,7 @@ export async function POST(req: Request) {
       : { role: m.role, content: m.content },
   );
 
-  const sources = excerpts.map((e) => ({ label: e.label, title: e.doc.title, type: e.doc.type, origin: e.doc.origin, source: e.doc.source ?? null }));
+  const sources = excerpts.map((e) => ({ label: e.label, title: e.doc.title, type: e.doc.type, origin: e.doc.origin, source: e.doc.source ?? null, status: e.doc.status ?? null }));
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {

@@ -28,6 +28,8 @@ type: programme officiel
 classes: 6e
 disciplines: Mathématiques
 source: [Ministère / direction émettrice], [année]
+statut: [facultatif — ex. : programme en vigueur, ou document ancien à confronter aux textes récents]
+avertissement: [facultatif — règle d'usage que KIBARU doit respecter pour ce document, sur une seule ligne]
 ---
 (texte du document)
 ```
@@ -37,6 +39,15 @@ Pour un `.pdf` ou un `.docx`, dans un fichier voisin portant le même nom suivi 
 
 `classes` et `disciplines` acceptent plusieurs valeurs séparées par des virgules. Laissez-les vides pour un
 document qui concerne toutes les classes ou toutes les disciplines (par exemple un guide général d'évaluation).
+
+## Statut et règle d'usage
+
+`statut` et `avertissement` servent à signaler un document qui ne doit pas être pris au pied de la lettre (par
+exemple un guide officiel mais ancien). Ils sont transmis au modèle avec chaque extrait du document, et le statut
+s'affiche dans l'application. KIBARU FASO continue alors d'utiliser le contenu pédagogique du document, mais classe
+en « À VÉRIFIER » toute affirmation sur le programme actuellement applicable qui ne repose que sur lui.
+
+Exemple : [`mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta`](mathematiques/BF_MATH_6E_GUIDE_PEDAGOGIQUE_REFERENCE.pdf.meta).
 
 ## Prise en compte
 

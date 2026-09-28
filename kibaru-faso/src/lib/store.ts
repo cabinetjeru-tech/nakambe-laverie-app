@@ -7,7 +7,7 @@
 
 import type { TeacherContext } from "./conversation";
 
-export type Source = { label: string; title: string; type: string; origin: "bibliotheque" | "enseignant"; source: string | null };
+export type Source = { label: string; title: string; type: string; origin: "bibliotheque" | "enseignant"; source: string | null; status?: string | null };
 export type StoredMessage = { role: "user" | "assistant"; content: string; sources?: Source[]; error?: boolean };
 export type Conversation = { id: string; title: string; updatedAt: number; messages: StoredMessage[] };
 export type TeacherDoc = { id: string; title: string; type: string; text: string; enabled: boolean; addedAt: number };

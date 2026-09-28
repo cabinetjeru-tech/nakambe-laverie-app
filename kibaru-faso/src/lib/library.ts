@@ -64,6 +64,8 @@ async function load(): Promise<RefDocument[]> {
         classes: meta.classes,
         disciplines: meta.disciplines,
         source: meta.source,
+        status: meta.statut,
+        notice: meta.avertissement,
         text,
       });
     } catch (e) {
