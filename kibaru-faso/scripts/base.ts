@@ -2,6 +2,7 @@
  * Outil d'administration de la base documentaire KIBARU FASO.
  *
  *   npm run base:verifier    contrôle le registre maître et la base (métadonnées, ID, remplacements, emplacements)
+ *   npm run base:nouvel-id -- 6e Mathématiques   propose le prochain ID libre (BF-6E-MATH-002…)
  *   npm run base:catalogue   régénère base-documentaire/CATALOGUE.md : tableau maître, couverture par classe,
  *                            ressources consultables, historique des versions, contrôles
  */
@@ -9,7 +10,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { BASE_DIR, loadBase, type PendingDoc } from "../src/lib/base/load";
 import { REGISTRY_FILE } from "../src/lib/base/registry";
-import { CATEGORIES, CLASS_INFO, STATUT_LABELS, STATUTS, typeLabel, type Statut } from "../src/lib/base/structure";
+import { CATEGORIES, CLASS_INFO, STATUT_LABELS, STATUTS, subjectCodes, SUBJECTS, typeLabel, type Statut } from "../src/lib/base/structure";
 import { canonicalClasse, resolveBase, type DocInfo } from "../src/lib/search";
 
 const root = path.join(process.cwd(), BASE_DIR);
@@ -159,7 +160,29 @@ async function main() {
     return;
   }
 
-  console.log("Usage : npm run base:verifier | npm run base:catalogue");
+  if (cmd === "nouvel-id") {
+    // Règle de mise à jour, étape 1 : créer l'ID de la nouvelle ressource (jamais réutiliser un ID existant).
+    const [classeArg, matiereArg] = process.argv.slice(3);
+    const cls = CLASS_INFO.find((c) => classeArg && canonicalClasse(classeArg) === c.classe);
+    const codes = matiereArg ? [...subjectCodes(matiereArg)] : [];
+    const subj = SUBJECTS.find((x) => codes.includes(x.code));
+    if (!cls || !subj) {
+      console.log("Usage : npm run base:nouvel-id -- <classe> <matière>   (ex. npm run base:nouvel-id -- 6e Mathématiques)");
+      process.exitCode = 2;
+      return;
+    }
+    const prefix = `BF-${cls.code}-${subj.code}-`;
+    const used = [...base.registry.map((e) => e.meta.documentId), ...base.docs.map((d) => d.documentId), ...base.pending.map((p) => p.documentId)]
+      .filter((x): x is string => !!x && x.toUpperCase().startsWith(prefix))
+      .map((x) => Number.parseInt(x.slice(prefix.length), 10))
+      .filter((n, i, all) => Number.isFinite(n) && all.indexOf(n) === i);
+    const next = `${prefix}${String((used.length ? Math.max(...used) : 0) + 1).padStart(3, "0")}`;
+    console.log(next);
+    if (used.length) console.log(`(déjà utilisés : ${used.sort((a, b) => a - b).map((n) => prefix + String(n).padStart(3, "0")).join(", ")})`);
+    return;
+  }
+
+  console.log("Usage : npm run base:verifier | npm run base:catalogue | npm run base:nouvel-id -- <classe> <matière>");
   process.exitCode = 2;
 }
 

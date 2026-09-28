@@ -108,7 +108,8 @@ export function KibaruApp() {
     });
   };
 
-  async function send(text: string) {
+  async function send(text: string, ctxOverride?: TeacherContext) {
+    const ctx = ctxOverride ?? context;
     const content = text.trim();
     if (!content || busy) return;
     setInput("");
@@ -144,6 +145,7 @@ export function KibaruApp() {
     let answer = "";
     let sources: Source[] = [];
     let decision: DecisionSummary | undefined;
+    let check: string[] | undefined;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -151,7 +153,7 @@ export function KibaruApp() {
         signal: controller.signal,
         body: JSON.stringify({
           messages: history,
-          context,
+          context: ctx,
           documents: docs.filter((d) => d.enabled).map((d) => ({ id: d.id, title: d.title, type: d.type, text: d.text })),
         }),
       });
@@ -175,12 +177,13 @@ export function KibaruApp() {
         buffer = lines.pop() ?? "";
         for (const line of lines) {
           if (!line.trim()) continue;
-          const ev = JSON.parse(line) as { type: string; text?: string; message?: string; sources?: Source[]; decision?: DecisionSummary };
+          const ev = JSON.parse(line) as { type: string; text?: string; message?: string; sources?: Source[]; decision?: DecisionSummary; check?: string[] };
           if (ev.type === "meta") {
             sources = ev.sources ?? [];
             decision = ev.decision;
           }
           else if (ev.type === "delta") answer += ev.text ?? "";
+          else if (ev.type === "done") check = ev.check;
           else if (ev.type === "error") throw new Error(ev.message);
         }
         if (Date.now() - lastPaint > 80) {
@@ -188,7 +191,7 @@ export function KibaruApp() {
           setAssistant({ role: "assistant", content: answer, sources, decision });
         }
       }
-      setAssistant({ role: "assistant", content: answer, sources, decision });
+      setAssistant({ role: "assistant", content: answer, sources, decision, check });
     } catch (e) {
       if ((e as Error).name === "AbortError") {
         setAssistant({ role: "assistant", content: answer ? `${answer}\n\n_(Production interrompue.)_` : "_(Production interrompue.)_", sources, decision });
@@ -308,7 +311,47 @@ export function KibaruApp() {
                       KIBARU FASO prépare votre document…
                     </div>
                   )}
-                  {!busy && last?.role === "assistant" && !last.error && (
+                  {!busy && last?.role === "assistant" && !last.error && last.decision?.missing?.includes("classe") && (
+                    <div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">Choisir la classe</div>
+                      <div className="flex flex-wrap gap-2">
+                        {CLASSES.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            onClick={() => {
+                              updateContext({ classe: c });
+                              void send(`Classe : ${c}.`, { ...context, classe: c });
+                            }}
+                            className="rounded-full border border-faso bg-white px-3 py-1 text-sm font-semibold text-faso hover:bg-faso-50"
+                          >
+                            {c}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!busy && last?.role === "assistant" && !last.error && !last.decision?.missing?.includes("classe") && last.decision?.missing?.includes("matiere") && (
+                    <div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">Choisir la matière</div>
+                      <div className="flex flex-wrap gap-2">
+                        {DISCIPLINES.slice(0, 10).map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => {
+                              updateContext({ discipline: m });
+                              void send(`Matière : ${m}.`, { ...context, discipline: m });
+                            }}
+                            className="rounded-full border border-faso bg-white px-3 py-1 text-sm text-faso hover:bg-faso-50"
+                          >
+                            {m}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {!busy && last?.role === "assistant" && !last.error && !last.decision?.missing?.length && (
                     <div>
                       <div className="mb-1.5 text-xs font-semibold text-muted">Modifier cette production</div>
                       <div className="flex flex-wrap gap-2">
@@ -531,6 +574,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
       <div ref={fullRef} className={`prose-kibaru ${streaming ? "caret" : ""}`}>
         <Markdown text={message.content} sources={message.sources} />
       </div>
+      {!streaming && message.check && <CheckBox check={message.check} />}
 
       {parts.length > 0 && (
         <div hidden>
@@ -589,20 +633,51 @@ const CONFIDENCE_STYLE: Record<string, string> = {
   ELEVEE: "bg-faso-50 text-faso-dark ring-faso/30",
   MOYENNE: "bg-or-50 text-[#7a5a00] ring-or/50",
   FAIBLE: "bg-rouge-50 text-rouge ring-rouge/30",
+  NON_CONFIRMEE: "bg-surface text-muted ring-line",
   AUCUNE: "bg-surface text-muted ring-line",
 };
 
-/** Résultat du moteur de décision documentaire pour cette réponse. */
+/** Résultat du moteur de décision pédagogique pour cette réponse. */
 function DecisionBar({ d }: { d: DecisionSummary }) {
-  const scope = [d.classe, d.matiere].filter(Boolean).join(" · ") || "périmètre non précisé";
+  const scope = [d.classe, d.matiere && `${d.matiere}${d.matiereDeduite ? " (déduite du thème)" : ""}`].filter(Boolean).join(" · ") || "périmètre non précisé";
   return (
-    <details className={`mb-3 rounded-lg px-3 py-1.5 text-xs ring-1 ${CONFIDENCE_STYLE[d.confidence] ?? CONFIDENCE_STYLE.AUCUNE}`}>
+    <details className={`mb-3 rounded-lg px-3 py-1.5 text-xs ring-1 ${CONFIDENCE_STYLE[d.confidence] ?? CONFIDENCE_STYLE.NON_CONFIRMEE}`}>
       <summary className="cursor-pointer">
-        <span className="font-bold">Confiance documentaire : {d.label}</span> <span className="opacity-80">— {scope} · {d.actives} ressource(s) ACTIVE(S){d.pending.length ? ` · ${d.pending.length} non encore intégrée(s)` : ""}</span>
+        <span className="font-bold">Confiance documentaire : {d.label}</span>{" "}
+        <span className="opacity-80">
+          — {scope} · {d.actives} ressource(s) ACTIVE(S){d.pending?.length ? ` · ${d.pending.length} non encore intégrée(s)` : ""}
+        </span>
       </summary>
-      <p className="mt-1 text-ink">{d.explanation.charAt(0).toUpperCase() + d.explanation.slice(1)}.</p>
-      {d.pending.length > 0 && <p className="mt-0.5 text-muted">Ressources du registre NON ENCORE INTÉGRÉES : {d.pending.join(", ")}.</p>}
+      <div className="mt-1 space-y-0.5 text-ink">
+        {d.besoins?.length ? <p>Besoin identifié : {d.besoins.join(" + ")}.</p> : null}
+        <p>{d.explanation.charAt(0).toUpperCase() + d.explanation.slice(1)}.</p>
+        {d.sources?.length ? (
+          <ul className="list-disc pl-4">
+            {d.sources.map((x) => (
+              <li key={x.id}>
+                {x.id} — {x.priorite}, {x.statut}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {d.pending?.length ? <p className="text-muted">Ressources du registre NON ENCORE INTÉGRÉES : {d.pending.join(", ")}.</p> : null}
+      </div>
     </details>
+  );
+}
+
+/** Contrôle final automatique : points à relire signalés après la génération. */
+function CheckBox({ check }: { check: string[] }) {
+  if (!check.length) return <p className="mt-2 text-[11px] text-muted">Contrôle final automatique : aucun signal.</p>;
+  return (
+    <div className="mt-3 rounded-lg bg-or-50 px-3 py-2 text-xs text-[#6b4f00] ring-1 ring-or/50">
+      <div className="font-bold">Contrôle final automatique — {check.length} point(s) à relire</div>
+      <ul className="mt-1 list-disc pl-4">
+        {check.map((c) => (
+          <li key={c}>{c}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

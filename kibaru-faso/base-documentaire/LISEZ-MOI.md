@@ -158,7 +158,7 @@ en vigueur sans ressource ACTIVE qui le confirme.
 
 ## Ajouter une nouvelle version, pas à pas
 
-1. Ajoutez une ligne au registre : nouvel ID, « Document remplacé » = ancien ID, statut `PROVISOIRE` ou `À_VÉRIFIER` tant
+1. Obtenez un ID libre (`npm run base:nouvel-id -- 6e Mathématiques`), puis ajoutez une ligne au registre : nouvel ID, « Document remplacé » = ancien ID, statut `PROVISOIRE` ou `À_VÉRIFIER` tant
    que son application officielle n'est pas confirmée ; déposez le fichier dans `…/ANNÉE/VERSION/` et renseignez « Fichier ».
 2. Une fois l'application confirmée : statut `ACTIF`, date de vérification et date de remplacement à jour. Sur la ligne
    de l'ancienne ressource : statut `REMPLACÉ` et « Document de remplacement » = nouvel ID. Ne supprimez jamais la ligne.

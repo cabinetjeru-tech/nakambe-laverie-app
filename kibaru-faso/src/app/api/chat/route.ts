@@ -1,7 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
-import { decide, decisionSummary, formatDecisionBlock, identifyRequest } from "@/lib/base/decision";
+import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
+import { finalCheck } from "@/lib/base/final-check";
 import { getBase } from "@/lib/library";
 import { AiUnavailableError, streamAnswer } from "@/lib/llm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -38,8 +39,11 @@ export async function POST(req: Request) {
   // Documents : base documentaire KIBARU + bibliothèque personnelle de l'enseignant.
   let library: RefDocument[] = [];
   let pending: Awaited<ReturnType<typeof getBase>>["pending"] = [];
+  let registryIds: string[] = [];
   try {
-    ({ docs: library, pending } = await getBase());
+    const base = await getBase();
+    ({ docs: library, pending } = base);
+    registryIds = [...base.registry.map((e) => e.meta.documentId), ...library.map((d) => d.documentId), ...pending.map((p) => p.documentId)].filter((x): x is string => !!x);
   } catch (e) {
     console.error("[chat] base documentaire indisponible :", (e as Error).message);
   }
@@ -56,7 +60,7 @@ export async function POST(req: Request) {
   // Versions : seules les ressources consultables sont recherchées ; l'historique est seulement signalé.
   const { usable, history: versionHistory } = resolveBase([...library, ...teacherDocs]);
   // Moteur de décision, étape 1 : périmètre de la demande (la demande écrite l'emporte sur le contexte).
-  const profile = identifyRequest(history[history.length - 1]!.content, context);
+  const profile = identifyConversation(history.filter((m) => m.role === "user").map((m) => m.content), context);
   const applies = (d: { classes: string[]; disciplines: string[] }) => isApplicable(d, profile.classe, profile.matiere);
   const catalogue = usable.filter(applies);
   const historyHere: ArchivedDoc[] = [
@@ -87,14 +91,25 @@ export async function POST(req: Request) {
       send({ type: "meta", sources, libraryCount: catalogue.length, decision: decisionSummary(decision) });
       try {
         const gen = streamAnswer(messages);
+        let answer = "";
         let r = await gen.next();
         while (!r.done) {
+          answer += r.value;
           send({ type: "delta", text: r.value });
           r = await gen.next();
         }
         if (r.value === "refusal") send({ type: "delta", text: "\n\n_Je ne peux pas traiter cette demande. Reformulez-la en lien avec votre préparation pédagogique._" });
         if (r.value === "max_tokens") send({ type: "delta", text: "\n\n_(Production interrompue car trop longue : demandez « continue » pour la suite.)_" });
-        send({ type: "done" });
+        // Contrôle final automatique : signale à l'enseignant ce qui mérite relecture (la réponse n'est pas modifiée).
+        const check = finalCheck({
+          answer,
+          labels: excerpts.map((e) => e.label),
+          knownIds: registryIds,
+          confidence: decision.confidence,
+          needs: profile.needs,
+          questionExpected: !!profile.question,
+        });
+        send({ type: "done", check });
       } catch (e) {
         let message = "KIBARU FASO n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
         if (e instanceof AiUnavailableError) message = e.message;

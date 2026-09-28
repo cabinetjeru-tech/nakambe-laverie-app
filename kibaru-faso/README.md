@@ -19,6 +19,11 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
   Chaque ressource a une fiche (ID unique, statut ACTIF, PROVISOIRE, À VÉRIFIER, REMPLACÉ ou ARCHIVE, priorité,
   dates…). Un document ancien n'est jamais obsolète par défaut, un document récent jamais applicable par défaut :
   seul un remplacement déclaré vers une ressource ACTIVE écarte l'ancienne, qui reste dans l'historique.
+- **Moteur de décision pédagogique** ([détail](docs/MOTEUR-DECISION-PEDAGOGIQUE.md)) : pour chaque demande,
+  identification du besoin (24 catégories) et du contexte (une seule question si la classe ou la matière manque),
+  recherche ciblée (`BF-6E-MATH`…), sélection des sources (autorité, pertinence, actualité, statut, version,
+  périmètre, cohérence), niveau de confiance, puis génération par le modèle et **contrôle final automatique**
+  affiché à l'enseignant.
 - **Registre maître et moteur de décision documentaire.** Toutes les ressources sont inscrites au registre (ID
   `BF-[CLASSE]-[MATIERE]-[NUMERO]`). Avant chaque réponse, l'application identifie classe et matière, recense les
   ressources, compare les versions, applique les remplacements et évalue une **confiance documentaire** (élevée,
@@ -107,6 +112,7 @@ de la route de conversation est fixée à 300 s (`maxDuration`), ce que permette
 | `npm run dev` / `build` / `start` | Développement, compilation, production (port 3100) |
 | `npm run lint` | Vérification TypeScript |
 | `npm run base:verifier` / `base:catalogue` | Contrôle de la base documentaire / génération de `CATALOGUE.md` |
+| `npm run base:nouvel-id -- 6e Mathématiques` | Prochain ID libre pour une nouvelle ressource (ex. `BF-6E-MATH-002`) |
 | `npm test` | Tests unitaires (recherche, versions et archives, hiérarchie des sources, métadonnées, contexte, rubriques, séparation des documents, prompt) |
 
 ## Structure

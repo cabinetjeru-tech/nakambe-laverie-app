@@ -41,7 +41,10 @@ export function splitDocuments(markdown: string): DocPart[] {
   const parts: DocPart[] = [];
   matches.forEach((m, i) => {
     const start = m.index! + m[0].length;
-    const end = i + 1 < matches.length ? matches[i + 1]!.index! : markdown.length;
+    // Un document s'arrête au titre de niveau 1 ou 2 suivant (autre document, « Statut des informations »…).
+    const rest = markdown.slice(start);
+    const next = rest.search(/^#{1,2}\s/m);
+    const end = next >= 0 ? start + next : markdown.length;
     const label = m[2]!.replace(/\*+/g, "").trim();
     const name = label.charAt(0).toUpperCase() + label.slice(1).toLowerCase();
     parts.push({ key: `doc${i + 1}`, title: name, markdown: markdown.slice(start, end).trim() });

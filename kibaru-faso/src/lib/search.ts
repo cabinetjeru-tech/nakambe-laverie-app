@@ -219,6 +219,9 @@ export function resolveBase(docs: RefDocument[], today = new Date().toISOString(
   return { usable, history };
 }
 
+/** Ordre de recherche (moteur pédagogique, section 6) : programme/curriculum, guide, référentiel, progression, puis le reste. */
+const TYPE_WEIGHT: Record<string, number> = { PROGRAMME: 1.15, CURRICULUM: 1.15, GUIDE_PEDAGOGIQUE: 1.1, REFERENTIEL: 1.08, PROGRESSION: 1.05 };
+
 /** Hiérarchie des sources : à pertinence égale, le document le plus officiel passe devant. */
 const LEVEL_WEIGHT: Record<number, number> = { 1: 1.3, 2: 1.2, 3: 1.1, 4: 1, 5: 0.9 };
 
@@ -268,7 +271,10 @@ export function searchDocuments(
         const idf = Math.log(1 + (N - n + 0.5) / (n + 0.5));
         score += (idf * f * (k1 + 1)) / (f + k1 * (1 - b + (b * it.len) / avgLen));
       }
-      const weight = (LEVEL_WEIGHT[it.doc.sourceLevel ?? 4] ?? 1) * (it.doc.statut ? STATUT_WEIGHT[it.doc.statut] : 1);
+      // Une source propre à la classe et à la matière passe devant une source plus générale (section 8).
+      const specific = opts.classe && opts.discipline && it.doc.classes.length > 0 && it.doc.disciplines.length > 0 ? 1.1 : 1;
+      const weight =
+        (LEVEL_WEIGHT[it.doc.sourceLevel ?? 4] ?? 1) * (it.doc.statut ? STATUT_WEIGHT[it.doc.statut] : 1) * (TYPE_WEIGHT[it.doc.type] ?? 1) * specific;
       return { it, score: score * weight };
     })
     .filter((s) => s.score > 0)

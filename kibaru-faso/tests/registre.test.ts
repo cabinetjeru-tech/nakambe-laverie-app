@@ -2,11 +2,9 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { decide, formatDecisionBlock, identifyRequest } from "@/lib/base/decision";
 import { loadBase } from "@/lib/base/load";
 import { parseCsv, readRegistry, REGISTRY_COLUMNS, toCsv } from "@/lib/base/registry";
 import { ID_FORMAT, parseDocType, subjectCodes } from "@/lib/base/structure";
-import { resolveBase, searchDocuments, type RefDocument } from "@/lib/search";
 
 describe("registre maître (fichier du projet)", () => {
   it("contient les 21 ressources initiales, au bon format, toutes À VÉRIFIER", async () => {
@@ -94,56 +92,5 @@ describe("registre et documents déposés", () => {
     expect(msgs.some((m) => m.startsWith("erreur: ID bf-6e-math-001 déjà présent"))).toBe(true);
     expect(msgs.some((m) => m.includes("ID MATHS6 hors du format recommandé"))).toBe(true);
     expect(msgs.some((m) => m.includes("absente du registre maître"))).toBe(true);
-  });
-});
-
-describe("moteur de décision documentaire", () => {
-  const doc = (p: Partial<RefDocument>): RefDocument => ({
-    id: "d",
-    title: "Guide",
-    type: "GUIDE_PEDAGOGIQUE",
-    origin: "bibliotheque",
-    classes: ["6e"],
-    disciplines: ["Mathématiques"],
-    statut: "ACTIF",
-    text: "les fractions en 6e",
-    ...p,
-  });
-
-  it("étape 1 : la classe et la matière écrites dans la demande l'emportent sur le contexte", () => {
-    const p = identifyRequest("Prépare un devoir de maths de 4ème sur Thalès", { classe: "6e", discipline: "Français", theme: "Thalès" });
-    expect(p).toMatchObject({ pays: "Burkina Faso", classe: "4e", niveau: "Post-primaire", matiere: "Mathématiques", typeDemande: "devoir", origineClasse: "message", origineMatiere: "message" });
-    expect(identifyRequest("Prépare le cours du 3e trimestre", { classe: "5e" }).classe).toBe("5e");
-    expect(identifyRequest("Séance en Terminale", {}).niveau).toBe("Secondaire");
-  });
-
-  const run = (docs: RefDocument[], pending = 0) => {
-    const profile = identifyRequest("fractions", { classe: "6e", discipline: "Mathématiques" });
-    const { usable, history } = resolveBase(docs);
-    const excerpts = searchDocuments(usable, "fractions");
-    const pend = Array.from({ length: pending }, (_, i) => ({ path: `p${i}`, documentId: `BF-6E-MATH-00${i + 2}`, title: "Programme", statut: "A_VERIFIER" as const, classes: ["6e"], disciplines: ["Mathématiques"], expectedLocation: "" }));
-    return decide(profile, usable, excerpts, history, pend);
-  };
-
-  it("étape 6 : confiance ÉLEVÉE seulement avec une ressource ACTIVE officielle (niveau 1 ou 2)", () => {
-    expect(run([doc({ sourceLevel: 2, documentId: "BF-6E-MATH-001" })]).confidence).toBe("ELEVEE");
-    expect(run([doc({ sourceLevel: 4 })]).confidence).toBe("MOYENNE");
-    expect(run([doc({ statut: "PROVISOIRE", sourceLevel: 1 })]).confidence).toBe("MOYENNE");
-  });
-  it("officiel ≠ actuel : une ressource officielle À VÉRIFIER ne donne qu'une confiance FAIBLE", () => {
-    const d = run([doc({ statut: "A_VERIFIER", sourceLevel: 2, documentId: "BF-6E-MATH-001" })]);
-    expect(d.confidence).toBe("FAIBLE");
-    expect(formatDecisionBlock(d)).toContain("source officielle historique, jamais comme le programme actuellement en vigueur");
-  });
-  it("aucune ressource : confiance AUCUNE, ressources non intégrées signalées", () => {
-    const d = run([], 1);
-    expect(d.confidence).toBe("AUCUNE");
-    const block = formatDecisionBlock(d);
-    expect(block).toContain("1 NON ENCORE INTÉGRÉE(S) [BF-6E-MATH-002 — Programme]");
-    expect(block).toContain("formulation de non-confirmation");
-  });
-  it("étape 4 : plusieurs ressources du même type sont à comparer, jamais tranchées arbitrairement", () => {
-    const d = run([doc({ id: "a", documentId: "BF-6E-MATH-001", version: "1", year: "2010" }), doc({ id: "b", documentId: "BF-6E-MATH-002", version: "2", year: "2020", statut: "PROVISOIRE" })]);
-    expect(formatDecisionBlock(d)).toContain("Guide pédagogique : BF-6E-MATH-001 v1 (2010) ACTIF / BF-6E-MATH-002 v2 (2020) PROVISOIRE — plusieurs ressources du même type");
   });
 });

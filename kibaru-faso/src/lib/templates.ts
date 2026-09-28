@@ -68,7 +68,7 @@ export const TEMPLATES: Template[] = [
     icon: "🔄",
     main: true,
     category: "remediation",
-    build: (c) => `Mes élèves de ${classe(c)} ont des difficultés en ${disc(c)} : [décrivez la difficulté observée, par exemple les erreurs fréquentes]. Propose une démarche de remédiation complète.`,
+    build: (c) => `Mes élèves de ${classe(c)} n'ont pas compris [la notion] en ${disc(c)} : [décrivez les erreurs observées]. Propose une remédiation complète : diagnostic, prérequis, activité de remédiation, exercices progressifs, correction, nouvelle vérification et consolidation.`,
   },
   {
     id: "activite",
@@ -91,7 +91,7 @@ export const TEMPLATES: Template[] = [
     label: "Fiche pédagogique",
     hint: "Tableau enseignant / élèves, prête à imprimer",
     category: "cours",
-    build: (c) => `Élabore une fiche pédagogique de ${disc(c)} en ${classe(c)} sur « ${theme(c)} » (${duree(c, "55 minutes")}), présentée sous forme de tableau : étapes, durée, activités de l'enseignant, activités des élèves, trace écrite.`,
+    build: (c) => `Élabore une fiche pédagogique de ${disc(c)} en ${classe(c)} sur « ${theme(c)} » (${duree(c, "55 minutes")}) : identification, compétence ou objectif documenté, prérequis, matériel, situation de départ, activités de l'enseignant et des apprenants (en tableau), synthèse, évaluation, remédiation, devoir éventuel.`,
   },
   {
     id: "exercices",
@@ -115,11 +115,25 @@ export const TEMPLATES: Template[] = [
     build: (c) => `Prépare une interrogation écrite de 15 minutes en ${disc(c)}, classe de ${classe(c)}, sur « ${theme(c)} », notée sur 10, avec sujet et corrigé séparés.`,
   },
   {
+    id: "sujet-blanc",
+    label: "Sujet blanc",
+    hint: "Épreuve d'entraînement, corrigé et barème",
+    category: "evaluation",
+    build: (c) => `Prépare un sujet blanc de ${disc(c)} pour la classe de ${classe(c)}, durée ${duree(c, "2 heures")}, avec corrigé détaillé et barème. Indique si des orientations officielles d'évaluation figurent dans la base KIBARU.`,
+  },
+  {
+    id: "grille",
+    label: "Grille critériée",
+    hint: "Critères, indicateurs et barème",
+    category: "evaluation",
+    build: (c) => `Construis une grille d'évaluation critériée pour [la production ou l'épreuve] en ${disc(c)} (${classe(c)}) : critères, indicateurs, barème.`,
+  },
+  {
     id: "differenciation",
     label: "Différencier",
-    hint: "Classe en difficulté, moyenne, avancée",
+    hint: "Consolidation, niveau attendu, approfondissement",
     category: "cours",
-    build: (c) => `Adapte l'activité sur « ${theme(c)} » (${disc(c)}, ${classe(c)}) pour une classe en difficulté, un niveau moyen, des élèves avancés et des élèves ayant besoin de davantage de guidage, en gardant le même objectif principal.`,
+    build: (c) => `Propose une activité différenciée sur « ${theme(c)} » (${disc(c)}, ${classe(c)}) en trois niveaux — consolidation, niveau attendu, approfondissement — avec le même objectif principal et des consignes non stigmatisantes.`,
   },
   {
     id: "revision",
