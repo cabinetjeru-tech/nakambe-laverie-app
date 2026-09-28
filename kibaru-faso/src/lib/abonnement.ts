@@ -125,3 +125,10 @@ export function refusPromo(p: CodePromo | null, utilisations: number, dejaUtilis
   if (dejaUtiliseParLui) return "Vous avez déjà utilisé ce code promo.";
   return null;
 }
+
+/** Durée d'une formule en clair : « 24 h », « 30 jours », « 1 an ». */
+export function dureeFormule(jours: number): string {
+  if (jours === 1) return "24 h";
+  if (jours === 365) return "1 an";
+  return `${jours} jours`;
+}
