@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "KIBARU FASO — L'intelligence pédagogique au service de l'enseignant",
+  title: "MON PROF.IA — L'intelligence artificielle au service de l'éducation",
   description:
     "Assistant pédagogique pour les enseignants du secondaire au Burkina Faso : leçons, fiches, exercices, devoirs et corrigés, évaluations, remédiation.",
   icons: { icon: "/icon.svg" },

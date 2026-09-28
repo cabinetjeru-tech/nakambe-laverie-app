@@ -43,11 +43,11 @@ export function finalCheck(c: CheckInput): string[] {
     const risky = sentences.filter((s) => OFFICIAL_CLAIM.test(s) && !HEDGE.test(s));
     if (risky.length) out.push("Affirmation possible sur le programme ou les instructions officielles en vigueur, sans source ACTIVE qui la confirme : à relire.");
   }
-  if (c.confidence === "NON_CONFIRMEE" && /\*\*source kibaru\*\*/i.test(text)) out.push("Étiquette SOURCE KIBARU employée alors qu'aucune ressource de la base n'a été consultée.");
+  if (c.confidence === "NON_CONFIRMEE" && /\*\*source (mon prof\.ia|kibaru)\*\*/i.test(text)) out.push("Étiquette SOURCE MON PROF.IA employée alors qu'aucune ressource de la base n'a été consultée.");
 
   const long = text.length > 700 && !c.questionExpected;
-  if (long && !/\*\*(source kibaru|proposition( pedagogique)? kibaru|connaissance generale|a verifier)\*\*/i.test(normalize(text)))
-    out.push("Aucune étiquette de transparence (SOURCE KIBARU, PROPOSITION KIBARU, CONNAISSANCE GÉNÉRALE, À VÉRIFIER).");
+  if (long && !/\*\*(source (mon prof\.ia|kibaru)|proposition( pedagogique)? (mon prof\.ia|kibaru)|connaissance generale|a verifier)\*\*/i.test(normalize(text)))
+    out.push("Aucune étiquette de transparence (SOURCE MON PROF.IA, PROPOSITION MON PROF.IA, CONNAISSANCE GÉNÉRALE, À VÉRIFIER).");
 
   const evaluative = c.needs.some((x) => ["devoir", "interrogation", "evaluation", "exercice", "serie_exercices"].includes(x));
   if (evaluative && long && !/corrig|correction|solution/.test(n)) out.push("Aucun corrigé repéré pour cette production d'exercices ou d'évaluation.");

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * KIBARU FASO — couleurs inspirées du drapeau du Burkina Faso
+ * MON PROF.IA — couleurs inspirées du drapeau du Burkina Faso
  *   Vert  #00843D (structure, actions principales)
  *   Rouge #C8102E (accents, alertes)
  *   Or    #F2B705 (étoile : mises en avant)
@@ -30,7 +30,7 @@ body { @apply bg-surface text-ink antialiased; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
-/* Réponses de KIBARU FASO */
+/* Réponses de MON PROF.IA */
 .prose-kibaru { @apply text-[15px] leading-7 text-ink; overflow-wrap: anywhere; }
 .prose-kibaru h1 { @apply mt-2 mb-3 text-xl font-bold text-faso-dark; }
 .prose-kibaru h2 { @apply mt-6 mb-2 text-lg font-bold text-faso-dark; }

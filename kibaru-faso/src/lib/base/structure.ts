@@ -1,5 +1,5 @@
 /**
- * Structure documentaire officielle de KIBARU FASO.
+ * Structure documentaire officielle de MON PROF.IA.
  *
  *   base-documentaire/
  *   ├── 01_PROGRAMMES_ET_CURRICULA

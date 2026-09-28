@@ -16,13 +16,13 @@ Correspondance entre les 22 sections du « Moteur de décision pédagogique V1 �
 | 8 | Priorité des sources | Code | Officielle active spécifique > officielle active générale > officielle à vérifier > institutionnelle > pédagogique > connaissance générale. Ni l'ancienneté ni la nouveauté ne décident seules. |
 | 9 | Niveaux de confiance | Code | ÉLEVÉE, MOYENNE, FAIBLE, NON CONFIRMÉE — affichés au-dessus de chaque réponse. |
 | 10 | Comportement selon la confiance | Prompt | Consigne adaptée à chaque niveau ; formulation exacte pour NON CONFIRMÉE. |
-| 11 | Séparer source et création | Prompt | « Selon le guide disponible dans la base KIBARU : … » puis « Proposition pédagogique KIBARU : … ». |
+| 11 | Séparer source et création | Prompt | « Selon le guide disponible dans la base MON PROF.IA : … » puis « Proposition pédagogique MON PROF.IA : … ». |
 | 12 | Fiche pédagogique en 15 points | Prompt + action rapide | Éléments documentés recherchés d'abord ; rien d'officiel inventé. |
 | 13 | Génération d'exercices en 8 étapes | Prompt + contrôle | Exercices présentés comme productions de l'IA ; le contrôle automatique signale un corrigé absent. |
 | 14 | Évaluations | Prompt + actions | Sujet blanc et grille critériée ajoutés. Orientations officielles privilégiées **si elles figurent dans les extraits**. |
 | 15 | Remédiation en 7 étapes | Prompt + action | Avec activité de consolidation. |
 | 16 | Différenciation en 3 niveaux, non stigmatisante | Prompt + action | Consolidation, niveau attendu, approfondissement. |
-| 17 | Contrôle final | Prompt + Code | Liste de contrôle silencieuse du modèle ; puis contrôle automatique affiché : renvois [Rn] sans extrait, ID absents du registre, affirmation sur le « programme en vigueur » sans source ACTIVE, étiquette SOURCE KIBARU sans source, corrigé ou barème absent. |
+| 17 | Contrôle final | Prompt + Code | Liste de contrôle silencieuse du modèle ; puis contrôle automatique affiché : renvois [Rn] sans extrait, ID absents du registre, affirmation sur le « programme en vigueur » sans source ACTIVE, étiquette SOURCE MON PROF.IA sans source, corrigé ou barème absent. |
 | 18 | Réformes : prompt stable, base évolutive | Prompt | Le prompt ne décrit aucun « programme actuel ». |
 | 19 | Règle de mise à jour | Outils | `npm run base:nouvel-id -- 6e Mathématiques` (ID), registre maître, `base:verifier`, `base:catalogue` ; historique jamais supprimé. |
 | 20 | Format de réponse standard | Prompt | Contexte / Base documentaire / Proposition pédagogique / Statut des informations / Point à vérifier ; l'impression d'un corrigé s'arrête avant « Statut des informations ». |
@@ -34,9 +34,9 @@ Correspondance entre les 22 sections du « Moteur de décision pédagogique V1 �
 Conformément à la section 18 (le prompt reste stable, la base évolue) et à l'interdiction d'inventer :
 
 - Section 14 : « Les guides officiels disponibles montrent notamment l'importance accordée à l'évaluation formative
-  et à l'évaluation critériée dans le cadre de l'API. » — aucun guide n'est encore intégré à la base : KIBARU ne
+  et à l'évaluation critériée dans le cadre de l'API. » — aucun guide n'est encore intégré à la base : MON PROF.IA ne
   peut pas l'affirmer. Cette orientation sera citée **depuis les guides** une fois ceux-ci intégrés.
 - Section 18 : « Le ministère a encore annoncé en 2026 une révision des curricula et supports pédagogiques. » — fait
   daté, non vérifiable dans la base. Le prompt indique seulement que des révisions peuvent être en cours. Pour que
-  KIBARU puisse en faire état, inscrivez l'annonce au registre (type `TEXTE_OFFICIEL` ou `NOTE_DE_SERVICE`, catégorie
+  MON PROF.IA puisse en faire état, inscrivez l'annonce au registre (type `TEXTE_OFFICIEL` ou `NOTE_DE_SERVICE`, catégorie
   `07_REFERENTIELS_ET_TEXTES_OFFICIELS`) avec son document source.

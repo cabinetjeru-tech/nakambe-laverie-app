@@ -79,7 +79,7 @@ describe("sélection des sources et niveaux de confiance (sections 7 à 10)", ()
     const d = run([], undefined, 1);
     expect(d.confidence).toBe("NON_CONFIRMEE");
     const block = formatDecisionBlock(d);
-    expect(block).toContain("« Cette information n'est pas confirmée dans la base documentaire KIBARU disponible. »");
+    expect(block).toContain("« Cette information n'est pas confirmée dans la base documentaire MON PROF.IA disponible. »");
     expect(block).toContain("1 NON ENCORE INTÉGRÉE(S) [BF-6E-MATH-002 — Programme]");
   });
   it("ordre de priorité : officielle active spécifique > officielle active générale > officielle à vérifier > institutionnelle > pédagogique", () => {
@@ -121,9 +121,9 @@ describe("contrôle final automatique (section 17)", () => {
     expect(finalCheck({ ...base, answer: "Conformément au programme en vigueur, la leçon dure 2 heures." }).join()).toContain("sans source ACTIVE");
     expect(finalCheck({ ...base, answer: "Le programme en vigueur n'est pas confirmé dans la base : à vérifier." })).toEqual([]);
   });
-  it("signale SOURCE KIBARU sans source, et l'absence de corrigé d'un devoir", () => {
+  it("signale SOURCE MON PROF.IA sans source, et l'absence de corrigé d'un devoir", () => {
     const long = "x ".repeat(400);
-    const out = finalCheck({ ...base, confidence: "NON_CONFIRMEE", needs: ["devoir"], answer: `**SOURCE KIBARU** ${long}` });
+    const out = finalCheck({ ...base, confidence: "NON_CONFIRMEE", needs: ["devoir"], answer: `**SOURCE MON PROF.IA** ${long}` });
     expect(out.join("\n")).toContain("aucune ressource de la base n'a été consultée");
     expect(out.join("\n")).toContain("Aucun corrigé repéré");
   });
@@ -131,7 +131,7 @@ describe("contrôle final automatique (section 17)", () => {
 
 describe("format de réponse standard (section 20)", () => {
   it("le corrigé imprimé s'arrête avant « Statut des informations »", () => {
-    const md = "## Contexte\nClasse : 6e\n## DOCUMENT 1 — SUJET\nEx 1\n## DOCUMENT 2 — CORRIGÉ\nRép 1\n### Détail\nd\n## Statut des informations\n- SOURCE KIBARU : …";
+    const md = "## Contexte\nClasse : 6e\n## DOCUMENT 1 — SUJET\nEx 1\n## DOCUMENT 2 — CORRIGÉ\nRép 1\n### Détail\nd\n## Statut des informations\n- SOURCE MON PROF.IA : …";
     const parts = splitDocuments(md);
     expect(parts.map((p) => p.markdown)).toEqual(["Ex 1", "Rép 1\n### Détail\nd"]);
   });

@@ -1,4 +1,4 @@
-# KIBARU FASO — état de la configuration V2
+# MON PROF.IA — état de la configuration V2
 
 Correspondance entre les 30 sections de la configuration V2 et l'application actuelle.
 « Fait » = disponible et testé ; « Prompt » = règle appliquée par le modèle via le prompt système ;
@@ -13,12 +13,12 @@ Correspondance entre les 30 sections de la configuration V2 et l'application act
 | 5 | Métadonnées | Fait | Fiche obligatoire (ID unique, statut, priorité, dates d'intégration, de vérification, de remplacement…), complétée par le chemin ; contrôlée par `npm run base:verifier`. |
 | 6 | Gestion des versions | Fait | `remplace:` archive l'ancienne version sans la supprimer ; les archives sont signalées au modèle mais jamais consultées. |
 | 7 | Hiérarchie des sources | Fait + Prompt | `fiabilite` 1 à 4 pondère la recherche et est transmise au modèle ; niveau 5 = connaissance générale. |
-| 8 | Transparence (4 étiquettes) | Fait | SOURCE KIBARU, PROPOSITION PÉDAGOGIQUE KIBARU, CONNAISSANCE GÉNÉRALE, À VÉRIFIER, affichées en couleur. |
+| 8 | Transparence (4 étiquettes) | Fait | SOURCE MON PROF.IA, PROPOSITION PÉDAGOGIQUE MON PROF.IA, CONNAISSANCE GÉNÉRALE, À VÉRIFIER, affichées en couleur. |
 | 9 | Interdiction d'inventer | Prompt | Phrase exacte en l'absence d'information. Aucun document officiel n'est fourni d'office. |
 | 10 | Profil de l'enseignant | Partiel | Panneau « Ma classe » (classe, matière, établissement, niveau…) conservé sur l'appareil. Comptes : à faire. |
 | 11 | Tableau de bord | Partiel | « Mes préparations » classées : cours, devoirs, corrigés, évaluations, progressions, remédiation, activités, historique ; « Ma bibliothèque ». Sur l'appareil uniquement ; synchronisation entre appareils : à faire (comptes). |
 | 12 | Préparation d'un cours | Fait | Action « Un cours », structure dans le prompt. |
-| 13 | Devoirs : sujet / corrigé / barème | Fait | Impression et export Word séparés pour chaque document ; le sujet ne porte aucune mention KIBARU. |
+| 13 | Devoirs : sujet / corrigé / barème | Fait | Impression et export Word séparés pour chaque document ; le sujet ne porte aucune mention MON PROF.IA. |
 | 14 | Versions A, B, C | Fait | Action « Versions A, B et C », documents imprimables séparément. |
 | 15 | Types d'évaluation | Fait | Actions « Une évaluation », « Interrogation écrite ». |
 | 16 | Remédiation | Fait | Action dédiée, démarche en 6 étapes dans le prompt. |

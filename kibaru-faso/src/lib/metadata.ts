@@ -1,7 +1,7 @@
 import { parseDocType, parseStatut, type Statut } from "./base/structure";
 
 /**
- * Fiche descriptive d'une ressource de la base documentaire KIBARU, au format « clé: valeur », une par ligne.
+ * Fiche descriptive d'une ressource de la base documentaire MON PROF.IA, au format « clé: valeur », une par ligne.
  * Les lignes commençant par « # » sont des commentaires.
  *
  *   id: BF-MATH-6E-PROG-002
@@ -24,7 +24,7 @@ import { parseDocType, parseStatut, type Statut } from "./base/structure";
  *   date_remplacement: 2026-09-01
  *   date_expiration: …               (facultatif)
  *   observations: …                  (remarque libre, affichée et transmise)
- *   avertissement: …                 (règle d'usage que KIBARU doit respecter)
+ *   avertissement: …                 (règle d'usage que MON PROF.IA doit respecter)
  *
  * Pour un fichier .md/.txt : en tête, entre deux lignes « --- ».
  * Pour un .pdf/.docx : dans un fichier voisin « nom-du-fichier.pdf.meta ».
@@ -189,6 +189,7 @@ export function parseFields(pairs: [string, string][]): DocMeta {
         break;
       case "date_integration":
       case "date_dintegration":
+      case "date_dintegration_dans_mon_prof.ia":
       case "date_dintegration_dans_kibaru":
       case "integration":
         meta.dateIntegration = date();

@@ -1,5 +1,5 @@
 /**
- * Outil d'administration de la base documentaire KIBARU FASO.
+ * Outil d'administration de la base documentaire MON PROF.IA.
  *
  *   npm run base:verifier    contrôle le registre maître et la base (métadonnées, ID, remplacements, emplacements)
  *   npm run base:nouvel-id -- 6e Mathématiques   propose le prochain ID libre (BF-6E-MATH-002…)
@@ -53,7 +53,7 @@ async function main() {
   const summary = `${base.registry.length} ressource(s) au registre maître ; ${base.docs.length} intégrée(s) dont ${usable.length} consultable(s) et ${history.length} dans l'historique ; ${base.pending.length} NON ENCORE INTÉGRÉE(S).`;
 
   if (cmd === "verifier") {
-    console.log(`Base documentaire KIBARU FASO — ${summary}`);
+    console.log(`Base documentaire MON PROF.IA — ${summary}`);
     for (const i of [...errors, ...warnings]) console.log(`${i.level === "erreur" ? "ERREUR   " : "attention"}  ${i.path} : ${i.message}`);
     console.log(errors.length ? `\n${errors.length} erreur(s) à corriger.` : `\nAucune erreur bloquante${warnings.length ? ` (${warnings.length} point(s) d'attention)` : ""}.`);
     process.exitCode = errors.length ? 1 : 0;
@@ -90,7 +90,7 @@ async function main() {
     const master = [...integrated, ...notIntegrated].sort((a, b) => (a.id ?? "~").localeCompare(b.id ?? "~"));
 
     const L: string[] = [
-      "# Catalogue de la base documentaire KIBARU FASO",
+      "# Catalogue de la base documentaire MON PROF.IA",
       "",
       `> Fichier généré par \`npm run base:catalogue\` à partir de \`${REGISTRY_FILE}\` et des documents déposés — ne pas modifier à la main.`,
       "> Le registre est un **registre initial** : il ne certifie pas l'actualité des documents. Les statuts sont mis à jour après vérification documentaire.",

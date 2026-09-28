@@ -36,7 +36,7 @@ export async function POST(req: Request) {
   const teacherChars = parsed.data.documents.reduce((s, d) => s + d.text.length, 0);
   if (teacherChars > MAX_TEACHER_DOCS_CHARS) return jsonError(413, "Vos documents sont trop volumineux : retirez-en un ou plusieurs.");
 
-  // Documents : base documentaire KIBARU + bibliothèque personnelle de l'enseignant.
+  // Documents : base documentaire MON PROF.IA + bibliothèque personnelle de l'enseignant.
   let library: RefDocument[] = [];
   let pending: Awaited<ReturnType<typeof getBase>>["pending"] = [];
   let registryIds: string[] = [];
@@ -111,7 +111,7 @@ export async function POST(req: Request) {
         });
         send({ type: "done", check });
       } catch (e) {
-        let message = "KIBARU FASO n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
+        let message = "MON PROF.IA n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
         if (e instanceof AiUnavailableError) message = e.message;
         else if (e instanceof Anthropic.RateLimitError) message = "Le service est très sollicité. Réessayez dans une minute.";
         else if (e instanceof Anthropic.AuthenticationError) message = "La clé API configurée est invalide. Prévenez l'administrateur.";

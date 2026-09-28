@@ -28,7 +28,7 @@ function escapeHtml(s: string) {
 
 export function buildDocumentHtml(title: string, bodyHtml: string, withFooter: boolean): string {
   const footer = withFooter
-    ? `<div class="pied">Préparé avec l'assistance de KIBARU FASO — L'intelligence pédagogique au service de l'enseignant. Contenu à vérifier et adapter par l'enseignant avant utilisation en classe.</div>`
+    ? `<div class="pied">Préparé avec l'assistance de MON PROF.IA — L'intelligence artificielle au service de l'éducation. Contenu à vérifier et adapter par l'enseignant avant utilisation en classe.</div>`
     : "";
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${PRINT_CSS}</style></head><body>${bodyHtml}${footer}</body></html>`;
 }

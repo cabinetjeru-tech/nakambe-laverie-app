@@ -7,14 +7,18 @@ import type { Source } from "@/lib/store";
 /** Rendu Markdown sûr (aucun HTML brut) avec badges de transparence et appels de source [R1]. */
 
 const BADGES: Record<string, string> = {
-  "SOURCE KIBARU": "badge badge-source",
-  "PROPOSITION PÉDAGOGIQUE KIBARU": "badge badge-proposition",
-  "PROPOSITION PEDAGOGIQUE KIBARU": "badge badge-proposition",
+  "SOURCE MON PROF.IA": "badge badge-source",
+  "PROPOSITION PÉDAGOGIQUE MON PROF.IA": "badge badge-proposition",
+  "PROPOSITION PEDAGOGIQUE MON PROF.IA": "badge badge-proposition",
   "CONNAISSANCE GÉNÉRALE": "badge badge-general",
   "CONNAISSANCE GENERALE": "badge badge-general",
   // Étiquettes de la première configuration (conversations déjà enregistrées).
   SOURCE: "badge badge-source",
+  "PROPOSITION MON PROF.IA": "badge badge-proposition",
+  // Étiquettes de l'ancien nom (KIBARU FASO), pour les conversations déjà enregistrées.
+  "SOURCE KIBARU": "badge badge-source",
   "PROPOSITION KIBARU": "badge badge-proposition",
+  "PROPOSITION PÉDAGOGIQUE KIBARU": "badge badge-proposition",
   "À VÉRIFIER": "badge badge-verifier",
   "A VÉRIFIER": "badge badge-verifier",
   "A VERIFIER": "badge badge-verifier",
@@ -45,7 +49,7 @@ export function Markdown({ text, sources = [] }: { text: string; sources?: Sourc
       if (m) {
         const s = sources.find((x) => x.label === m[1]);
         return (
-          <span className="cite" title={s ? `${s.title}${s.source ? ` — ${s.source}` : ""} (${s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire KIBARU"})` : "Source"}>
+          <span className="cite" title={s ? `${s.title}${s.source ? ` — ${s.source}` : ""} (${s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire MON PROF.IA"})` : "Source"}>
             {m[1]}
           </span>
         );

@@ -1,4 +1,4 @@
-# Catalogue de la base documentaire KIBARU FASO
+# Catalogue de la base documentaire MON PROF.IA
 
 > Fichier généré par `npm run base:catalogue` à partir de `REGISTRE_MAITRE.csv` et des documents déposés — ne pas modifier à la main.
 > Le registre est un **registre initial** : il ne certifie pas l'actualité des documents. Les statuts sont mis à jour après vérification documentaire.
