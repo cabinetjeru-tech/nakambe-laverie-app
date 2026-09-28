@@ -17,7 +17,13 @@ export async function GET(req: Request) {
     const required = accessRequired();
     return Response.json({ mode: required ? "code" : "libre", granted: hasAccess(req) });
   }
-  const [compte, offres] = await Promise.all([compteCourant().catch(() => null), formules().catch(() => [])]);
+  const [compte, offres] = await Promise.all([
+    compteCourant().catch((e: Error) => {
+      console.error("[compte]", e.message);
+      return null;
+    }),
+    formules().catch(() => []),
+  ]);
   return Response.json({
     mode: "comptes",
     granted: !!compte?.acces,

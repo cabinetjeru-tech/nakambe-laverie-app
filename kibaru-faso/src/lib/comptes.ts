@@ -44,7 +44,9 @@ export async function chargerCompte(user: { id: string; email: string }): Promis
   const db = adminClient();
   let { data: profil } = await db.from("profils").select("*").eq("id", user.id).maybeSingle<Profil>();
   if (!profil) {
-    ({ data: profil } = await db.from("profils").upsert({ id: user.id, email: user.email }).select("*").single<Profil>());
+    const r = await db.from("profils").upsert({ id: user.id, email: user.email }).select("*").single<Profil>();
+    if (r.error) throw new Error(`Profil illisible (${r.error.code ?? ""} ${r.error.message}) : vérifier SUPABASE_SECRET_KEY.`);
+    profil = r.data;
   }
   if (!profil) throw new Error("Profil introuvable.");
   // Les adresses listées dans ADMIN_EMAILS deviennent administratrices à leur connexion.

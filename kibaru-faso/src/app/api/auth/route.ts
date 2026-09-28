@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { traduire } from "@/lib/auth-messages";
+import { chargerCompte } from "@/lib/comptes";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { accountsEnabled, sessionClient } from "@/lib/supabase/server";
 
@@ -20,6 +21,9 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("deconnexion") }),
 ]);
 
+const CONFIG_ERROR =
+  "Connexion réussie, mais le serveur ne peut pas lire votre profil : la clé secrète Supabase (SUPABASE_SECRET_KEY) configurée dans Vercel est invalide. Prévenez l'administrateur.";
+
 function origin(req: Request): string {
   return process.env.APP_URL?.replace(/\/$/, "") || new URL(req.url).origin;
 }
@@ -39,8 +43,15 @@ export async function POST(req: Request) {
   try {
     switch (x.action) {
       case "connexion": {
-        const { error } = await sb.auth.signInWithPassword({ email: x.email.trim(), password: x.password });
+        const { data, error } = await sb.auth.signInWithPassword({ email: x.email.trim(), password: x.password });
         if (error) throw error;
+        // Le mot de passe est bon : on vérifie que le serveur lit bien le profil (clé secrète Supabase valide).
+        try {
+          await chargerCompte({ id: data.user.id, email: data.user.email ?? x.email.trim() });
+        } catch (e) {
+          console.error("[auth] profil illisible :", (e as Error).message);
+          return Response.json({ error: CONFIG_ERROR }, { status: 503 });
+        }
         return Response.json({ ok: true });
       }
       case "inscription": {
