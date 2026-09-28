@@ -7,7 +7,7 @@ import type { PendingDoc } from "./load";
 import { CLASS_INFO, STATUT_LABELS, subjectCodes, SUBJECTS, typeLabel } from "./structure";
 
 /**
- * Moteur de décision pédagogique de MON PROF.IA (V1), qui intègre le moteur de décision documentaire.
+ * Moteur de décision pédagogique de PÉDAGOGUE.IA (V1), qui intègre le moteur de décision documentaire.
  *
  * Chaîne de traitement : demande → identification du besoin → identification du contexte → recherche dans la
  * base → sélection des sources (score A à G) → vérification du statut → niveau de confiance → [modèle :
@@ -273,10 +273,10 @@ export function decide(profile: RequestProfile, catalogue: RefDocument[], excerp
 }
 
 const INSTRUCTIONS: Record<Confidence, string> = {
-  ELEVEE: "Tu peux présenter comme documentées les informations tirées des sources officielles actives citées (SOURCE MON PROF.IA, avec leur renvoi [Rn]). Signale les points que les extraits ne couvrent pas.",
-  MOYENNE: "Signale la réserve appropriée : la source est officielle ou institutionnelle, mais son actualité ou certains éléments ne sont pas confirmés. Cite-la (« Selon le guide disponible dans la base MON PROF.IA… »), précise son statut, et classe en À VÉRIFIER toute affirmation sur le programme actuellement applicable.",
+  ELEVEE: "Tu peux présenter comme documentées les informations tirées des sources officielles actives citées (SOURCE PÉDAGOGUE.IA, avec leur renvoi [Rn]). Signale les points que les extraits ne couvrent pas.",
+  MOYENNE: "Signale la réserve appropriée : la source est officielle ou institutionnelle, mais son actualité ou certains éléments ne sont pas confirmés. Cite-la (« Selon le guide disponible dans la base PÉDAGOGUE.IA… »), précise son statut, et classe en À VÉRIFIER toute affirmation sur le programme actuellement applicable.",
   FAIBLE: "Les informations proviennent principalement de ressources complémentaires ou de connaissances générales : évite de présenter quoi que ce soit comme une exigence officielle.",
-  NON_CONFIRMEE: "La base ne permet pas de présenter d'information comme officielle : pour tout élément de programme, de compétence, d'objectif ou d'orientation officielle, écris « Cette information n'est pas confirmée dans la base documentaire MON PROF.IA disponible. », puis propose une solution pédagogique générale clairement identifiée comme PROPOSITION MON PROF.IA.",
+  NON_CONFIRMEE: "La base ne permet pas de présenter d'information comme officielle : pour tout élément de programme, de compétence, d'objectif ou d'orientation officielle, écris « Cette information n'est pas confirmée dans la base documentaire PÉDAGOGUE.IA disponible. », puis propose une solution pédagogique générale clairement identifiée comme PROPOSITION PÉDAGOGUE.IA.",
 };
 
 const id = (d: { documentId?: string; title: string }) => d.documentId ?? d.title;

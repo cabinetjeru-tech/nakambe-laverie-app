@@ -59,7 +59,7 @@ export const TEMPLATES: Template[] = [
     icon: "📅",
     main: true,
     category: "progression",
-    build: (c) => `Aide-moi à construire une progression de ${disc(c)} en ${classe(c)} pour [le trimestre / l'année], avec le nombre de séances par chapitre. Indique clairement ce qui provient de la base documentaire MON PROF.IA et ce qui est une proposition.`,
+    build: (c) => `Aide-moi à construire une progression de ${disc(c)} en ${classe(c)} pour [le trimestre / l'année], avec le nombre de séances par chapitre. Indique clairement ce qui provient de la base documentaire PÉDAGOGUE.IA et ce qui est une proposition.`,
   },
   {
     id: "remediation",
@@ -82,7 +82,7 @@ export const TEMPLATES: Template[] = [
   {
     id: "accompagnement",
     label: "Construire pas à pas",
-    hint: "MON PROF.IA vous pose les bonnes questions",
+    hint: "PÉDAGOGUE.IA vous pose les bonnes questions",
     category: "cours",
     build: (c) => `Je dois enseigner « ${theme(c)} » [demain]. Aide-moi à construire la séance pas à pas : pose-moi d'abord les questions nécessaires.`,
   },
@@ -119,7 +119,7 @@ export const TEMPLATES: Template[] = [
     label: "Sujet blanc",
     hint: "Épreuve d'entraînement, corrigé et barème",
     category: "evaluation",
-    build: (c) => `Prépare un sujet blanc de ${disc(c)} pour la classe de ${classe(c)}, durée ${duree(c, "2 heures")}, avec corrigé détaillé et barème. Indique si des orientations officielles d'évaluation figurent dans la base MON PROF.IA.`,
+    build: (c) => `Prépare un sujet blanc de ${disc(c)} pour la classe de ${classe(c)}, durée ${duree(c, "2 heures")}, avec corrigé détaillé et barème. Indique si des orientations officielles d'évaluation figurent dans la base PÉDAGOGUE.IA.`,
   },
   {
     id: "grille",

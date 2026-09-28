@@ -1,8 +1,8 @@
-# Base documentaire MON PROF.IA — structure officielle
+# Base documentaire PÉDAGOGUE.IA — structure officielle
 
-Ce dossier est la base documentaire de MON PROF.IA. Sa structure est la **structure documentaire officielle du
+Ce dossier est la base documentaire de PÉDAGOGUE.IA. Sa structure est la **structure documentaire officielle du
 projet**. Elle évolue par ajout de ressources et de versions, sans jamais modifier les instructions fondamentales
-de MON PROF.IA (le prompt) : il suffit de déposer des fichiers et leur fiche, puis de redéployer.
+de PÉDAGOGUE.IA (le prompt) : il suffit de déposer des fichiers et leur fiche, puis de redéployer.
 
 ```
 base-documentaire/
@@ -48,13 +48,13 @@ prioritaire**, et tout désaccord entre les deux est signalé par `npm run base:
 
 ## Registre maître — `REGISTRE_MAITRE.csv`
 
-Le registre maître est le **catalogue central** de MON PROF.IA : une ligne par ressource, qu'elle soit intégrée
+Le registre maître est le **catalogue central** de PÉDAGOGUE.IA : une ligne par ressource, qu'elle soit intégrée
 (document déposé) ou **NON ENCORE INTÉGRÉE** (connue, mais texte non disponible). Il s'ouvre dans Excel ou LibreOffice
 (séparateur `;`, UTF-8). Ses valeurs l'emportent sur la fiche du document et sur son emplacement ; tout désaccord est
 signalé par `npm run base:verifier`.
 
 Colonnes (métadonnées obligatoires) : ID ; Titre officiel ; Pays ; Ministère/Institution productrice ; Niveau ;
-Classe ; Matière ; Type de document ; Année de publication ; Version ; Date d'intégration dans MON PROF.IA ; Source ;
+Classe ; Matière ; Type de document ; Année de publication ; Version ; Date d'intégration dans PÉDAGOGUE.IA ; Source ;
 URL ou référence documentaire ; Statut ; Niveau de source ; Priorité ; Date de dernière vérification ;
 Document remplacé ; Document de remplacement ; Observations ; Périmètre d'utilisation ; Fichier ; Avertissement.
 
@@ -105,7 +105,7 @@ date_verification: 2026-09-28
 remplace: BF-6E-MATH-001
 date_remplacement: 2026-09-28
 observations: [facultatif]
-avertissement: [facultatif — règle d'usage que MON PROF.IA doit respecter]
+avertissement: [facultatif — règle d'usage que PÉDAGOGUE.IA doit respecter]
 ```
 
 | Métadonnée | Obligatoire | Rôle |
@@ -114,7 +114,7 @@ avertissement: [facultatif — règle d'usage que MON PROF.IA doit respecter]
 | `titre`, `pays`, `niveau`, `classe`, `matiere`, `type` | oui | Identification et champ d'application (le chemin peut fournir pays → type). |
 | `organisme` | oui | Organisme ou producteur. |
 | `annee`, `version` | oui | Date et version (le chemin peut les fournir). |
-| `date_integration` | oui | Date d'entrée dans la base MON PROF.IA. |
+| `date_integration` | oui | Date d'entrée dans la base PÉDAGOGUE.IA. |
 | `statut` | oui | Voir ci-dessous. **Sans statut, la ressource est traitée comme À VÉRIFIER — jamais comme ACTIVE.** |
 | `source` | oui | Provenance exacte (site, service, référence). |
 | `niveau_source` | oui | Hiérarchie des sources : 1 sources officielles (ministère, directions générales, institutions habilitées, textes réglementaires) ; 2 documents curriculaires officiels (programmes, curricula, référentiels, guides validés) ; 3 ressources institutionnelles complémentaires ; 4 ressources pédagogiques fiables non officielles ; 5 connaissances générales du modèle. |
@@ -130,7 +130,7 @@ Une valeur `à renseigner` est ignorée : **n'inventez jamais** une année, une 
 
 ## Statuts
 
-| Statut | Consulté par MON PROF.IA ? | Traitement |
+| Statut | Consulté par PÉDAGOGUE.IA ? | Traitement |
 |---|---|---|
 | `ACTIF` | oui | Actuellement confirmée comme utilisable dans son périmètre. Seule une ressource ACTIVE, officielle et pertinente peut fonder une affirmation sur les programmes ou orientations du Burkina Faso. |
 | `À_VÉRIFIER` | oui | Officielle ou sérieuse, mais actualité, portée ou applicabilité actuelle insuffisamment confirmées. Citée comme « source officielle historique » ; ce qui en provient reste « À VÉRIFIER ». |
@@ -141,17 +141,17 @@ Une valeur `à renseigner` est ignorée : **n'inventez jamais** une année, une 
 **Officiel ≠ automatiquement actuel** : une ressource officielle ancienne n'est jamais présentée comme le programme
 en vigueur sans ressource ACTIVE qui le confirme.
 
-À pertinence égale, MON PROF.IA privilégie la priorité la plus officielle, puis ACTIF avant PROVISOIRE avant À VÉRIFIER.
+À pertinence égale, PÉDAGOGUE.IA privilégie la priorité la plus officielle, puis ACTIF avant PROVISOIRE avant À VÉRIFIER.
 
 ## Règles de versions
 
 1. **Un document plus ancien n'est jamais automatiquement obsolète**, et **un document plus récent n'est jamais
    automatiquement applicable** : ni la date ni le titre ne suffisent. Aucun remplacement n'est deviné.
-2. Pour choisir la source, MON PROF.IA prend en compte : le caractère officiel (`priorite`), le champ d'application
+2. Pour choisir la source, PÉDAGOGUE.IA prend en compte : le caractère officiel (`priorite`), le champ d'application
    (pays, niveau, classe, matière), la date, la version, le statut et un éventuel remplacement déclaré.
 3. Un remplacement ne s'applique que s'il est **déclaré** (`remplace` sur la nouvelle ressource, ou `remplace_par`
    sur l'ancienne) **et** que la nouvelle ressource est **ACTIVE**. Tant qu'elle est PROVISOIRE ou À VÉRIFIER,
-   l'ancienne reste consultée, et MON PROF.IA est informé qu'une version plus récente existe.
+   l'ancienne reste consultée, et PÉDAGOGUE.IA est informé qu'une version plus récente existe.
 4. **On ne supprime jamais silencieusement** une ressource : on change son statut (REMPLACÉ ou ARCHIVE) et on peut
    la déplacer dans `09_ARCHIVES` en conservant son chemin d'origine. L'historique des versions est conservé et
    visible dans l'application et dans `CATALOGUE.md`.

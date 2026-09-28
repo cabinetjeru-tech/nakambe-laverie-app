@@ -26,7 +26,7 @@ export type RefDocument = {
   observations?: string;
   /** Règle d'usage propre au document, transmise au modèle avec chaque extrait. */
   notice?: string;
-  /** ID unique dans la base MON PROF.IA (ex. BF-MATH-6E-GUIDE-001). */
+  /** ID unique dans la base PÉDAGOGUE.IA (ex. BF-MATH-6E-GUIDE-001). */
   documentId?: string;
   organisme?: string;
   pays?: string;
@@ -333,7 +333,7 @@ export function formatReferenceBlock(catalogue: RefDocument[], excerpts: Excerpt
         .join("\n")}\n</historique>`
     : "";
   if (catalogue.length === 0) {
-    return `<documents_de_reference>\nAucune ressource de la base documentaire MON PROF.IA n'est disponible pour cette demande.${archives}\n</documents_de_reference>`;
+    return `<documents_de_reference>\nAucune ressource de la base documentaire PÉDAGOGUE.IA n'est disponible pour cette demande.${archives}\n</documents_de_reference>`;
   }
   const shown = catalogue.slice(0, 60);
   const lines = shown.map(

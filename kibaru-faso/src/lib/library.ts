@@ -2,9 +2,9 @@ import "server-only";
 import { loadBase, type BaseLoad } from "./base/load";
 
 /**
- * Base documentaire MON PROF.IA (dossier `base-documentaire/`), chargée une fois par instance serveur
+ * Base documentaire PÉDAGOGUE.IA (dossier `base-documentaire/`), chargée une fois par instance serveur
  * puis gardée en mémoire. Toute mise à jour de la base passe par un redéploiement : les instructions
- * de MON PROF.IA (prompt) ne changent pas quand les documents changent.
+ * de PÉDAGOGUE.IA (prompt) ne changent pas quand les documents changent.
  */
 
 let cache: Promise<BaseLoad> | null = null;

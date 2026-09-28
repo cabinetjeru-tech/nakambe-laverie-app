@@ -1,5 +1,5 @@
 /**
- * Structure documentaire officielle de MON PROF.IA.
+ * Structure documentaire officielle de PÉDAGOGUE.IA.
  *
  *   base-documentaire/
  *   ├── 01_PROGRAMMES_ET_CURRICULA

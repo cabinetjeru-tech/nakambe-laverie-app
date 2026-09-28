@@ -49,10 +49,10 @@ describe("séparation sujet / corrigé", () => {
 
 describe("prompt système", () => {
   it("contient les règles essentielles", () => {
-    for (const s of ["MON PROF.IA", "INTERDICTION D'INVENTER", "PROPOSITION PÉDAGOGIQUE MON PROF.IA", "CONNAISSANCE GÉNÉRALE", "SOURCE MON PROF.IA", "À VÉRIFIER", "HIÉRARCHIE DES SOURCES", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée dans la base documentaire MON PROF.IA disponible.", "30. MESSAGE DE DÉMARRAGE",
-      "Cette information n'est pas confirmée dans la base documentaire MON PROF.IA disponible.", "Selon le guide disponible dans la base MON PROF.IA", "Proposition pédagogique MON PROF.IA", "## Point à vérifier", "niveau 3 — activité d'approfondissement", "15. Devoir éventuel", "Règle d'or",
-      "Je peux néanmoins vous proposer une activité pédagogique générale, clairement présentée comme une proposition MON PROF.IA et non comme une prescription officielle.",
-      "Deux ressources de la base MON PROF.IA présentent des informations différentes.", "officiel ≠ automatiquement actuel", "**PROPOSITION MON PROF.IA**", "<decision_pedagogique>", "BF-[CLASSE]-[MATIERE]-[NUMERO]"]) {
+    for (const s of ["PÉDAGOGUE.IA", "INTERDICTION D'INVENTER", "PROPOSITION PÉDAGOGIQUE PÉDAGOGUE.IA", "CONNAISSANCE GÉNÉRALE", "SOURCE PÉDAGOGUE.IA", "À VÉRIFIER", "HIÉRARCHIE DES SOURCES", "DOCUMENT 2 — CORRIGÉ", "Cette information n'a pas été retrouvée dans la base documentaire PÉDAGOGUE.IA disponible.", "30. MESSAGE DE DÉMARRAGE",
+      "Cette information n'est pas confirmée dans la base documentaire PÉDAGOGUE.IA disponible.", "Selon le guide disponible dans la base PÉDAGOGUE.IA", "Proposition pédagogique PÉDAGOGUE.IA", "## Point à vérifier", "niveau 3 — activité d'approfondissement", "15. Devoir éventuel", "Règle d'or",
+      "Je peux néanmoins vous proposer une activité pédagogique générale, clairement présentée comme une proposition PÉDAGOGUE.IA et non comme une prescription officielle.",
+      "Deux ressources de la base PÉDAGOGUE.IA présentent des informations différentes.", "officiel ≠ automatiquement actuel", "**PROPOSITION PÉDAGOGUE.IA**", "<decision_pedagogique>", "BF-[CLASSE]-[MATIERE]-[NUMERO]"]) {
       expect(SYSTEM_PROMPT).toContain(s);
     }
   });

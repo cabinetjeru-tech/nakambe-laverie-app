@@ -3,8 +3,8 @@ import type { MetadataRoute } from "next";
 /** Application installable sur Android et ordinateur (écran d'accueil), en attendant les applications natives. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "MON PROF.IA — L'intelligence artificielle au service de l'éducation",
-    short_name: "MON PROF.IA",
+    name: "PÉDAGOGUE.IA — L'intelligence au service de la pédagogie",
+    short_name: "PÉDAGOGUE.IA",
     description: "Assistant pédagogique pour les enseignants du secondaire au Burkina Faso.",
     lang: "fr",
     start_url: "/",

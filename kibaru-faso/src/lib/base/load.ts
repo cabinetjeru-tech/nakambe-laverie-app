@@ -19,7 +19,7 @@ import {
 import { crossCheck, missingFields, pathConflicts, type Issue } from "./validate";
 
 /**
- * Chargement de la base documentaire MON PROF.IA : registre maître (REGISTRE_MAITRE.csv) + documents déposés
+ * Chargement de la base documentaire PÉDAGOGUE.IA : registre maître (REGISTRE_MAITRE.csv) + documents déposés
  * dans la structure officielle. Sans dépendance au serveur Next.js : utilisé par l'application et par
  * le script `npm run base:…`.
  *

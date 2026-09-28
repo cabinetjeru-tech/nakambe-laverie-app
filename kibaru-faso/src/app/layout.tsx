@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MON PROF.IA — L'intelligence artificielle au service de l'éducation",
+  title: "PÉDAGOGUE.IA — L'intelligence au service de la pédagogie",
   description:
     "Assistant pédagogique pour les enseignants du secondaire au Burkina Faso : leçons, fiches, exercices, devoirs et corrigés, évaluations, remédiation.",
   icons: { icon: "/icon.svg" },

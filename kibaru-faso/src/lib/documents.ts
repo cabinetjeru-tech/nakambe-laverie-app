@@ -2,7 +2,7 @@
 
 export type DocPart = { key: string; title: string; markdown: string };
 
-/** Un sujet est distribué aux élèves : il est exporté sans mention MON PROF.IA. */
+/** Un sujet est distribué aux élèves : il est exporté sans mention PÉDAGOGUE.IA. */
 export function isStudentCopy(title: string): boolean {
   return /\bsujet\b/i.test(title) && !/corrig/i.test(title);
 }

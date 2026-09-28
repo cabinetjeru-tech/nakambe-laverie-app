@@ -1,6 +1,6 @@
-# MON PROF.IA
+# PÉDAGOGUE.IA
 
-**L'intelligence artificielle au service de l'éducation.**
+**L'intelligence au service de la pédagogie.**
 
 Assistant pédagogique pour les enseignants de l'enseignement secondaire au Burkina Faso (6e à Terminale) :
 préparation de leçons et de fiches pédagogiques, progressions, situations-problèmes, exercices progressifs,
@@ -11,7 +11,7 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
 
 ## Principes (configuration V2)
 
-- **Priorité absolue à la base documentaire MON PROF.IA.** Avant chaque réponse, l'application recherche les passages
+- **Priorité absolue à la base documentaire PÉDAGOGUE.IA.** Avant chaque réponse, l'application recherche les passages
   pertinents dans la base (`base-documentaire/`, déposée par l'administrateur) et dans la bibliothèque personnelle de
   l'enseignant. Les connaissances générales du modèle ne viennent qu'en dernier recours, et sont signalées comme telles.
 - **Base évolutive et versionnée, selon la structure documentaire officielle** : 9 catégories
@@ -28,8 +28,8 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
   `BF-[CLASSE]-[MATIERE]-[NUMERO]`). Avant chaque réponse, l'application identifie classe et matière, recense les
   ressources, compare les versions, applique les remplacements et évalue une **confiance documentaire** (élevée,
   moyenne, faible, aucune), transmise au modèle et affichée à l'enseignant. Officiel ≠ automatiquement actuel.
-- **Jamais d'invention présentée comme officielle.** Chaque production distingue **SOURCE MON PROF.IA** (avec renvoi
-  [R1]… vers l'extrait consulté), **PROPOSITION MON PROF.IA**, **CONNAISSANCE GÉNÉRALE** et **À VÉRIFIER**.
+- **Jamais d'invention présentée comme officielle.** Chaque production distingue **SOURCE PÉDAGOGUE.IA** (avec renvoi
+  [R1]… vers l'extrait consulté), **PROPOSITION PÉDAGOGUE.IA**, **CONNAISSANCE GÉNÉRALE** et **À VÉRIFIER**.
 - **L'enseignant reste responsable** : il vérifie, adapte et valide chaque contenu avant usage en classe.
 
 Le prompt système complet se trouve dans [`src/lib/prompt.ts`](src/lib/prompt.ts) : la configuration V2 du
@@ -46,9 +46,9 @@ de l'enseignant et la base documentaire.
 | Accueil | Les sept choix du message de démarrage : un cours, un devoir, une évaluation, un corrigé, une progression, une activité de remédiation, une activité pédagogique ; plus : construire pas à pas, fiche, exercices progressifs, versions A/B/C, interrogation, différenciation, révision |
 | Conversation | Réponses en direct (streaming) ; 13 modifications en un clic (simplifier, développer, exemples, exercices, réduire la durée, classe faible / avancée, situation-problème, corrigé, barème, transformer en devoir ou en fiche, résumer) |
 | Mes préparations | Classées en cours, devoirs, corrigés, évaluations, progressions, remédiation, activités ; historique complet |
-| Documents | Base documentaire MON PROF.IA (serveur, versionnée, avec archives) + « Ma bibliothèque » : documents personnels PDF / Word / texte (lus puis conservés dans le navigateur) |
+| Documents | Base documentaire PÉDAGOGUE.IA (serveur, versionnée, avec archives) + « Ma bibliothèque » : documents personnels PDF / Word / texte (lus puis conservés dans le navigateur) |
 | Recherche | Extraits retrouvés par classement BM25, filtrés par classe et matière, pondérés par le niveau de fiabilité, cités [R1]… |
-| Export | Copier, imprimer ou enregistrer en PDF, Word ; chaque document d'un devoir (sujet, corrigé, barème, versions A/B/C) exportable séparément — un sujet ne porte aucune mention MON PROF.IA |
+| Export | Copier, imprimer ou enregistrer en PDF, Word ; chaque document d'un devoir (sujet, corrigé, barème, versions A/B/C) exportable séparément — un sujet ne porte aucune mention PÉDAGOGUE.IA |
 | Mobile | Mise en page adaptée au téléphone ; installable sur l'écran d'accueil (Android, ordinateur) |
 | Confidentialité | Conversations, contexte et documents personnels restent sur l'appareil de l'enseignant (localStorage). Le serveur ne conserve rien |
 | Accès | Code d'accès partagé facultatif (`KIBARU_ACCESS_CODE`), limitation du nombre de demandes par minute |
@@ -92,7 +92,7 @@ Catalogue à jour : [`base-documentaire/CATALOGUE.md`](base-documentaire/CATALOG
 
 **Aucun texte officiel n'est encore intégré.** Le registre maître (`base-documentaire/REGISTRE_MAITRE.csv`) recense
 21 guides pédagogiques du post-primaire (6e à 3e), tous « À VÉRIFIER » et NON ENCORE INTÉGRÉS : leurs documents restent
-à déposer. MON PROF.IA ne doit s'appuyer
+à déposer. PÉDAGOGUE.IA ne doit s'appuyer
 que sur des textes authentiques, dont l'origine est connue. Tant que la base est vide, les réponses sont présentées
 comme des propositions ou des connaissances générales.
 

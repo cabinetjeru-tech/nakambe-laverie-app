@@ -33,7 +33,7 @@ function summary(d: DocInfo) {
   };
 }
 
-/** Base documentaire MON PROF.IA (sans le texte) : ressources consultées, historique des versions, fiches en attente. */
+/** Base documentaire PÉDAGOGUE.IA (sans le texte) : ressources consultées, historique des versions, fiches en attente. */
 export async function GET(req: Request) {
   if (!hasAccess(req)) return Response.json({ error: "Code d'accès requis." }, { status: 401 });
   const base = await getBase().catch(() => ({ docs: [], pending: [], issues: [] }));

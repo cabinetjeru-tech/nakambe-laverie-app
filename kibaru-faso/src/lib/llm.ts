@@ -2,7 +2,7 @@ import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
 import { SYSTEM_PROMPT } from "./prompt";
 
-/** Appel à Claude en flux (streaming) avec le prompt système MON PROF.IA. */
+/** Appel à Claude en flux (streaming) avec le prompt système PÉDAGOGUE.IA. */
 
 export class AiUnavailableError extends Error {
   constructor() {

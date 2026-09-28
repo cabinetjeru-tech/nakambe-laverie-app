@@ -243,7 +243,7 @@ export function KibaruApp() {
 
   return (
     <div className="flex h-dvh flex-col">
-      <header className="flex items-center gap-3 border-b border-line bg-white px-4 py-2.5">
+      <header className="flex items-center gap-2 border-b border-line bg-white px-3 py-2.5 sm:gap-3 sm:px-4">
         <button
           type="button"
           className="whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm lg:hidden"
@@ -255,7 +255,7 @@ export function KibaruApp() {
         </button>
         <Brand />
         <div className="ml-auto flex items-center gap-2">
-          <button type="button" onClick={newConversation} className="whitespace-nowrap rounded-lg bg-faso px-3 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark">
+          <button type="button" onClick={newConversation} className="whitespace-nowrap rounded-lg bg-faso px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark sm:px-3">
             <span className="sm:hidden">Nouveau</span>
             <span className="hidden sm:inline">Nouvelle préparation</span>
           </button>
@@ -308,7 +308,7 @@ export function KibaruApp() {
                   )}
                   {busy && last?.role === "user" && (
                     <div className="rounded-2xl border border-line bg-white px-4 py-3 text-sm text-muted">
-                      MON PROF.IA prépare votre document…
+                      PÉDAGOGUE.IA prépare votre document…
                     </div>
                   )}
                   {!busy && last?.role === "assistant" && !last.error && last.decision?.missing?.includes("classe") && (
@@ -411,7 +411,7 @@ export function KibaruApp() {
               )}
             </div>
             <p className="mx-auto mt-1.5 max-w-3xl text-[11px] text-muted">
-              MON PROF.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.
+              PÉDAGOGUE.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.
             </p>
           </form>
         </main>
@@ -422,12 +422,12 @@ export function KibaruApp() {
 
 function Brand() {
   return (
-    <div className="flex items-center gap-2.5">
+    <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.svg" alt="" width={32} height={32} className="rounded-lg" />
+      <img src="/icon.svg" alt="" width={32} height={32} className="h-7 w-7 shrink-0 rounded-lg sm:h-8 sm:w-8" />
       <div className="leading-tight">
-        <div className="whitespace-nowrap text-[15px] font-extrabold tracking-wide text-faso-dark">MON PROF.IA</div>
-        <div className="hidden text-[11px] text-muted sm:block">L&apos;intelligence artificielle au service de l&apos;éducation</div>
+        <div className="whitespace-nowrap text-[13px] font-extrabold tracking-wide text-faso-dark sm:text-[15px]">PÉDAGOGUE.IA</div>
+        <div className="hidden text-[11px] text-muted sm:block">L&apos;intelligence au service de la pédagogie</div>
       </div>
     </div>
   );
@@ -453,7 +453,7 @@ function AccessGate({ onGranted }: { onGranted: () => void }) {
         }}
       >
         <Brand />
-        <p className="mt-5 text-sm text-muted">Saisissez le code d&apos;accès communiqué par votre établissement ou par l&apos;administrateur de MON PROF.IA.</p>
+        <p className="mt-5 text-sm text-muted">Saisissez le code d&apos;accès communiqué par votre établissement ou par l&apos;administrateur de PÉDAGOGUE.IA.</p>
         <label htmlFor="code" className="mt-4 block text-sm font-medium">
           Code d&apos;accès
         </label>
@@ -479,7 +479,7 @@ function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContex
   const others = TEMPLATES.filter((t) => !t.main);
   return (
     <div className="fade-in">
-      <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur MON PROF.IA</h1>
+      <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
       <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
       <p className="mt-3 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -530,10 +530,10 @@ function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContex
         <p className="mt-1 text-muted">Chaque production distingue :</p>
         <ul className="mt-1 space-y-1">
           <li>
-            <span className="badge badge-source">SOURCE MON PROF.IA</span> information issue d&apos;une ressource intégrée de la base, avec son renvoi <span className="cite">R1</span> ;
+            <span className="badge badge-source">SOURCE PÉDAGOGUE.IA</span> information issue d&apos;une ressource intégrée de la base, avec son renvoi <span className="cite">R1</span> ;
           </li>
           <li>
-            <span className="badge badge-proposition">PROPOSITION MON PROF.IA</span> production pédagogique de l&apos;IA, à partir des sources disponibles ;
+            <span className="badge badge-proposition">PROPOSITION PÉDAGOGUE.IA</span> production pédagogique de l&apos;IA, à partir des sources disponibles ;
           </li>
           <li>
             <span className="badge badge-general">CONNAISSANCE GÉNÉRALE</span> information issue des connaissances générales de l&apos;IA, pas de la base ;
@@ -544,8 +544,8 @@ function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContex
         </ul>
         <p className="mt-2 text-muted">
           {libraryCount > 0
-            ? `${libraryCount} ressource(s) consultable(s) dans la base documentaire MON PROF.IA. Au-dessus de chaque réponse, la « confiance documentaire » indique sur quoi elle s'appuie.`
-            : "La base documentaire MON PROF.IA ne contient encore aucun document : les réponses sont des propositions ou des connaissances générales, jamais des prescriptions officielles."}
+            ? `${libraryCount} ressource(s) consultable(s) dans la base documentaire PÉDAGOGUE.IA. Au-dessus de chaque réponse, la « confiance documentaire » indique sur quoi elle s'appuie.`
+            : "La base documentaire PÉDAGOGUE.IA ne contient encore aucun document : les réponses sont des propositions ou des connaissances générales, jamais des prescriptions officielles."}
         </p>
       </div>
     </div>
@@ -557,12 +557,12 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
   const partRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [copied, setCopied] = useState(false);
   const parts = useMemo(() => (streaming ? [] : splitDocuments(message.content)), [message.content, streaming]);
-  const baseTitle = ["MON PROF.IA", context.discipline, context.classe, context.theme].filter(Boolean).join(" — ");
+  const baseTitle = ["PÉDAGOGUE.IA", context.discipline, context.classe, context.theme].filter(Boolean).join(" — ");
 
   const exportPart = (kind: "print" | "word", key: string | null, label: string) => {
     const el = key ? partRefs.current[key] : fullRef.current;
     if (!el) return;
-    const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention MON PROF.IA
+    const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention PÉDAGOGUE.IA
     const title = `${baseTitle} — ${label}`;
     if (kind === "print") printHtml(title, el.innerHTML, withFooter);
     else downloadWord(title, el.innerHTML, withFooter);
@@ -597,7 +597,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
                 {s.version ? `, version ${s.version}` : ""}
                 {s.year ? `, ${s.year}` : ""}
                 {s.source ? ` — ${s.source}` : ""}
-                {s.statut ? <span className={s.statut === "ACTIF" ? "text-faso-dark" : "text-rouge"}> · {STATUT_LABELS[s.statut as Statut] ?? s.statut}</span> : null} · {s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire MON PROF.IA"}
+                {s.statut ? <span className={s.statut === "ACTIF" ? "text-faso-dark" : "text-rouge"}> · {STATUT_LABELS[s.statut as Statut] ?? s.statut}</span> : null} · {s.origin === "enseignant" ? "ma bibliothèque" : "base documentaire PÉDAGOGUE.IA"}
               </li>
             ))}
           </ul>
@@ -800,7 +800,7 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
   return (
     <Section title="Documents">
       <div className="text-xs text-muted">
-        <div className="font-semibold text-ink">Base documentaire MON PROF.IA ({library.length})</div>
+        <div className="font-semibold text-ink">Base documentaire PÉDAGOGUE.IA ({library.length})</div>
         {library.length === 0 ? (
           <p className="mt-1">Aucune ressource consultable n&apos;est encore intégrée.</p>
         ) : (
@@ -860,7 +860,7 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
 
       <div className="mt-4 text-xs">
         <div className="font-semibold text-ink">Ma bibliothèque ({docs.length})</div>
-        <p className="mt-1 text-muted">Vos documents personnels (PDF, Word, texte). Ils complètent la base MON PROF.IA sans être considérés comme validés. Le texte est conservé sur cet appareil uniquement.</p>
+        <p className="mt-1 text-muted">Vos documents personnels (PDF, Word, texte). Ils complètent la base PÉDAGOGUE.IA sans être considérés comme validés. Le texte est conservé sur cet appareil uniquement.</p>
         <ul className="mt-2 space-y-1.5">
           {docs.map((d) => (
             <li key={d.id} className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 import { parseFields, type DocMeta } from "../metadata";
 
 /**
- * Registre maître des ressources de MON PROF.IA : `base-documentaire/REGISTRE_MAITRE.csv`.
+ * Registre maître des ressources de PÉDAGOGUE.IA : `base-documentaire/REGISTRE_MAITRE.csv`.
  * Une ligne par ressource, intégrée ou non. Séparateur « ; », encodage UTF-8 : le fichier s'ouvre
  * directement dans Excel ou LibreOffice. Le registre est la source principale des métadonnées ;
  * il ne supprime jamais rien : une ressource remplacée ou archivée y reste, avec son statut.
@@ -20,7 +20,7 @@ export const REGISTRY_COLUMNS = [
   "Type de document",
   "Année de publication",
   "Version",
-  "Date d'intégration dans MON PROF.IA",
+  "Date d'intégration dans PÉDAGOGUE.IA",
   "Source",
   "URL ou référence documentaire",
   "Statut",
