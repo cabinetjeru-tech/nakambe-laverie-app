@@ -15,7 +15,7 @@ export type Template = {
   main?: boolean;
   category: Category;
   /** Ouvre le formulaire du générateur de fiches (Module 01) ou d'évaluations (Module 02) au lieu de pré-remplir. */
-  action?: "fiche-form" | "eval-form" | "remed-form";
+  action?: "fiche-form" | "eval-form" | "remed-form" | "prog-form";
   /** Type d'évaluation présélectionné dans le formulaire du Module 02. */
   evalType?: string;
   build: (c: TeacherContext) => string;
@@ -70,6 +70,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "progression",
+    action: "prog-form",
     label: "Une progression",
     hint: "Répartition annuelle ou trimestrielle",
     icon: "📅",
@@ -218,6 +219,16 @@ export const REMED_COMMANDS: { label: string; prompt: string }[] = [
   { label: "Nouvelle vérification", prompt: "Propose une autre nouvelle vérification." },
   { label: "Fiche élève imprimable", prompt: "Fiche élève imprimable." },
   { label: "Tutorat entre pairs", prompt: "Organise un tutorat entre pairs." },
+];
+
+export const PROG_COMMANDS: { label: string; prompt: string }[] = [
+  { label: "Recalculer pour 3 h / semaine", prompt: "Recalcule pour 3 h par semaine." },
+  { label: "Version trimestrielle", prompt: "Version trimestrielle." },
+  { label: "Ajouter les dates", prompt: "Ajoute les dates, à partir du [date de début]." },
+  { label: "Plus de temps pour un chapitre", prompt: "Plus de temps pour le chapitre [nom du chapitre], total inchangé." },
+  { label: "Ajouter les évaluations", prompt: "Ajoute les évaluations." },
+  { label: "Détailler en séances", prompt: "Détaille en séances." },
+  { label: "Tableau imprimable", prompt: "Tableau imprimable." },
 ];
 
 /** Suggestions de disciplines (saisie libre possible). */

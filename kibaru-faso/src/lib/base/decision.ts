@@ -3,6 +3,7 @@ import { classify, type Category } from "../documents";
 import { identifyNeeds, isSpecialized, NEEDS, subjectFromTheme, type Need } from "./needs";
 import { parseEvalParams, type EvalParams } from "../evaluation";
 import { parseRemedParams, type RemedParams } from "../remediation";
+import { heuresDisponibles, parseProgParams, type ProgParams } from "../progression";
 import type { ArchivedDoc, DocInfo, Excerpt, RefDocument } from "../search";
 import { canonicalClasse, normalize } from "../search";
 import type { PendingDoc } from "./load";
@@ -40,6 +41,9 @@ export type RequestProfile = {
   /** Demande de remédiation : Module 03 (démarche diagnostique, activités, nouvelle vérification). */
   module03: boolean;
   remediation?: RemedParams;
+  /** Demande de progression : Module 04 (répartition dans le temps, volume horaire, évaluations, contrôles). */
+  module04: boolean;
+  progression?: ProgParams;
   duree?: string;
   typeDemande: Category;
   /** Besoins identifiés (section 3), éventuellement combinés. */
@@ -48,7 +52,7 @@ export type RequestProfile = {
   origineClasse?: "message" | "contexte";
   origineMatiere?: "message" | "contexte" | "theme";
   /** Contexte minimal manquant, indispensable pour une réponse spécialisée : on le demande. */
-  missing: ("classe" | "matiere" | "notions" | "difficulte")[];
+  missing: ("classe" | "matiere" | "notions" | "difficulte" | "volume")[];
   /** Contexte pédagogique absent : le modèle fait une hypothèse raisonnable et l'annonce. */
   assumptions: string[];
   /** Question unique à poser à l'enseignant quand le contexte minimal manque. */
@@ -165,11 +169,19 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   const typeSeance = typeSeanceIn(ctx.typeSeance ?? "") ?? typeSeanceIn(needsFrom) ?? (ctx.typeSeance?.trim() || undefined);
   const mode = modeIn(needsFrom, ctx.mode);
   const fiche = needs.includes("fiche_pedagogique");
-  const module02 = !fiche && needs.some((x) => x === "devoir" || x === "interrogation" || x === "evaluation");
+  // « Construis une progression… avec les évaluations » reste une progression ; « un devoir conforme à ma progression » reste un devoir.
+  const nf = normalize(needsFrom);
+  const at = (re: RegExp) => nf.search(re);
+  const progAt = needs.includes("progression") ? at(/progression|repartition (annuelle|trimestrielle)/) : -1;
+  const otherAt = at(/devoir|interrogation|evaluation|composition|remediation/);
+  const progressionFirst = progAt >= 0 && (otherAt < 0 || progAt < otherAt);
+  const module02 = !fiche && !progressionFirst && needs.some((x) => x === "devoir" || x === "interrogation" || x === "evaluation");
   const evaluation = module02 ? parseEvalParams(needsFrom === message ? message : `${needsFrom}\n${message}`) : undefined;
   const notions = evaluation?.notions ?? ctx.sousTheme ?? ctx.theme;
-  const module03 = !fiche && !module02 && needs.includes("remediation");
+  const module03 = !fiche && !module02 && !progressionFirst && needs.includes("remediation");
   const remediation = module03 ? parseRemedParams(needsFrom === message ? message : `${needsFrom}\n${message}`) : undefined;
+  const module04 = !fiche && !module02 && !module03 && needs.includes("progression");
+  const progression = module04 ? parseProgParams(needsFrom === message ? message : `${needsFrom}\n${message}`) : undefined;
 
   const missing: RequestProfile["missing"] = [];
   const assumptions: string[] = [];
@@ -180,9 +192,14 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
     // Module 02 : une évaluation doit porter sur des notions précises (thème, chapitre ou notions évaluées).
     // Module 03 : sans description de la difficulté (notion, erreurs observées), pas de diagnostic possible.
     if (module03 && !remediation?.difficulteDecrite) missing.push("difficulte");
+    // Module 04 : le volume horaire hebdomadaire est une donnée officielle ; on le demande, on ne le devine pas.
+    if (module04 && !progression?.heuresSemaine) missing.push("volume");
+    if (module04 && !progression?.periode) assumptions.push("période non précisée : construis une progression annuelle et indique-le");
+    if (module04 && !progression?.semaines)
+      assumptions.push("nombre de semaines non précisé : retiens une hypothèse de travail explicite, à ajuster au calendrier scolaire officiel de l'année (jamais présentée comme officielle)");
     if (module02 && !notions?.trim() && !fromTheme && !/\b(sur|portant sur|concernant)\s+(l[ea']|les|des|du|un|une|la)\b/.test(normalize(needsFrom))) missing.push("notions");
     const timed = needs.some((n) => ["preparation_cours", "fiche_pedagogique", "seance", "devoir", "interrogation", "evaluation", "revision"].includes(n));
-    if (timed && !duree) assumptions.push("durée non précisée : retiens une durée usuelle et indique-la");
+    if (timed && !duree && !module04) assumptions.push("durée non précisée : retiens une durée usuelle et indique-la");
     if ((needs.includes("preparation_cours") || fiche) && !typeSeance)
       assumptions.push("type de séance non précisé : considère une séance d'apprentissage (nouvelle notion) et indique-le");
     if (fromTheme && !fiche) assumptions.push(`matière déduite du thème (${fromTheme}) : à confirmer par l'enseignant`);
@@ -191,9 +208,11 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   let question: string | undefined;
   // Accord : « ce devoir », « cette interrogation », « cette préparation de cours »…
   const cette = /^(exercice|devoir|barème|objectif|contenu|conseil|autre)/.test(besoin) ? "ce" : "cette";
-  const main = missing.filter((m) => m !== "difficulte");
+  const main = missing.filter((m) => m !== "difficulte" && m !== "volume");
   const askDifficulty = "Quelle difficulté avez-vous observée chez vos élèves (notion concernée et erreurs typiques) ?";
+  const askVolume = "Quel est le volume horaire hebdomadaire de cette matière dans votre classe (ex. 4 h par semaine) ?";
   if (missing.length === 1 && missing[0] === "difficulte") question = askDifficulty;
+  else if (missing.length === 1 && missing[0] === "volume") question = askVolume;
   else if (main.length > 1) {
     const asks = [
       missing.includes("classe") && "quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale)",
@@ -211,6 +230,7 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
       : `Pour quelle matière souhaitez-vous ${cette} ${besoin} ?`;
 
   if (missing.includes("difficulte") && main.length && question) question += ` Précisez aussi la difficulté observée (notion concernée et erreurs typiques).`;
+  if (missing.includes("volume") && main.length && question) question += ` Précisez aussi le volume horaire hebdomadaire de la matière (ex. 4 h par semaine).`;
 
   return {
     pays: "Burkina Faso",
@@ -227,6 +247,8 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
     evaluation,
     module03,
     remediation,
+    module04,
+    progression,
     duree,
     typeDemande: classify(needsFrom),
     needs,
@@ -423,6 +445,9 @@ export function formatDecisionBlock(d: Decision): string {
     ...(p.module03 && !p.question
       ? [`Module 03 — remédiation : actif ; public = ${p.remediation?.public ?? "non précisé (toute la classe par défaut)"}${p.remediation?.seances ? ` ; séances = ${p.remediation.seances}` : ""} ; applique la démarche et les contrôles du Module 03.`]
       : []),
+    ...(p.module04 && !p.question && p.progression
+      ? [`Module 04 — progression : actif ; période = ${p.progression.periode ?? "non précisée (année scolaire par défaut)"} ; volume horaire = ${p.progression.heuresSemaine} h/semaine${p.progression.dureeSeance ? ` ; séance = ${p.progression.dureeSeance} min` : ""} ; semaines = ${p.progression.semaines ?? "non précisé (hypothèse à annoncer)"}${heuresDisponibles(p.progression) !== undefined ? ` ; heures disponibles = ${heuresDisponibles(p.progression)} h` : ""} ; applique la structure et les contrôles du Module 04.`]
+      : []),
     ...(p.fiche && !p.question
       ? [`Module 01 — fiche pédagogique : actif ; mode ${p.mode.toUpperCase()} ; applique la structure et les contrôles du Module 01 (recherche ciblée : ${[p.pays, p.classe, p.matiere, p.theme, p.sousTheme, p.typeSeance].filter(Boolean).join(" + ")}).`]
       : []),
@@ -445,6 +470,7 @@ export function decisionSummary(d: Decision) {
     fiche: d.profile.fiche,
     module02: d.profile.module02,
     module03: d.profile.module03,
+    module04: d.profile.module04,
     mode: d.profile.mode,
     matiereSuggeree: d.profile.matiereSuggeree ?? null,
     missing: d.profile.missing,

@@ -113,6 +113,7 @@ export async function POST(req: Request) {
           dureeAnnoncee: profile.duree,
           evaluation: profile.module02 ? profile.evaluation : undefined,
           remediation: profile.module03,
+          progression: profile.module04 ? profile.progression : undefined,
         });
         send({ type: "done", check });
       } catch (e) {

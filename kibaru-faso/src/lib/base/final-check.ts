@@ -3,6 +3,7 @@ import type { Need } from "./needs";
 import type { Confidence } from "./decision";
 import { evaluationChecks, type EvalParams } from "../evaluation";
 import { remediationChecks } from "../remediation";
+import { progressionChecks, type ProgParams } from "../progression";
 
 /**
  * Contrôle final automatique (moteur de décision pédagogique, section 17).
@@ -28,6 +29,8 @@ export type CheckInput = {
   evaluation?: EvalParams;
   /** Module 03 : remédiation. */
   remediation?: boolean;
+  /** Module 04 : paramètres de la progression demandée. */
+  progression?: ProgParams;
 };
 
 /** « 55 minutes », « 1 h 30 », « 1h30 », « 2 heures », « 90 mn », « 15' » → minutes. */
@@ -144,7 +147,7 @@ export function finalCheck(c: CheckInput): string[] {
     out.push("Aucune étiquette de transparence (SOURCE PÉDAGOGUE.IA, PROPOSITION PÉDAGOGUE.IA, CONNAISSANCE GÉNÉRALE, À VÉRIFIER).");
 
   const evaluative = c.needs.some((x) => ["devoir", "interrogation", "evaluation", "exercice", "serie_exercices"].includes(x));
-  if (evaluative && long && !/corrig|correction|solution/.test(n)) out.push("Aucun corrigé repéré pour cette production d'exercices ou d'évaluation.");
+  if (evaluative && long && !c.progression && !/corrig|correction|solution/.test(n)) out.push("Aucun corrigé repéré pour cette production d'exercices ou d'évaluation.");
   if (c.needs.includes("bareme") && long && !/bareme|points?\b|\/\s?20|\/\s?10/.test(n)) out.push("Barème demandé mais non repéré.");
 
   if (/\b(p\.|page)\s?\d+/.test(n) && c.labels.length === 0) out.push("Numéro de page cité alors qu'aucun extrait de la base n'a été consulté.");
@@ -152,6 +155,7 @@ export function finalCheck(c: CheckInput): string[] {
   if (c.fiche && !c.questionExpected && text.length > 400) out.push(...ficheChecks(c, n));
   if (c.evaluation && !c.questionExpected && text.length > 400) out.push(...evaluationChecks(text, c.evaluation));
   if (c.remediation && !c.questionExpected && text.length > 400) out.push(...remediationChecks(text));
+  if (c.progression && !c.questionExpected && text.length > 400) out.push(...progressionChecks(text, c.progression, c.confidence === "ELEVEE"));
 
   return out;
 }

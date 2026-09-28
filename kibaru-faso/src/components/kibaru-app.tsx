@@ -8,8 +8,9 @@ import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
-import { DISCIPLINES, EVAL_COMMANDS, FICHE_COMMANDS, MODIFICATIONS, REMED_COMMANDS, TEMPLATES, type Template } from "@/lib/templates";
+import { DISCIPLINES, EVAL_COMMANDS, FICHE_COMMANDS, MODIFICATIONS, PROG_COMMANDS, REMED_COMMANDS, TEMPLATES, type Template } from "@/lib/templates";
 import { RemedFormDialog } from "./remed-form";
+import { ProgFormDialog } from "./prog-form";
 import { EvalFormDialog } from "./eval-form";
 import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
@@ -60,6 +61,7 @@ export function KibaruApp() {
   /** Formulaire du Module 02 ouvert, avec le type d'évaluation présélectionné. */
   const [evalOpen, setEvalOpen] = useState<string | null>(null);
   const [remedOpen, setRemedOpen] = useState(false);
+  const [progOpen, setProgOpen] = useState(false);
   // Rubrique de l'action rapide choisie, retenue tant que l'enseignant garde le début du texte proposé.
   const [pendingCategory, setPendingCategory] = useState<{ category: Category; prefix: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -242,6 +244,10 @@ export function KibaruApp() {
       setRemedOpen(true);
       return;
     }
+    if (t.action === "prog-form") {
+      setProgOpen(true);
+      return;
+    }
     if (t.action === "eval-form") {
       setEvalOpen(t.evalType ?? "devoir surveillé");
       return;
@@ -286,6 +292,20 @@ export function KibaruApp() {
         <div className="border-b border-rouge/30 bg-rouge-50 px-4 py-2 text-sm text-rouge">
           L&apos;assistant n&apos;est pas encore configuré : l&apos;administrateur doit renseigner la clé <code>ANTHROPIC_API_KEY</code>.
         </div>
+      )}
+
+      {progOpen && (
+        <ProgFormDialog
+          context={context}
+          onClose={() => setProgOpen(false)}
+          onSubmit={(message, patch) => {
+            const next = { ...context, ...patch };
+            updateContext(patch);
+            setProgOpen(false);
+            setCurrentId(null);
+            void send(message, next, { category: "progression" });
+          }}
+        />
       )}
 
       {remedOpen && (
@@ -358,7 +378,7 @@ export function KibaruApp() {
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-4 py-6">
               {messages.length === 0 ? (
-                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} onEval={() => setEvalOpen("devoir surveillé")} onRemed={() => setRemedOpen(true)} libraryCount={status.library.length} />
+                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} onEval={() => setEvalOpen("devoir surveillé")} onRemed={() => setRemedOpen(true)} onProg={() => setProgOpen(true)} libraryCount={status.library.length} />
               ) : (
                 <div className="space-y-5">
                   {messages.map((m, i) =>
@@ -417,9 +437,9 @@ export function KibaruApp() {
                   )}
                   {!busy && last?.role === "assistant" && !last.error && !last.decision?.missing?.length && (
                     <div>
-                      <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : last.decision?.module02 ? "Commandes de l'évaluation" : last.decision?.module03 ? "Commandes de la remédiation" : "Modifier cette production"}</div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : last.decision?.module02 ? "Commandes de l'évaluation" : last.decision?.module03 ? "Commandes de la remédiation" : last.decision?.module04 ? "Commandes de la progression" : "Modifier cette production"}</div>
                       <div className="flex flex-wrap gap-2">
-                        {(last.decision?.fiche ? FICHE_COMMANDS : last.decision?.module02 ? EVAL_COMMANDS : last.decision?.module03 ? REMED_COMMANDS : MODIFICATIONS).map((m) => (
+                        {(last.decision?.fiche ? FICHE_COMMANDS : last.decision?.module02 ? EVAL_COMMANDS : last.decision?.module03 ? REMED_COMMANDS : last.decision?.module04 ? PROG_COMMANDS : MODIFICATIONS).map((m) => (
                           <button
                             key={m.label}
                             type="button"
@@ -486,6 +506,10 @@ export function KibaruApp() {
               ·{" "}
               <button type="button" onClick={() => setRemedOpen(true)} className="font-semibold text-faso underline underline-offset-2">
                 Remédiation
+              </button>{" "}
+              ·{" "}
+              <button type="button" onClick={() => setProgOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+                Progressions
               </button>
             </p>
           </form>
@@ -555,6 +579,7 @@ function Welcome({
   onFiche,
   onEval,
   onRemed,
+  onProg,
   libraryCount,
 }: {
   context: TeacherContext;
@@ -562,6 +587,7 @@ function Welcome({
   onFiche: () => void;
   onEval: () => void;
   onRemed: () => void;
+  onProg: () => void;
   libraryCount: number;
 }) {
   const main = TEMPLATES.filter((t) => t.main);
@@ -570,7 +596,7 @@ function Welcome({
     <div className="fade-in">
       <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
       <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
-      <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button type="button" onClick={onFiche} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
           <span aria-hidden className="text-2xl leading-none">
             📋
@@ -596,6 +622,15 @@ function Welcome({
           <span>
             <span className="block font-bold text-faso-dark">Générateur de remédiation</span>
             <span className="mt-0.5 block text-xs text-ink">Hypothèses, diagnostic, activités, nouvelle vérification, consolidation.</span>
+          </span>
+        </button>
+        <button type="button" onClick={onProg} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
+          <span aria-hidden className="text-2xl leading-none">
+            📅
+          </span>
+          <span>
+            <span className="block font-bold text-faso-dark">Générateur de progressions</span>
+            <span className="mt-0.5 block text-xs text-ink">Répartition par semaine et par chapitre ; volume horaire et évaluations vérifiés.</span>
           </span>
         </button>
       </div>

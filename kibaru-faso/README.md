@@ -28,6 +28,10 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
 - **Module 03 — Générateur de remédiation** ([détail](docs/MODULE-03-REMEDIATION.md)) : difficulté → hypothèses →
   diagnostic → activités → exercices → nouvelle vérification → consolidation ; **contrôle automatique** des étapes, des
   causes formulées comme hypothèses, du vocabulaire non stigmatisant, du critère de réussite et des calculs du corrigé.
+- **Module 04 — Générateur de progressions** ([détail](docs/MODULE-04-PROGRESSIONS.md)) : progression officielle
+  suivie si elle est dans la base, sinon proposition annoncée ; volume horaire hebdomadaire demandé, jamais deviné ;
+  tableau par semaine, répartition par chapitre, évaluations, réserve ; **contrôle automatique** du volume total, des
+  semaines, de la charge hebdomadaire, des évaluations et de toute mention « officielle » sans source active.
 - **Moteur de décision pédagogique** ([détail](docs/MOTEUR-DECISION-PEDAGOGIQUE.md)) : pour chaque demande,
   identification du besoin (24 catégories) et du contexte (une seule question si la classe ou la matière manque),
   recherche ciblée (`BF-6E-MATH`…), sélection des sources (autorité, pertinence, actualité, statut, version,
