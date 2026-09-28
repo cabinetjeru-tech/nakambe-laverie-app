@@ -1,5 +1,9 @@
 # Comptes enseignants, abonnements, paiement et administration
 
+Entreprise porteuse : **MEGAVISION**, Ouagadougou — +226 03 70 37 17 — megavision.gca@gmail.com
+(coordonnées affichées aux enseignants : `src/lib/contact.ts`). Compte administrateur et compte marchand CinetPay :
+megavision.gca@gmail.com.
+
 ## Ce que voit l'enseignant
 
 1. **Inscription / connexion** par e-mail et mot de passe (mot de passe oublié par e-mail).

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { nouvelleTransaction } from "@/lib/abonnement";
+import { CONTACT } from "@/lib/contact";
 import { compteCourant, formules } from "@/lib/comptes";
 import { initialiserPaiement, PaiementError, paiementDisponible } from "@/lib/paiement/cinetpay";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
@@ -15,7 +16,7 @@ function baseUrl(req: Request): string {
 
 /** Démarre un paiement mobile money : renvoie l'adresse de la page de paiement CinetPay. */
 export async function POST(req: Request) {
-  if (!accountsEnabled() || !paiementDisponible()) return Response.json({ error: "Le paiement en ligne n'est pas encore activé. Contactez l'administrateur." }, { status: 503 });
+  if (!accountsEnabled() || !paiementDisponible()) return Response.json({ error: `Le paiement en ligne n'est pas encore activé. Contactez ${CONTACT.entreprise} au ${CONTACT.telephone}.` }, { status: 503 });
   const compte = await compteCourant();
   if (!compte) return Response.json({ error: "Connectez-vous." }, { status: 401 });
   if (compte.profil.suspendu) return Response.json({ error: "Votre compte est suspendu." }, { status: 403 });

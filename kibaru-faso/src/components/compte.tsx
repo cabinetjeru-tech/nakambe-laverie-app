@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
+import { CONTACT } from "@/lib/contact";
 import { browserClient } from "@/lib/supabase/browser";
 
 /** Espace enseignant : connexion, inscription, mot de passe, abonnement et paiement mobile money. */
@@ -44,6 +45,22 @@ export function Logo() {
         <div className="text-[11px] text-muted">L&apos;intelligence au service de la pédagogie</div>
       </div>
     </div>
+  );
+}
+
+/** Coordonnées de l'entreprise porteuse : assistance, abonnement, paiement. */
+export function Contact({ className = "" }: { className?: string }) {
+  return (
+    <p className={`text-xs text-muted ${className}`}>
+      Assistance et abonnements : <strong className="text-ink">{CONTACT.entreprise}</strong>, {CONTACT.ville} ·{" "}
+      <a href={`tel:${CONTACT.telephoneLien}`} className="whitespace-nowrap font-semibold text-faso underline underline-offset-2">
+        {CONTACT.telephone}
+      </a>{" "}
+      ·{" "}
+      <a href={`mailto:${CONTACT.email}`} className="font-semibold text-faso underline underline-offset-2">
+        {CONTACT.email}
+      </a>
+    </p>
   );
 }
 
@@ -161,6 +178,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
             </button>
           )}
         </div>
+        <Contact className="mt-5 border-t border-line pt-3 text-center" />
       </form>
     </div>
   );
@@ -204,7 +222,7 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
   return (
     <div className="space-y-5">
       {message && <p className="rounded-lg border border-or/40 bg-or/10 p-3 text-sm">{message}</p>}
-      {c.suspendu && <p className="rounded-lg bg-rouge-50 p-3 text-sm text-rouge">Votre compte est suspendu. Contactez l&apos;administrateur de PÉDAGOGUE.IA.</p>}
+      {c.suspendu && <p className="rounded-lg bg-rouge-50 p-3 text-sm text-rouge">Votre compte est suspendu. Contactez {CONTACT.entreprise} au {CONTACT.telephone}.</p>}
 
       <section>
         <h3 className="font-bold text-faso-dark">Mon abonnement</h3>
@@ -240,8 +258,9 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
         <p className="mt-2 text-xs text-muted">
           {etat.paiementDisponible
             ? "Paiement sécurisé par CinetPay : Orange Money, Moov Money. Vous serez redirigé vers la page de paiement puis ramené ici."
-            : "Le paiement en ligne n'est pas encore ouvert : contactez l'administrateur pour activer votre abonnement."}
+            : "Le paiement en ligne n'est pas encore ouvert : contactez-nous pour activer votre abonnement."}
         </p>
+        <Contact className="mt-1" />
         {error && <p className="mt-2 text-sm text-rouge">{error}</p>}
       </section>
 

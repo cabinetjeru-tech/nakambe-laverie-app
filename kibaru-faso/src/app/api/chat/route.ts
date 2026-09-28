@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
 import { compteCourant } from "@/lib/comptes";
+import { CONTACT } from "@/lib/contact";
 import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   if (accountsEnabled()) {
     const compte = await compteCourant().catch(() => null);
     if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
-    if (compte.profil.suspendu) return jsonError(403, "Votre compte est suspendu. Contactez l'administrateur.");
+    if (compte.profil.suspendu) return jsonError(403, `Votre compte est suspendu. Contactez ${CONTACT.entreprise} au ${CONTACT.telephone}.`);
     if (!compte.acces) return jsonError(402, "Votre abonnement n'est pas actif : abonnez-vous dans « Mon compte » pour continuer.");
     who = compte.profil.id;
   } else if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");

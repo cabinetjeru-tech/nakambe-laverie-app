@@ -14,6 +14,7 @@ import { ProgFormDialog } from "./prog-form";
 import { EvalFormDialog } from "./eval-form";
 import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
+import { CONTACT } from "@/lib/contact";
 import { AbonnementScreen, AuthScreen, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
 
 type LibraryDoc = {
@@ -742,7 +743,7 @@ function AccessGate({ onGranted }: { onGranted: () => void }) {
         }}
       >
         <Brand />
-        <p className="mt-5 text-sm text-muted">Saisissez le code d&apos;accès communiqué par votre établissement ou par l&apos;administrateur de PÉDAGOGUE.IA.</p>
+        <p className="mt-5 text-sm text-muted">Saisissez le code d&apos;accès communiqué par votre établissement ou par {CONTACT.entreprise}.</p>
         <label htmlFor="code" className="mt-4 block text-sm font-medium">
           Code d&apos;accès
         </label>
