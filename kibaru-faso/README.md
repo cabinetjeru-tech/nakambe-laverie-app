@@ -87,6 +87,12 @@ npm run dev                  # http://localhost:3100
 | `KIBARU_ACCESS_CODE` | Code demandé aux enseignants ; vide = accès libre | — |
 | `KIBARU_SESSION_SECRET` | Secret de signature du cookie d'accès | clé API |
 | `KIBARU_RATE_LIMIT` | Demandes par minute et par adresse IP | `12` |
+| `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` | Comptes enseignants (les trois ensemble) ; remplacent le code d'accès | — |
+| `ADMIN_EMAILS` | Adresses des administrateurs (séparées par des virgules) | — |
+| `APP_URL` | Adresse publique, pour les retours de paiement | adresse de la requête |
+| `CINETPAY_API_KEY`, `CINETPAY_SITE_ID` | Paiement mobile money (CinetPay) | — |
+
+Comptes, abonnements, paiement et administration : voir [docs/COMPTES-ET-PAIEMENT.md](docs/COMPTES-ET-PAIEMENT.md).
 
 > **En ligne, définissez un code d'accès.** Sans lui, toute personne qui connaît l'adresse peut utiliser
 > l'assistant, et les appels sont facturés sur votre compte Anthropic.

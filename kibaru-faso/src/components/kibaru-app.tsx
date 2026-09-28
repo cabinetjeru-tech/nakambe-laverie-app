@@ -14,6 +14,7 @@ import { ProgFormDialog } from "./prog-form";
 import { EvalFormDialog } from "./eval-form";
 import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
+import { AbonnementScreen, AuthScreen, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
 
 type LibraryDoc = {
   id: string;
@@ -38,7 +39,19 @@ type LibraryDoc = {
   reason?: string;
 };
 type PendingDoc = { path: string; documentId?: string; title: string; statut: Statut; categoryLabel: string };
-type Status = { loading: boolean; required: boolean; granted: boolean; configured: boolean; library: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[] };
+type Status = {
+  loading: boolean;
+  /** libre : aucun contrôle ; code : code partagé ; comptes : espace enseignant avec abonnement. */
+  mode: "libre" | "code" | "comptes";
+  required: boolean;
+  granted: boolean;
+  configured: boolean;
+  library: LibraryDoc[];
+  history: LibraryDoc[];
+  pending: PendingDoc[];
+  etat?: EtatCompte;
+};
+type CompteReponse = { mode: Status["mode"]; granted: boolean; compte?: CompteInfo | null; formules?: EtatCompte["formules"]; paiementDisponible?: boolean; paiements?: PaiementInfo[] };
 
 const RELIABILITY: Record<number, string> = {
   1: "Niveau 1 — document officiel",
@@ -49,7 +62,15 @@ const RELIABILITY: Record<number, string> = {
 };
 
 export function KibaruApp() {
-  const [status, setStatus] = useState<Status>({ loading: true, required: false, granted: false, configured: true, library: [], history: [], pending: [] });
+  const [status, setStatus] = useState<Status>({ loading: true, mode: "libre", required: false, granted: false, configured: true, library: [], history: [], pending: [] });
+  const [compteOpen, setCompteOpen] = useState(false);
+  /** Message après un retour de paiement ou un lien e-mail. */
+  const [notice, setNotice] = useState<string | null>(null);
+  /** Lien « mot de passe oublié » : l'enseignant choisit un nouveau mot de passe. */
+  const [reinit, setReinit] = useState(false);
+  const scopeRef = useRef<string | null | undefined>(undefined);
+  /** Version (updatedAt) de chaque préparation déjà sauvegardée en ligne. */
+  const syncedRef = useRef<Map<string, number> | null>(null);
   const [context, setContext] = useState<TeacherContext>({});
   const [docs, setDocs] = useState<TeacherDoc[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -68,27 +89,106 @@ export function KibaruApp() {
   const endRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const loadStatus = useCallback(async () => {
-    try {
-      const a = (await (await fetch("/api/acces")).json()) as { required: boolean; granted: boolean };
-      if (a.required && !a.granted) {
-        setStatus({ loading: false, required: true, granted: false, configured: true, library: [], history: [], pending: [] });
-        return;
-      }
-      const r = await fetch("/api/referentiels");
-      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[] };
-      setStatus({ loading: false, required: a.required, granted: true, configured: j.configured, library: j.documents ?? [], history: j.history ?? [], pending: j.pending ?? [] });
-    } catch {
-      setStatus((s) => ({ ...s, loading: false, granted: true }));
-    }
-  }, []);
-
-  useEffect(() => {
+  /** Données locales de l'enseignant (propres à son compte sur cet appareil). */
+  const applyScope = useCallback((scope: string | null) => {
+    if (scopeRef.current === scope) return;
+    scopeRef.current = scope;
+    store.setScope(scope);
     setContext(store.context());
     setDocs(store.docs());
     setConversations(store.conversations());
-    void loadStatus();
+    syncedRef.current = null;
+  }, []);
+
+  /** Préparations en ligne : fusion avec la copie de l'appareil (la version la plus récente l'emporte). */
+  const loadPreparations = useCallback(async () => {
+    const r = await fetch("/api/preparations").catch(() => null);
+    if (!r?.ok) return;
+    const j = (await r.json()) as { conversations: Conversation[] };
+    syncedRef.current = new Map(j.conversations.map((c) => [c.id, c.updatedAt]));
+    setConversations((local) => {
+      const byId = new Map(local.map((c) => [c.id, c]));
+      for (const c of j.conversations) {
+        const l = byId.get(c.id);
+        if (!l || l.updatedAt <= c.updatedAt) byId.set(c.id, c);
+      }
+      const next = [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+      store.saveConversations(next);
+      return next;
+    });
+  }, []);
+
+  const loadStatus = useCallback(async () => {
+    try {
+      const a = (await (await fetch("/api/compte")).json()) as CompteReponse;
+      const etat: EtatCompte | undefined =
+        a.mode === "comptes"
+          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted }
+          : undefined;
+      applyScope(a.mode === "comptes" ? (a.compte?.email.toLowerCase() ?? null) : null);
+      if (!a.granted && a.mode !== "libre") {
+        setStatus({ loading: false, mode: a.mode, required: true, granted: false, configured: true, library: [], history: [], pending: [], etat });
+        return;
+      }
+      if (a.mode === "comptes") void loadPreparations();
+      const r = await fetch("/api/referentiels");
+      const j = (await r.json()) as { configured: boolean; documents: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[] };
+      setStatus({ loading: false, mode: a.mode, required: a.mode !== "libre", granted: true, configured: j.configured, library: j.documents ?? [], history: j.history ?? [], pending: j.pending ?? [], etat });
+    } catch {
+      setStatus((s) => ({ ...s, loading: false, granted: true }));
+    }
+  }, [applyScope, loadPreparations]);
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("reinit")) setReinit(true);
+    if (q.get("erreur_lien")) setNotice("Ce lien a expiré ou a déjà été utilisé. Recommencez la démarche.");
+    const tx = q.get("paiement");
+    if (q.get("erreur_lien") || tx) window.history.replaceState(null, "", "/");
+    if (!tx) {
+      void loadStatus();
+      return;
+    }
+    // Retour de la page de paiement : l'état réel est revérifié auprès du service de paiement.
+    void (async () => {
+      setNotice("Vérification de votre paiement…");
+      const r = await fetch("/api/paiement/verifier", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ transaction: tx }) }).catch(() => null);
+      const j = (await r?.json().catch(() => ({}))) as { statut?: string; error?: string } | undefined;
+      setNotice(
+        j?.statut === "reussi"
+          ? "✅ Paiement confirmé : votre abonnement est actif. Bon travail !"
+          : j?.statut === "en_attente"
+            ? "⏳ Paiement en cours de confirmation par l'opérateur. Actualisez la page dans une minute."
+            : j?.statut === "echoue" || j?.statut === "annule"
+              ? "❌ Le paiement n'a pas abouti. Aucun montant n'a été validé : vous pouvez réessayer."
+              : (j?.error ?? "Impossible de vérifier le paiement pour le moment. Actualisez la page dans une minute."),
+      );
+      await loadStatus();
+    })();
   }, [loadStatus]);
+
+  // Sauvegarde en ligne des préparations modifiées ou supprimées (comptes enseignants), une fois la réponse terminée.
+  useEffect(() => {
+    const synced = syncedRef.current;
+    if (status.mode !== "comptes" || !status.granted || busy || !synced) return;
+    const t = setTimeout(() => {
+      for (const c of conversations) {
+        if (synced.get(c.id) === c.updatedAt) continue;
+        synced.set(c.id, c.updatedAt);
+        const retry = () => synced.delete(c.id);
+        void fetch("/api/preparations", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(c) }).then((r) => {
+          if (!r.ok) retry();
+        }, retry);
+      }
+      const ids = new Set(conversations.map((c) => c.id));
+      for (const id of [...synced.keys()]) {
+        if (ids.has(id)) continue;
+        synced.delete(id);
+        void fetch(`/api/preparations?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [conversations, busy, status.mode, status.granted]);
 
   const current = useMemo(() => conversations.find((c) => c.id === currentId) ?? null, [conversations, currentId]);
 
@@ -188,6 +288,8 @@ export function KibaruApp() {
       }
       if (!res.ok || !res.body) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
+        // Session expirée ou abonnement terminé : l'écran de connexion ou d'abonnement reprend la main.
+        if (status.mode === "comptes" && [401, 402, 403].includes(res.status)) void loadStatus();
         throw new Error(j.error || "Le service n'a pas répondu.");
       }
       const reader = res.body.getReader();
@@ -281,9 +383,24 @@ export function KibaruApp() {
   if (status.loading) {
     return <div className="flex min-h-dvh items-center justify-center text-muted">Chargement…</div>;
   }
-  if (status.required && !status.granted) {
+  if (status.mode === "comptes" && status.etat) {
+    if (!status.etat.compte || reinit)
+      return (
+        <AuthScreen
+          initial={reinit ? "nouveau" : "connexion"}
+          notice={notice ?? undefined}
+          onDone={() => {
+            setReinit(false);
+            setNotice(null);
+            void loadStatus();
+          }}
+        />
+      );
+    if (!status.granted) return <AbonnementScreen etat={status.etat} onChange={loadStatus} message={notice} />;
+  } else if (status.required && !status.granted) {
     return <AccessGate onGranted={loadStatus} />;
   }
+  const compte = status.etat?.compte ?? null;
 
   const messages = current?.messages ?? [];
   const last = messages[messages.length - 1];
@@ -307,12 +424,58 @@ export function KibaruApp() {
         </button>
         <Brand compact={!!currentId} />
         <div className="ml-auto flex items-center gap-2">
+          {compte && (
+            <button
+              type="button"
+              onClick={() => setCompteOpen(true)}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-2 py-1.5 text-sm font-semibold text-faso-dark hover:border-faso sm:px-3"
+              aria-label="Mon compte"
+            >
+              <span aria-hidden className="flex h-5 w-5 items-center justify-center rounded-full bg-faso-100 text-[11px] font-bold uppercase">
+                {(compte.nom || compte.email).charAt(0)}
+              </span>
+              <span className="hidden md:inline">Mon compte</span>
+            </button>
+          )}
           <button type="button" onClick={newConversation} className="whitespace-nowrap rounded-lg bg-faso px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark sm:px-3">
             <span className="sm:hidden">Nouveau</span>
             <span className="hidden sm:inline">Nouvelle préparation</span>
           </button>
         </div>
       </header>
+
+      {notice && (
+        <div className="flex items-start justify-between gap-3 border-b border-faso/30 bg-faso-50 px-4 py-2 text-sm text-faso-dark">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="text-muted" aria-label="Fermer">
+            ✕
+          </button>
+        </div>
+      )}
+      {compte && compte.role !== "admin" && compte.joursRestants > 0 && compte.joursRestants <= 5 && (
+        <div className="border-b border-or/40 bg-or-50 px-4 py-2 text-sm">
+          Votre abonnement se termine dans {compte.joursRestants} jour{compte.joursRestants > 1 ? "s" : ""}.{" "}
+          <button type="button" onClick={() => setCompteOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+            Prolonger
+          </button>
+        </div>
+      )}
+
+      {compteOpen && status.etat?.compte && (
+        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40 sm:items-center" role="dialog" aria-modal="true" aria-labelledby="compte-titre" onClick={() => setCompteOpen(false)}>
+          <div className="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl sm:rounded-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <h2 id="compte-titre" className="text-lg font-bold text-faso-dark">
+                Mon compte
+              </h2>
+              <button type="button" onClick={() => setCompteOpen(false)} className="text-muted hover:text-rouge" aria-label="Fermer">
+                ✕
+              </button>
+            </div>
+            <ComptePanel etat={status.etat} onChange={loadStatus} />
+          </div>
+        </div>
+      )}
 
       {!status.configured && (
         <div className="border-b border-rouge/30 bg-rouge-50 px-4 py-2 text-sm text-rouge">

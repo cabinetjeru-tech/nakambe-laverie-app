@@ -1,5 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
+import { compteCourant } from "@/lib/comptes";
+import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
 import { finalCheck } from "@/lib/base/final-check";
@@ -17,9 +19,17 @@ function jsonError(status: number, message: string) {
 }
 
 export async function POST(req: Request) {
-  if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");
+  // Comptes enseignants : connexion et abonnement en cours obligatoires. Sinon, code d'accès partagé.
+  let who = clientIp(req);
+  if (accountsEnabled()) {
+    const compte = await compteCourant().catch(() => null);
+    if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
+    if (compte.profil.suspendu) return jsonError(403, "Votre compte est suspendu. Contactez l'administrateur.");
+    if (!compte.acces) return jsonError(402, "Votre abonnement n'est pas actif : abonnez-vous dans « Mon compte » pour continuer.");
+    who = compte.profil.id;
+  } else if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");
   const perMinute = Number(process.env.KIBARU_RATE_LIMIT) || 12;
-  const rl = rateLimit(`chat:${clientIp(req)}`, perMinute, 60_000);
+  const rl = rateLimit(`chat:${who}`, perMinute, 60_000);
   if (!rl.ok) return jsonError(429, `Trop de demandes rapprochées. Réessayez dans ${rl.retryAfter} s.`);
 
   let body: unknown;
