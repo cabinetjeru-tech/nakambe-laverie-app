@@ -1,5 +1,5 @@
 import "server-only";
-import { finAbonnement, joursRestants, nouvellePeriode, type Formule } from "./abonnement";
+import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, tauxCommission, type Formule } from "./abonnement";
 import { verifierPaiement } from "./paiement/cinetpay";
 import { adminClient, sessionClient } from "./supabase/server";
 
@@ -15,9 +15,19 @@ export type Profil = {
   role: "enseignant" | "admin";
   suspendu: boolean;
   cree_le: string;
+  code_parrainage: string;
+  parrain_id: string | null;
 };
 
-export type Compte = { profil: Profil; fin: Date | null; acces: boolean; joursRestants: number };
+export type Compte = {
+  profil: Profil;
+  fin: Date | null;
+  acces: boolean;
+  joursRestants: number;
+  heuresRestantes: number;
+  /** Accès en cours issu de l'essai gratuit de 24 h (et non d'un paiement). */
+  essai: boolean;
+};
 
 /** Adresses e-mail des administrateurs (variable ADMIN_EMAILS, séparées par des virgules). */
 export function adminEmails(): string[] {
@@ -44,7 +54,9 @@ export async function chargerCompte(user: { id: string; email: string }): Promis
   const db = adminClient();
   let { data: profil } = await db.from("profils").select("*").eq("id", user.id).maybeSingle<Profil>();
   if (!profil) {
-    ({ data: profil } = await db.from("profils").upsert({ id: user.id, email: user.email }).select("*").single<Profil>());
+    const r = await db.from("profils").upsert({ id: user.id, email: user.email, code_parrainage: nouveauCodeParrainage() }).select("*").single<Profil>();
+    if (r.error) throw new Error(`Profil illisible (${r.error.code ?? ""} ${r.error.message}) : vérifier SUPABASE_SECRET_KEY.`);
+    profil = r.data;
   }
   if (!profil) throw new Error("Profil introuvable.");
   // Les adresses listées dans ADMIN_EMAILS deviennent administratrices à leur connexion.
@@ -52,10 +64,18 @@ export async function chargerCompte(user: { id: string; email: string }): Promis
     await db.from("profils").update({ role: "admin" }).eq("id", user.id);
     profil = { ...profil, role: "admin" };
   }
-  const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", user.id).order("fin", { ascending: false }).limit(1);
+  const { data: abos } = await db.from("abonnements").select("fin, origine").eq("utilisateur_id", user.id).order("fin", { ascending: false }).limit(1);
   const fin = finAbonnement(abos ?? []);
   const now = new Date();
-  return { profil, fin, acces: aAcces(profil, fin, now), joursRestants: joursRestants(fin, now) };
+  const acces = aAcces(profil, fin, now);
+  return {
+    profil,
+    fin,
+    acces,
+    joursRestants: joursRestants(fin, now),
+    heuresRestantes: heuresRestantes(fin, now),
+    essai: acces && profil.role !== "admin" && abos?.[0]?.origine === "essai",
+  };
 }
 
 /** Enseignant connecté avec son compte ; null s'il n'est pas connecté. */
@@ -115,6 +135,63 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
   if (statut === "reussi") {
     const { data: f } = await db.from("formules").select("duree_jours").eq("id", paiement.formule_id).single<{ duree_jours: number }>();
     await activerAbonnement({ utilisateurId: paiement.utilisateur_id, jours: f?.duree_jours ?? 30, formuleId: paiement.formule_id, paiementId: paiement.id, origine: "paiement" });
+    await enregistrerCommission(paiement).catch((e: Error) => console.error("[parrainage]", e.message));
   }
   return { statut, paiement };
+}
+
+// ---------------------------------------------------------------- Parrainage
+
+/**
+ * Commission du parrain (20 % par défaut) sur chaque paiement réussi de son filleul, mensuel ou annuel.
+ * Condition : le parrain est lui-même abonné (ou administrateur) et non suspendu au moment du paiement.
+ * Un paiement ne donne qu'une commission (contrainte d'unicité sur paiement_id).
+ */
+async function enregistrerCommission(paiement: PaiementRow) {
+  const db = adminClient();
+  const { data: filleul } = await db.from("profils").select("parrain_id").eq("id", paiement.utilisateur_id).single<{ parrain_id: string | null }>();
+  if (!filleul?.parrain_id || filleul.parrain_id === paiement.utilisateur_id) return;
+  const { data: parrain } = await db.from("profils").select("*").eq("id", filleul.parrain_id).single<Profil>();
+  if (!parrain) return;
+  const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", parrain.id).order("fin", { ascending: false }).limit(1);
+  if (!aAcces(parrain, finAbonnement(abos ?? []))) return;
+  const taux = tauxCommission();
+  const { error } = await db.from("commissions").insert({
+    parrain_id: parrain.id,
+    filleul_id: paiement.utilisateur_id,
+    paiement_id: paiement.id,
+    montant_fcfa: montantCommission(paiement.montant_fcfa, taux),
+    taux,
+  });
+  if (error && error.code !== "23505") throw new Error(error.message);
+}
+
+export type Parrainage = {
+  code: string;
+  taux: number;
+  filleuls: number;
+  filleulsAbonnes: number;
+  due: number;
+  versee: number;
+  commissions: { montant_fcfa: number; statut: string; cree_le: string; filleul: string }[];
+};
+
+export async function parrainage(profil: Profil): Promise<Parrainage> {
+  const db = adminClient();
+  const [{ data: filleuls }, { data: coms }] = await Promise.all([
+    db.from("profils").select("id, nom, email").eq("parrain_id", profil.id).limit(5000),
+    db.from("commissions").select("montant_fcfa, statut, cree_le, filleul_id").eq("parrain_id", profil.id).order("cree_le", { ascending: false }).limit(500),
+  ]);
+  const noms = new Map((filleuls ?? []).map((f) => [f.id as string, (f.nom as string | null) || (f.email as string).replace(/@.*/, "@…")]));
+  const payeurs = new Set((coms ?? []).map((c) => c.filleul_id as string));
+  const somme = (st: string) => (coms ?? []).filter((c) => c.statut === st).reduce((s, c) => s + (c.montant_fcfa as number), 0);
+  return {
+    code: profil.code_parrainage,
+    taux: tauxCommission(),
+    filleuls: filleuls?.length ?? 0,
+    filleulsAbonnes: payeurs.size,
+    due: somme("due"),
+    versee: somme("versee"),
+    commissions: (coms ?? []).slice(0, 20).map((c) => ({ montant_fcfa: c.montant_fcfa, statut: c.statut, cree_le: c.cree_le, filleul: noms.get(c.filleul_id) ?? "—" })),
+  };
 }

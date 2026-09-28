@@ -63,3 +63,34 @@ export function statutCinetpay(status: string | undefined): StatutPaiement {
       return "en_attente";
   }
 }
+
+// ---------------------------------------------------------------- Essai gratuit et parrainage
+
+/** Durée de l'essai gratuit offert à l'inscription (appliqué par la base, voir supabase/migrations/0002). */
+export const ESSAI_HEURES = 24;
+
+/** Commission du parrain sur chaque paiement de son filleul (mensuel ou annuel), en pourcentage. */
+export function tauxCommission(): number {
+  const t = Number(process.env.PARRAINAGE_TAUX);
+  return Number.isFinite(t) && t > 0 && t <= 50 ? t : 20;
+}
+
+export function montantCommission(montant: number, taux: number): number {
+  return Math.floor((montant * taux) / 100);
+}
+
+const CODE_CHARS = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+/** Code de parrainage : 6 caractères sans ambiguïté (pas de 0/O ni 1/I/L). */
+export function codeParrainageValide(code: string | null | undefined): string | null {
+  const c = (code ?? "").trim().toUpperCase();
+  return /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{6}$/.test(c) ? c : null;
+}
+
+export function nouveauCodeParrainage(): string {
+  return Array.from({ length: 6 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+}
+
+export function heuresRestantes(fin: Date | null, maintenant: Date): number {
+  return fin && fin > maintenant ? Math.ceil((fin.getTime() - maintenant.getTime()) / 3_600_000) : 0;
+}

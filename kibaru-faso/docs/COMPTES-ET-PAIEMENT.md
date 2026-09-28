@@ -15,6 +15,28 @@ megavision.gca@gmail.com.
    présentes sur l'appareil sont reprises dans le compte à la première connexion.
 5. Impression, PDF et Word : inchangés (sous chaque production).
 
+## Essai gratuit de 24 h
+
+Chaque nouvel inscrit reçoit automatiquement 24 h d'accès complet (créé par la base à l'inscription,
+`supabase/migrations/0002_essai_parrainage.sql`). Un bandeau indique les heures restantes ; un abonnement payé
+pendant l'essai s'ajoute après l'essai.
+
+## Parrainage (commission de 20 %)
+
+- Chaque enseignant a un **code** (6 caractères) et un **lien** : `https://pedagogue-ia.vercel.app/?parrain=CODE`,
+  à copier ou à partager sur WhatsApp depuis « Mon compte ».
+- Un collègue qui s'inscrit par ce lien est rattaché au parrain et reçoit ses 24 h d'essai.
+- À **chaque paiement réussi** du filleul (mensuel ou annuel, y compris les renouvellements), le parrain gagne
+  **20 %** du montant (variable `PARRAINAGE_TAUX`), à condition d'être lui-même abonné (ou administrateur) et non
+  suspendu au moment du paiement. Un paiement ne donne qu'une commission.
+- Le parrain voit ses filleuls, les montants à recevoir et déjà reçus. L'administration verse les commissions par
+  mobile money (numéro du profil) et les marque « versées » dans l'onglet **Parrainage** de `/admin`.
+
+## Téléchargement PDF
+
+Sous chaque production : **⬇ Télécharger PDF** (fichier A4 prêt à imprimer, aussi sur téléphone), **Imprimer**,
+**Word**, et pour les évaluations un PDF séparé du sujet, du corrigé et du barème.
+
 ## Espace administration (`/admin`)
 
 Réservé aux adresses listées dans `ADMIN_EMAILS` (elles deviennent administratrices à la connexion).
@@ -42,7 +64,10 @@ Réservé aux adresses listées dans `ADMIN_EMAILS` (elles deviennent administra
    pour un vrai lancement, brancher un fournisseur SMTP (Brevo, Resend…) — ou désactiver « Confirm email ».
 4. **Vercel** : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`,
    `ADMIN_EMAILS`, `APP_URL`, puis redéployer. Le code d'accès partagé n'est alors plus utilisé.
-5. **CinetPay** : ouvrir un compte marchand (pièces d'identité, documents de l'entreprise), récupérer
+5. **CinetPay** (compte marchand de MEGAVISION, megavision.gca@gmail.com) : dans le tableau de bord CinetPay,
+   rubrique **Intégration**, copier l'**API KEY** et le **SITE ID** ; dans Vercel, ajouter `CINETPAY_API_KEY` et
+   `CINETPAY_SITE_ID` (Production), puis redéployer. Moyens proposés : `CINETPAY_CHANNELS` = `ALL` (défaut :
+   mobile money + carte), `MOBILE_MONEY` ou `CREDIT_CARD`. Pour un nouveau compte marchand : ouvrir un compte marchand (pièces d'identité, documents de l'entreprise), récupérer
    `CINETPAY_API_KEY` et `CINETPAY_SITE_ID`, les ajouter dans Vercel. Adresse de notification :
    `https://pedagogue-ia.vercel.app/api/paiement/notification`. Faire un paiement réel de faible montant pour
    valider l'intégration (l'API n'a pas pu être testée en direct pendant le développement).

@@ -16,9 +16,34 @@ export type CompteInfo = {
   suspendu: boolean;
   fin: string | null;
   joursRestants: number;
+  heuresRestantes: number;
+  /** Accès en cours issu de l'essai gratuit de 24 h. */
+  essai: boolean;
 };
 export type PaiementInfo = { transaction_id: string; formule_id: string; montant_fcfa: number; statut: string; moyen: string | null; cree_le: string };
-export type EtatCompte = { compte: CompteInfo | null; formules: Formule[]; paiementDisponible: boolean; paiements: PaiementInfo[]; granted: boolean };
+export type ParrainageInfo = {
+  code: string;
+  taux: number;
+  filleuls: number;
+  filleulsAbonnes: number;
+  due: number;
+  versee: number;
+  commissions: { montant_fcfa: number; statut: string; cree_le: string; filleul: string }[];
+};
+export type EtatCompte = {
+  compte: CompteInfo | null;
+  formules: Formule[];
+  paiementDisponible: boolean;
+  paiements: PaiementInfo[];
+  granted: boolean;
+  parrainage?: ParrainageInfo | null;
+};
+
+/** Lien d'invitation d'un parrain. */
+export function lienParrainage(code: string): string {
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://pedagogue-ia.vercel.app";
+  return `${origin}/?parrain=${code}`;
+}
 
 const inputCls = "mt-1 w-full rounded-lg border border-line px-3 py-2 focus:border-faso focus:outline-none";
 const STATUTS: Record<string, string> = { reussi: "Réussi", en_attente: "En attente", echoue: "Échoué", annule: "Annulé" };
@@ -55,7 +80,7 @@ export function Contact({ className = "" }: { className?: string }) {
 
 type Vue = "connexion" | "inscription" | "oubli" | "nouveau";
 
-export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: () => void; initial?: Vue; notice?: string }) {
+export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: { onDone: () => void; initial?: Vue; notice?: string; parrain?: string | null }) {
   const [vue, setVue] = useState<Vue>(initial);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -75,7 +100,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
         vue === "connexion"
           ? { action: "connexion", email, password }
           : vue === "inscription"
-            ? { action: "inscription", email, password, nom }
+            ? { action: "inscription", email, password, nom, ...(parrain ? { parrain } : {}) }
             : vue === "oubli"
               ? { action: "oubli", email }
               : { action: "nouveau", password };
@@ -110,7 +135,13 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
         <Logo />
         <h1 className="mt-5 text-lg font-bold text-faso-dark">{titres[vue]}</h1>
         {vue === "inscription" && (
-          <p className="mt-1 text-sm text-muted">Votre espace personnel : vos préparations sont sauvegardées et retrouvées sur tous vos appareils.</p>
+          <>
+            <p className="mt-2 rounded-lg border border-or/50 bg-or-50 p-2.5 text-sm font-semibold text-ink">
+              🎁 24 h d&apos;essai gratuit, sans paiement : tous les générateurs dès votre inscription.
+            </p>
+            <p className="mt-2 text-sm text-muted">Votre espace personnel : vos préparations sont sauvegardées et retrouvées sur tous vos appareils.</p>
+            {parrain && <p className="mt-2 text-xs text-faso-dark">Invitation d&apos;un collègue : code parrain <strong>{parrain}</strong>.</p>}
+          </>
         )}
         {info && <p className="mt-3 rounded-lg bg-faso-50 p-2.5 text-sm text-faso-dark">{info}</p>}
         {vue === "inscription" && (
@@ -147,7 +178,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice }: { onDone: 
           {vue === "connexion" && (
             <>
               <button type="button" onClick={() => setVue("inscription")} className="block w-full font-semibold text-faso underline underline-offset-2">
-                Pas encore de compte ? Créer mon espace
+                Pas encore de compte ? Créer mon espace (24 h gratuites)
               </button>
               <button type="button" onClick={() => setVue("oubli")} className="block w-full text-muted underline underline-offset-2">
                 Mot de passe oublié
@@ -219,6 +250,11 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
         <h3 className="font-bold text-faso-dark">Mon abonnement</h3>
         {c.role === "admin" ? (
           <p className="mt-1 text-sm">Compte administrateur : accès complet, sans abonnement.</p>
+        ) : actif && c.essai ? (
+          <p className="mt-1 rounded-lg border border-or/50 bg-or-50 p-2.5 text-sm">
+            🎁 <strong>Essai gratuit en cours</strong> : il vous reste {c.heuresRestantes} heure{c.heuresRestantes > 1 ? "s" : ""}. Abonnez-vous
+            maintenant pour continuer sans interruption : les jours payés s&apos;ajoutent après l&apos;essai.
+          </p>
         ) : actif ? (
           <p className="mt-1 text-sm">
             ✅ Actif jusqu&apos;au <strong>{formatDate(c.fin!)}</strong> ({c.joursRestants} jour{c.joursRestants > 1 ? "s" : ""} restant{c.joursRestants > 1 ? "s" : ""}). Un
@@ -241,19 +277,21 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
                 onClick={() => void payer(f.id)}
                 className="mt-3 w-full rounded-lg bg-faso py-2 text-sm font-semibold text-white hover:bg-faso-dark disabled:opacity-50"
               >
-                {busy === f.id ? "Redirection…" : actif ? "Prolonger" : "Payer par mobile money"}
+                {busy === f.id ? "Redirection…" : actif && !c.essai ? "Prolonger" : "S'abonner"}
               </button>
             </div>
           ))}
         </div>
         <p className="mt-2 text-xs text-muted">
           {etat.paiementDisponible
-            ? "Paiement sécurisé par CinetPay : Orange Money, Moov Money. Vous serez redirigé vers la page de paiement puis ramené ici."
+            ? "Paiement sécurisé par CinetPay : Orange Money, Moov Money ou carte bancaire. Vous serez redirigé vers la page de paiement puis ramené ici."
             : "Le paiement en ligne n'est pas encore ouvert : contactez-nous pour activer votre abonnement."}
         </p>
         <Contact className="mt-1" />
         {error && <p className="mt-2 text-sm text-rouge">{error}</p>}
       </section>
+
+      {etat.parrainage && <Parrainage p={etat.parrainage} telephone={c.telephone} />}
 
       {etat.paiements.length > 0 && (
         <section>
@@ -312,6 +350,83 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
   );
 }
 
+const STATUTS_COM: Record<string, string> = { due: "À verser", versee: "Versée", annulee: "Annulée" };
+
+/** Parrainage : lien personnel, partage WhatsApp, filleuls et commissions (20 % de chaque paiement d'un filleul). */
+function Parrainage({ p, telephone }: { p: ParrainageInfo; telephone: string | null }) {
+  const [copie, setCopie] = useState(false);
+  const lien = lienParrainage(p.code);
+  const message = `Je prépare mes cours, devoirs et corrigés avec PÉDAGOGUE.IA, l'assistant pédagogique pour les enseignants du Burkina Faso. Essayez-le gratuitement pendant 24 h : ${lien}`;
+  async function copier() {
+    try {
+      await navigator.clipboard.writeText(lien);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 2500);
+    } catch {
+      prompt("Copiez votre lien :", lien);
+    }
+  }
+  return (
+    <section className="rounded-xl border-2 border-faso/30 bg-faso-50 p-4">
+      <h3 className="font-bold text-faso-dark">🤝 Parrainage : gagnez {p.taux} % sur chaque abonnement de vos filleuls</h3>
+      <p className="mt-1 text-sm">
+        Partagez votre lien avec vos collègues. Ils profitent de 24 h gratuites, et vous touchez <strong>{p.taux} %</strong> de chacun de leurs paiements,
+        mensuels ou annuels, tant que votre propre abonnement est actif.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <code className="min-w-0 flex-1 truncate rounded-lg border border-line bg-white px-3 py-2 text-sm">{lien}</code>
+        <button type="button" onClick={() => void copier()} className="rounded-lg border border-faso bg-white px-3 py-2 text-sm font-semibold text-faso">
+          {copie ? "Copié ✓" : "Copier"}
+        </button>
+        <a
+          href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg bg-[#25D366] px-3 py-2 text-sm font-semibold text-white"
+        >
+          Partager sur WhatsApp
+        </a>
+      </div>
+      <p className="mt-1 text-xs text-muted">
+        Votre code : <strong>{p.code}</strong>
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+        {(
+          [
+            ["Filleuls inscrits", String(p.filleuls)],
+            ["Filleuls abonnés", String(p.filleulsAbonnes)],
+            ["À recevoir", formatFcfa(p.due)],
+            ["Déjà reçu", formatFcfa(p.versee)],
+          ] as const
+        ).map(([l, v]) => (
+          <div key={l} className="rounded-lg bg-white p-2">
+            <div className="text-lg font-extrabold text-faso-dark">{v}</div>
+            <div className="text-[11px] text-muted">{l}</div>
+          </div>
+        ))}
+      </div>
+      {p.commissions.length > 0 && (
+        <ul className="mt-3 divide-y divide-line rounded-lg border border-line bg-white text-sm">
+          {p.commissions.map((x, i) => (
+            <li key={i} className="flex flex-wrap justify-between gap-2 px-3 py-1.5">
+              <span>
+                {formatDate(x.cree_le)} · {x.filleul}
+              </span>
+              <span className={x.statut === "versee" ? "font-semibold text-faso" : "text-ink"}>
+                {formatFcfa(x.montant_fcfa)} · {STATUTS_COM[x.statut] ?? x.statut}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2 text-xs text-muted">
+        Les commissions sont versées par mobile money par {CONTACT.entreprise}
+        {telephone ? ` au ${telephone}` : " : renseignez votre numéro de téléphone dans « Mon profil »"}.
+      </p>
+    </section>
+  );
+}
+
 /** Page affichée quand l'enseignant est connecté mais sans abonnement actif. */
 export function AbonnementScreen({ etat, onChange, message }: { etat: EtatCompte; onChange: () => void; message?: string | null }) {
   return (
@@ -320,7 +435,9 @@ export function AbonnementScreen({ etat, onChange, message }: { etat: EtatCompte
         <Logo />
         <h1 className="mt-5 text-xl font-bold text-faso-dark">Bienvenue{etat.compte?.nom ? `, ${etat.compte.nom}` : ""} !</h1>
         <p className="mt-1 text-sm text-muted">
-          Fiches pédagogiques, devoirs avec corrigés, remédiation, progressions : abonnez-vous pour accéder à tous les générateurs de PÉDAGOGUE.IA.
+          {etat.compte?.fin
+            ? "Votre essai gratuit ou votre abonnement est terminé. Abonnez-vous pour retrouver tous les générateurs : fiches pédagogiques, devoirs avec corrigés, remédiation, progressions."
+            : "Fiches pédagogiques, devoirs avec corrigés, remédiation, progressions : abonnez-vous pour accéder à tous les générateurs de PÉDAGOGUE.IA."}
         </p>
         <div className="mt-5">
           <ComptePanel etat={etat} onChange={onChange} message={message} />

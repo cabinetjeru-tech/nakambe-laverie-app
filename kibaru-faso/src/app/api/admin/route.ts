@@ -19,29 +19,57 @@ export async function GET() {
   const a = await admin();
   if (a.error) return a.error;
   const db = adminClient();
-  const [profils, abos, paiements, preps, offres] = await Promise.all([
-    db.from("profils").select("*").order("cree_le", { ascending: false }).limit(2000),
-    db.from("abonnements").select("utilisateur_id, fin").limit(20000),
+  const [profils, abos, paiements, preps, offres, coms] = await Promise.all([
+    db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
+    db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
     db.from("preparations").select("utilisateur_id").limit(100000),
     formules(true),
+    db.from("commissions").select("id, parrain_id, filleul_id, montant_fcfa, taux, statut, versee_le, reference_versement, cree_le").order("cree_le", { ascending: false }).limit(2000),
   ]);
   const finPar = new Map<string, { fin: string }[]>();
-  for (const x of abos.data ?? []) finPar.set(x.utilisateur_id, [...(finPar.get(x.utilisateur_id) ?? []), { fin: x.fin }]);
+  // Dernier abonnement de chaque enseignant (le plus lointain) : essai gratuit ou payé.
+  const dernier = new Map<string, { fin: string; origine: string }>();
+  for (const x of abos.data ?? []) {
+    finPar.set(x.utilisateur_id, [...(finPar.get(x.utilisateur_id) ?? []), { fin: x.fin }]);
+    const d = dernier.get(x.utilisateur_id);
+    if (!d || x.fin > d.fin) dernier.set(x.utilisateur_id, { fin: x.fin, origine: x.origine });
+  }
   const prepsPar = new Map<string, number>();
   for (const x of preps.data ?? []) prepsPar.set(x.utilisateur_id, (prepsPar.get(x.utilisateur_id) ?? 0) + 1);
   const now = new Date();
   const enseignants = ((profils.data ?? []) as Profil[]).map((p) => {
     const fin = finAbonnement(finPar.get(p.id) ?? []);
-    return { ...p, fin: fin?.toISOString() ?? null, actif: !!fin && fin > now, preparations: prepsPar.get(p.id) ?? 0 };
+    const actif = !!fin && fin > now;
+    return {
+      ...p,
+      fin: fin?.toISOString() ?? null,
+      actif,
+      essai: actif && dernier.get(p.id)?.origine === "essai",
+      preparations: prepsPar.get(p.id) ?? 0,
+      filleuls: 0,
+    };
   });
   const emails = new Map(enseignants.map((e) => [e.id, e.email]));
+  const filleulsPar = new Map<string, number>();
+  for (const e of enseignants) if (e.parrain_id) filleulsPar.set(e.parrain_id, (filleulsPar.get(e.parrain_id) ?? 0) + 1);
+  for (const e of enseignants) e.filleuls = filleulsPar.get(e.id) ?? 0;
+  const parrainDe = new Map(enseignants.map((e) => [e.id, e.parrain_id]));
+  const commissions = (coms.data ?? []).map((c) => ({
+    ...c,
+    parrain: emails.get(c.parrain_id) ?? "—",
+    telephone: enseignants.find((e) => e.id === c.parrain_id)?.telephone ?? null,
+    filleul: emails.get(c.filleul_id) ?? "—",
+  }));
   const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
   const reussis = (paiements.data ?? []).filter((p) => p.statut === "reussi");
   return Response.json({
     stats: {
       enseignants: enseignants.length,
-      abonnesActifs: enseignants.filter((e) => e.actif).length,
+      abonnesActifs: enseignants.filter((e) => e.actif && !e.essai && e.role !== "admin").length,
+      enEssai: enseignants.filter((e) => e.essai).length,
+      parraines: enseignants.filter((e) => parrainDe.get(e.id)).length,
+      commissionsDues: commissions.filter((c) => c.statut === "due").reduce((s, c) => s + c.montant_fcfa, 0),
       preparations: preps.data?.length ?? 0,
       recettesMois: reussis.filter((p) => new Date(p.cree_le) >= debutMois).reduce((s, p) => s + p.montant_fcfa, 0),
       recettesTotal: reussis.reduce((s, p) => s + p.montant_fcfa, 0),
@@ -49,6 +77,7 @@ export async function GET() {
     enseignants,
     paiements: (paiements.data ?? []).map((p) => ({ ...p, email: emails.get(p.utilisateur_id) ?? "—" })),
     formules: offres,
+    commissions,
     moi: a.compte.profil.id,
   });
 }
@@ -66,6 +95,7 @@ const actionSchema = z.discriminatedUnion("action", [
     active: z.boolean(),
   }),
   z.object({ action: z.literal("verifier_paiement"), transaction: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/) }),
+  z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
 ]);
 
 export async function POST(req: Request) {
@@ -93,6 +123,15 @@ export async function POST(req: Request) {
       if (!prixValide(x.prix_fcfa)) return Response.json({ error: "Prix invalide : nombre entier, multiple de 5, au moins 100 FCFA." }, { status: 400 });
       await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active });
       return Response.json({ ok: true });
+    case "commission": {
+      const patch =
+        x.statut === "versee"
+          ? { statut: "versee", versee_le: new Date().toISOString(), reference_versement: x.reference || null }
+          : { statut: x.statut, versee_le: null, reference_versement: null };
+      const { error } = await db.from("commissions").update(patch).eq("id", x.id);
+      if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
     case "verifier_paiement": {
       const r = await traiterPaiement(x.transaction).catch((e: Error) => ({ statut: `erreur : ${e.message}` }));
       return Response.json({ ok: true, statut: r.statut });

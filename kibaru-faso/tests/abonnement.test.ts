@@ -52,3 +52,32 @@ describe("Paiement", () => {
     expect(formatFcfa(15000)).toBe("15 000 FCFA");
   });
 });
+
+describe("Essai gratuit et parrainage", async () => {
+  const { codeParrainageValide, heuresRestantes, montantCommission, nouveauCodeParrainage, tauxCommission } = await import("@/lib/abonnement");
+  it("calcule la commission de 20 % sur chaque paiement du filleul", () => {
+    expect(tauxCommission()).toBe(20);
+    expect(montantCommission(2000, 20)).toBe(400);
+    expect(montantCommission(15000, 20)).toBe(3000);
+    expect(montantCommission(2005, 20)).toBe(401);
+  });
+  it("valide les codes de parrainage (6 caractères sans ambiguïté)", () => {
+    expect(codeParrainageValide(" g5te58 ")).toBe("G5TE58");
+    expect(codeParrainageValide("G5TE5O")).toBeNull(); // O interdit
+    expect(codeParrainageValide("ABC")).toBeNull();
+    expect(codeParrainageValide(undefined)).toBeNull();
+    for (let i = 0; i < 50; i++) expect(codeParrainageValide(nouveauCodeParrainage())).not.toBeNull();
+  });
+  it("compte les heures restantes de l'essai", () => {
+    expect(heuresRestantes(new Date(now.getTime() + 23.2 * 3_600_000), now)).toBe(24);
+    expect(heuresRestantes(new Date(now.getTime() - 1), now)).toBe(0);
+  });
+});
+
+describe("Nom des fichiers téléchargés", async () => {
+  const { fileName } = await import("@/lib/export");
+  it("retire accents et caractères refusés par les navigateurs", () => {
+    expect(fileName("Devoir — Mathématiques 6e : fractions", "pdf")).toBe("Devoir - Mathematiques 6e fractions.pdf");
+    expect(fileName("«»", "doc")).toBe("pedagogue-ia.doc");
+  });
+});

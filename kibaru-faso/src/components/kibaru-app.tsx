@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TYPES_SEANCE, type TeacherContext } from "@/lib/conversation";
 import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
-import { downloadWord, printHtml } from "@/lib/export";
+import { downloadPdf, downloadWord, printHtml } from "@/lib/export";
 import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
@@ -52,7 +52,16 @@ type Status = {
   pending: PendingDoc[];
   etat?: EtatCompte;
 };
-type CompteReponse = { mode: Status["mode"]; granted: boolean; compte?: CompteInfo | null; formules?: EtatCompte["formules"]; paiementDisponible?: boolean; paiements?: PaiementInfo[] };
+type CompteReponse = {
+  mode: Status["mode"];
+  granted: boolean;
+  compte?: CompteInfo | null;
+  formules?: EtatCompte["formules"];
+  paiementDisponible?: boolean;
+  paiements?: PaiementInfo[];
+  parrainage?: EtatCompte["parrainage"];
+};
+const PARRAIN_KEY = "kibaru:parrain";
 
 const RELIABILITY: Record<number, string> = {
   1: "Niveau 1 — document officiel",
@@ -69,6 +78,8 @@ export function KibaruApp() {
   const [notice, setNotice] = useState<string | null>(null);
   /** Lien « mot de passe oublié » : l'enseignant choisit un nouveau mot de passe. */
   const [reinit, setReinit] = useState(false);
+  /** Code du parrain (lien d'invitation ?parrain=CODE), gardé jusqu'à l'inscription. */
+  const [parrain, setParrain] = useState<string | null>(null);
   const scopeRef = useRef<string | null | undefined>(undefined);
   /** Version (updatedAt) de chaque préparation déjà sauvegardée en ligne. */
   const syncedRef = useRef<Map<string, number> | null>(null);
@@ -124,7 +135,7 @@ export function KibaruApp() {
       const a = (await (await fetch("/api/compte")).json()) as CompteReponse;
       const etat: EtatCompte | undefined =
         a.mode === "comptes"
-          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted }
+          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted, parrainage: a.parrainage ?? null }
           : undefined;
       applyScope(a.mode === "comptes" ? (a.compte?.email.toLowerCase() ?? null) : null);
       if (!a.granted && a.mode !== "libre") {
@@ -143,6 +154,14 @@ export function KibaruApp() {
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     if (q.get("reinit")) setReinit(true);
+    const code = (q.get("parrain") ?? "").trim().toUpperCase();
+    try {
+      if (/^[A-Z0-9]{6}$/.test(code)) localStorage.setItem(PARRAIN_KEY, code);
+      setParrain(localStorage.getItem(PARRAIN_KEY));
+    } catch {
+      if (/^[A-Z0-9]{6}$/.test(code)) setParrain(code);
+    }
+    if (q.get("parrain") && !q.get("paiement") && !q.get("reinit")) window.history.replaceState(null, "", "/");
     if (q.get("erreur_lien")) setNotice("Ce lien a expiré ou a déjà été utilisé. Recommencez la démarche.");
     const tx = q.get("paiement");
     if (q.get("erreur_lien") || tx) window.history.replaceState(null, "", "/");
@@ -388,9 +407,15 @@ export function KibaruApp() {
     if (!status.etat.compte || reinit)
       return (
         <AuthScreen
-          initial={reinit ? "nouveau" : "connexion"}
+          initial={reinit ? "nouveau" : parrain ? "inscription" : "connexion"}
           notice={notice ?? undefined}
+          parrain={parrain}
           onDone={() => {
+            try {
+              localStorage.removeItem(PARRAIN_KEY);
+            } catch {
+              // stockage indisponible
+            }
             setReinit(false);
             setNotice(null);
             void loadStatus();
@@ -453,7 +478,15 @@ export function KibaruApp() {
           </button>
         </div>
       )}
-      {compte && compte.role !== "admin" && compte.joursRestants > 0 && compte.joursRestants <= 5 && (
+      {compte?.essai && (
+        <div className="border-b border-or/40 bg-or-50 px-4 py-2 text-sm">
+          🎁 Essai gratuit : il vous reste <strong>{compte.heuresRestantes} h</strong>.{" "}
+          <button type="button" onClick={() => setCompteOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+            S&apos;abonner
+          </button>
+        </div>
+      )}
+      {compte && !compte.essai && compte.role !== "admin" && compte.joursRestants > 0 && compte.joursRestants <= 5 && (
         <div className="border-b border-or/40 bg-or-50 px-4 py-2 text-sm">
           Votre abonnement se termine dans {compte.joursRestants} jour{compte.joursRestants > 1 ? "s" : ""}.{" "}
           <button type="button" onClick={() => setCompteOpen(true)} className="font-semibold text-faso underline underline-offset-2">
@@ -903,14 +936,21 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
   const parts = useMemo(() => (streaming ? [] : splitDocuments(message.content)), [message.content, streaming]);
   const baseTitle = ["PÉDAGOGUE.IA", context.discipline, context.classe, context.theme].filter(Boolean).join(" — ");
 
-  const exportPart = (kind: "print" | "word", key: string | null, label: string) => {
+  const [pdfBusy, setPdfBusy] = useState<string | null>(null);
+  const exportPart = (kind: "print" | "word" | "pdf", key: string | null, label: string) => {
     const el = key ? partRefs.current[key] : fullRef.current;
     if (!el) return;
     const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention PÉDAGOGUE.IA
     // Copie élève : ni mention de la plateforme dans le pied de page, ni dans le titre (imprimé en en-tête par les navigateurs).
     const title = withFooter ? `${baseTitle} — ${label}` : [context.discipline, context.classe, label].filter(Boolean).join(" — ");
     if (kind === "print") printHtml(title, el.innerHTML, withFooter);
-    else downloadWord(title, el.innerHTML, withFooter);
+    else if (kind === "word") downloadWord(title, el.innerHTML, withFooter);
+    else {
+      setPdfBusy(label);
+      downloadPdf(title, el.innerHTML, withFooter)
+        .catch((e) => (console.error("[pdf]", e), alert("Téléchargement PDF impossible sur cet appareil : utilisez « Imprimer » puis « Enregistrer en PDF ».")))
+        .finally(() => setPdfBusy(null));
+    }
   };
 
   return (
@@ -960,10 +1000,12 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
           >
             {copied ? "Copié" : "Copier"}
           </ActionButton>
-          <ActionButton onClick={() => exportPart("print", null, "Document complet")}>Imprimer / PDF</ActionButton>
+          <ActionButton onClick={() => exportPart("pdf", null, "Document complet")}>{pdfBusy === "Document complet" ? "Préparation du PDF…" : "⬇ Télécharger PDF"}</ActionButton>
+          <ActionButton onClick={() => exportPart("print", null, "Document complet")}>Imprimer</ActionButton>
           <ActionButton onClick={() => exportPart("word", null, "Document complet")}>Word</ActionButton>
           {parts.map((p) => (
             <span key={p.key} className="contents">
+              <ActionButton onClick={() => exportPart("pdf", p.key, p.title)}>{pdfBusy === p.title ? "Préparation…" : `⬇ PDF : ${p.title.toLowerCase()}`}</ActionButton>
               <ActionButton onClick={() => exportPart("print", p.key, p.title)}>Imprimer : {p.title.toLowerCase()}</ActionButton>
               <ActionButton onClick={() => exportPart("word", p.key, p.title)}>Word : {p.title.toLowerCase()}</ActionButton>
             </span>
