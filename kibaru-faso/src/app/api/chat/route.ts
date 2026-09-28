@@ -4,7 +4,7 @@ import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normaliz
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
 import { finalCheck } from "@/lib/base/final-check";
 import { getBase } from "@/lib/library";
-import { AiUnavailableError, streamAnswer } from "@/lib/llm";
+import { aiErrorMessage, streamAnswer } from "@/lib/llm";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { formatReferenceBlock, isApplicable, resolveBase, searchDocuments, type ArchivedDoc, type RefDocument } from "@/lib/search";
 
@@ -117,12 +117,8 @@ export async function POST(req: Request) {
         });
         send({ type: "done", check });
       } catch (e) {
-        let message = "PÉDAGOGUE.IA n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
-        if (e instanceof AiUnavailableError) message = e.message;
-        else if (e instanceof Anthropic.RateLimitError) message = "Le service est très sollicité. Réessayez dans une minute.";
-        else if (e instanceof Anthropic.AuthenticationError) message = "La clé API configurée est invalide. Prévenez l'administrateur.";
         console.error("[chat]", (e as Error).message);
-        send({ type: "error", message });
+        send({ type: "error", message: aiErrorMessage(e) });
       } finally {
         controller.close();
       }
