@@ -1,5 +1,5 @@
 import "server-only";
-import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, tauxCommission, type Formule } from "./abonnement";
+import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, refusPromo, tauxCommission, type CodePromo, type Formule } from "./abonnement";
 import { verifierPaiement } from "./paiement/cinetpay";
 import { adminClient, sessionClient } from "./supabase/server";
 
@@ -194,4 +194,18 @@ export async function parrainage(profil: Profil): Promise<Parrainage> {
     versee: somme("versee"),
     commissions: (coms ?? []).slice(0, 20).map((c) => ({ montant_fcfa: c.montant_fcfa, statut: c.statut, cree_le: c.cree_le, filleul: noms.get(c.filleul_id) ?? "—" })),
   };
+}
+
+// ---------------------------------------------------------------- Codes promo
+
+/** Vérifie un code promo pour un enseignant : une utilisation par compte, dates et plafond respectés. */
+export async function verifierPromo(code: string, utilisateurId: string): Promise<{ promo: CodePromo } | { erreur: string }> {
+  const db = adminClient();
+  const [{ data: promo }, { count: utilisations }, { count: siens }] = await Promise.all([
+    db.from("codes_promo").select("*").eq("code", code).maybeSingle<CodePromo>(),
+    db.from("paiements").select("id", { count: "exact", head: true }).eq("code_promo", code).eq("statut", "reussi"),
+    db.from("paiements").select("id", { count: "exact", head: true }).eq("code_promo", code).eq("statut", "reussi").eq("utilisateur_id", utilisateurId),
+  ]);
+  const refus = refusPromo(promo ?? null, utilisations ?? 0, (siens ?? 0) > 0);
+  return refus ? { erreur: refus } : { promo: promo! };
 }

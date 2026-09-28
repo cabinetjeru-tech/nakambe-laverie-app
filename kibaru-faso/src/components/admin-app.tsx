@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
+import { formatDate, formatFcfa, type CodePromo, type Formule } from "@/lib/abonnement";
+import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { deconnexion, Logo } from "./compte";
 
 /** Espace administration : tableau de bord, enseignants, paiements, tarifs. */
@@ -49,12 +50,14 @@ type Donnees = {
     recettesTotal: number;
   };
   commissions: Commission[];
+  promos: (CodePromo & { utilisations: number })[];
+  codeParrainage: string;
   enseignants: Enseignant[];
   paiements: Paiement[];
   formules: Formule[];
   moi: string;
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "tarifs";
 /** Objectif de lancement : 5 000 enseignants abonnés. */
 const OBJECTIF_ABONNES = 5000;
 
@@ -105,6 +108,7 @@ export function AdminApp() {
     ["enseignants", `Enseignants (${d.stats.enseignants})`],
     ["paiements", "Paiements"],
     ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
+    ["campagne", "Campagne"],
     ["tarifs", "Tarifs"],
   ];
 
@@ -140,6 +144,7 @@ export function AdminApp() {
         {onglet === "enseignants" && <Enseignants d={d} action={action} />}
         {onglet === "paiements" && <Paiements d={d} action={action} />}
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
+        {onglet === "campagne" && <Campagne d={d} action={action} />}
         {onglet === "tarifs" && <Tarifs d={d} action={action} />}
       </main>
     </div>
@@ -439,6 +444,151 @@ function ParrainageAdmin({ d, action }: { d: Donnees; action: (b: Record<string,
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function Campagne({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
+  const vide = { code: "", description: "", remise_pct: 20, actif: true, expire_le: "", max_utilisations: "" };
+  const [f, setF] = useState(vide);
+  const [copie, setCopie] = useState<number | null>(null);
+  const actifs = d.promos.filter((p) => p.actif && (!p.expire_le || new Date(p.expire_le) > new Date()));
+  const promo = actifs[0] ?? null;
+  const lien = lienDecouvrir(d.codeParrainage, typeof window !== "undefined" ? window.location.origin : undefined);
+  const messages = messagesCampagne(lien, promo);
+
+  async function copier(i: number, texte: string) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      setCopie(i);
+      setTimeout(() => setCopie(null), 2000);
+    } catch {
+      prompt("Copiez le message :", texte);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="rounded-xl border border-line bg-white p-4">
+        <h2 className="font-bold text-faso-dark">Page de présentation</h2>
+        <p className="mt-1 text-sm text-muted">
+          Page publique à partager partout (aperçu illustré sur WhatsApp et Facebook). Votre lien ci-dessous inclut votre code de parrainage.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <code className="min-w-0 flex-1 truncate rounded-lg border border-line px-3 py-2 text-sm">{lien}</code>
+          <a href={lien} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-faso px-3 py-2 text-sm font-semibold text-faso">
+            Ouvrir
+          </a>
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-line bg-white p-4">
+        <h2 className="font-bold text-faso-dark">Codes promo</h2>
+        <p className="mt-1 text-sm text-muted">Remise sur un paiement, une fois par enseignant. Les commissions de parrainage portent sur le prix réellement payé.</p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="text-xs uppercase text-muted">
+              <tr>
+                <th className="py-1 pr-3">Code</th>
+                <th className="py-1 pr-3">Remise</th>
+                <th className="py-1 pr-3">Expire</th>
+                <th className="py-1 pr-3">Utilisations</th>
+                <th className="py-1 pr-3">État</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {d.promos.map((p) => (
+                <tr key={p.code}>
+                  <td className="py-2 pr-3 font-mono font-semibold">{p.code}</td>
+                  <td className="py-2 pr-3">-{p.remise_pct} %</td>
+                  <td className="py-2 pr-3">{p.expire_le ? formatDate(p.expire_le) : "—"}</td>
+                  <td className="py-2 pr-3">
+                    {p.utilisations}
+                    {p.max_utilisations ? ` / ${p.max_utilisations}` : ""}
+                  </td>
+                  <td className="py-2 pr-3">{p.actif ? "Actif" : "Désactivé"}</td>
+                  <td className="py-2 text-right">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void action(
+                          { action: "promo", code: p.code, description: p.description ?? undefined, remise_pct: p.remise_pct, actif: !p.actif, expire_le: p.expire_le, max_utilisations: p.max_utilisations },
+                          p.actif ? `Code ${p.code} désactivé` : `Code ${p.code} réactivé`,
+                        )
+                      }
+                      className="text-xs text-faso underline"
+                    >
+                      {p.actif ? "Désactiver" : "Réactiver"}
+                    </button>{" "}
+                    <button
+                      type="button"
+                      onClick={() => setF({ code: p.code, description: p.description ?? "", remise_pct: p.remise_pct, actif: p.actif, expire_le: p.expire_le?.slice(0, 10) ?? "", max_utilisations: p.max_utilisations ? String(p.max_utilisations) : "" })}
+                      className="text-xs text-faso underline"
+                    >
+                      Modifier
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <form
+          className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-6"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void action(
+              {
+                action: "promo",
+                code: f.code,
+                description: f.description || undefined,
+                remise_pct: Number(f.remise_pct),
+                actif: f.actif,
+                expire_le: f.expire_le ? `${f.expire_le}T23:59:59` : null,
+                max_utilisations: f.max_utilisations ? Number(f.max_utilisations) : null,
+              },
+              `Code ${f.code.toUpperCase()} enregistré`,
+            ).then(() => setF(vide));
+          }}
+        >
+          <input required value={f.code} onChange={(e) => setF({ ...f, code: e.target.value.toUpperCase() })} placeholder="CODE" className={`${input} font-mono`} aria-label="Code" />
+          <input value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} placeholder="Description" className={`${input} sm:col-span-2`} aria-label="Description" />
+          <label className="flex items-center gap-1 text-sm">
+            -<input type="number" min={1} max={90} value={f.remise_pct} onChange={(e) => setF({ ...f, remise_pct: Number(e.target.value) })} className={`${input} w-16`} aria-label="Remise en %" />%
+          </label>
+          <input type="date" value={f.expire_le} onChange={(e) => setF({ ...f, expire_le: e.target.value })} className={input} aria-label="Date d'expiration" />
+          <input inputMode="numeric" value={f.max_utilisations} onChange={(e) => setF({ ...f, max_utilisations: e.target.value.replace(/\D/g, "") })} placeholder="Max. utilisations" className={input} aria-label="Nombre maximal d'utilisations" />
+          <button type="submit" className="rounded-lg bg-faso px-3 py-1.5 text-sm font-semibold text-white sm:col-span-6 sm:justify-self-start">
+            Enregistrer le code
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-line bg-white p-4">
+        <h2 className="font-bold text-faso-dark">Messages prêts à diffuser</h2>
+        <p className="mt-1 text-sm text-muted">
+          Copiez-les dans vos groupes WhatsApp d&apos;enseignants, sur Facebook ou par SMS.{promo ? ` Ils mentionnent le code ${promo.code}.` : ""}
+        </p>
+        <div className="mt-3 space-y-3">
+          {messages.map((m, i) => (
+            <div key={m.titre} className="rounded-lg border border-line p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-bold">{m.titre}</h3>
+                <span className="flex gap-2">
+                  <button type="button" onClick={() => void copier(i, m.texte)} className="rounded-lg border border-faso px-2 py-1 text-xs font-semibold text-faso">
+                    {copie === i ? "Copié ✓" : "Copier"}
+                  </button>
+                  <a href={`https://wa.me/?text=${encodeURIComponent(m.texte)}`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-[#25D366] px-2 py-1 text-xs font-semibold text-white">
+                    WhatsApp
+                  </a>
+                </span>
+              </div>
+              <pre className="mt-2 whitespace-pre-wrap font-sans text-sm text-ink">{m.texte}</pre>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

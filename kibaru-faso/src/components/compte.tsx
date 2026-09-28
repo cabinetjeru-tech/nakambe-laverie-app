@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
+import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { CONTACT } from "@/lib/contact";
 
 /** Espace enseignant : connexion, inscription, mot de passe, abonnement et paiement mobile money. */
@@ -39,10 +40,9 @@ export type EtatCompte = {
   parrainage?: ParrainageInfo | null;
 };
 
-/** Lien d'invitation d'un parrain. */
+/** Lien d'invitation d'un parrain : page de présentation (aperçu soigné sur WhatsApp), puis inscription parrainée. */
 export function lienParrainage(code: string): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://pedagogue-ia.vercel.app";
-  return `${origin}/?parrain=${code}`;
+  return lienDecouvrir(code, typeof window !== "undefined" ? window.location.origin : undefined);
 }
 
 const inputCls = "mt-1 w-full rounded-lg border border-line px-3 py-2 focus:border-faso focus:outline-none";
@@ -219,11 +219,28 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
   const [profil, setProfil] = useState({ nom: c.nom ?? "", telephone: c.telephone ?? "", etablissement: c.etablissement ?? "", ville: c.ville ?? "" });
   const [saved, setSaved] = useState(false);
   const actif = !!c.fin && new Date(c.fin) > new Date();
+  const [codeSaisi, setCodeSaisi] = useState("");
+  const [promo, setPromo] = useState<{ code: string; remise_pct: number; prix: Record<string, number> } | null>(null);
+  const [promoMsg, setPromoMsg] = useState<string | null>(null);
+
+  async function appliquerPromo(e: React.FormEvent) {
+    e.preventDefault();
+    setPromoMsg(null);
+    const r = await fetch(`/api/promo?code=${encodeURIComponent(codeSaisi)}`).catch(() => null);
+    const j = (await r?.json().catch(() => ({}))) as { code?: string; remise_pct?: number; prix?: Record<string, number>; error?: string };
+    if (r?.ok && j.code) {
+      setPromo({ code: j.code, remise_pct: j.remise_pct!, prix: j.prix ?? {} });
+      setPromoMsg(`Code ${j.code} appliqué : -${j.remise_pct} %.`);
+    } else {
+      setPromo(null);
+      setPromoMsg(j?.error ?? "Code promo invalide.");
+    }
+  }
 
   async function payer(formule: string) {
     setBusy(formule);
     setError(null);
-    const r = await fetch("/api/paiement", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ formule }) }).catch(() => null);
+    const r = await fetch("/api/paiement", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ formule, ...(promo ? { promo: promo.code } : {}) }) }).catch(() => null);
     const j = (await r?.json().catch(() => ({}))) as { url?: string; error?: string };
     if (r?.ok && j.url) window.location.href = j.url;
     else {
@@ -269,7 +286,14 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
           {etat.formules.map((f) => (
             <div key={f.id} className="rounded-xl border-2 border-faso/30 bg-white p-4">
               <div className="font-semibold">{f.libelle}</div>
-              <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
+              {promo?.prix[f.id] !== undefined && promo.prix[f.id] !== f.prix_fcfa ? (
+                <div className="mt-1">
+                  <span className="text-sm text-muted line-through">{formatFcfa(f.prix_fcfa)}</span>{" "}
+                  <span className="text-2xl font-extrabold text-faso-dark">{formatFcfa(promo.prix[f.id]!)}</span>
+                </div>
+              ) : (
+                <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
+              )}
               <div className="text-xs text-muted">{f.duree_jours} jours d&apos;accès complet</div>
               <button
                 type="button"
@@ -282,6 +306,21 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
             </div>
           ))}
         </div>
+        {c.role !== "admin" && (
+          <form onSubmit={appliquerPromo} className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              value={codeSaisi}
+              onChange={(e) => setCodeSaisi(e.target.value.toUpperCase())}
+              placeholder="Code promo (ex. LANCEMENT)"
+              aria-label="Code promo"
+              className="min-w-0 flex-1 rounded-lg border border-line px-3 py-2 text-sm uppercase focus:border-faso focus:outline-none"
+            />
+            <button type="submit" disabled={!codeSaisi.trim()} className="rounded-lg border border-faso px-3 py-2 text-sm font-semibold text-faso disabled:opacity-40">
+              Appliquer
+            </button>
+            {promoMsg && <span className={`w-full text-sm ${promo ? "text-faso" : "text-rouge"}`}>{promoMsg}</span>}
+          </form>
+        )}
         <p className="mt-2 text-xs text-muted">
           {etat.paiementDisponible
             ? "Paiement sécurisé par CinetPay : Orange Money, Moov Money ou carte bancaire. Vous serez redirigé vers la page de paiement puis ramené ici."
@@ -356,7 +395,7 @@ const STATUTS_COM: Record<string, string> = { due: "À verser", versee: "Versée
 function Parrainage({ p, telephone }: { p: ParrainageInfo; telephone: string | null }) {
   const [copie, setCopie] = useState(false);
   const lien = lienParrainage(p.code);
-  const message = `Je prépare mes cours, devoirs et corrigés avec PÉDAGOGUE.IA, l'assistant pédagogique pour les enseignants du Burkina Faso. Essayez-le gratuitement pendant 24 h : ${lien}`;
+  const message = messagesCampagne(lien)[0]!.texte;
   async function copier() {
     try {
       await navigator.clipboard.writeText(lien);

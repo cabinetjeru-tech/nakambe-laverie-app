@@ -80,6 +80,8 @@ export function KibaruApp() {
   const [reinit, setReinit] = useState(false);
   /** Code du parrain (lien d'invitation ?parrain=CODE), gardé jusqu'à l'inscription. */
   const [parrain, setParrain] = useState<string | null>(null);
+  /** Arrivée depuis la page de présentation : ouvrir directement l'inscription. */
+  const [inscription, setInscription] = useState(false);
   const scopeRef = useRef<string | null | undefined>(undefined);
   /** Version (updatedAt) de chaque préparation déjà sauvegardée en ligne. */
   const syncedRef = useRef<Map<string, number> | null>(null);
@@ -161,7 +163,8 @@ export function KibaruApp() {
     } catch {
       if (/^[A-Z0-9]{6}$/.test(code)) setParrain(code);
     }
-    if (q.get("parrain") && !q.get("paiement") && !q.get("reinit")) window.history.replaceState(null, "", "/");
+    if (q.get("inscription")) setInscription(true);
+    if ((q.get("parrain") || q.get("inscription")) && !q.get("paiement") && !q.get("reinit")) window.history.replaceState(null, "", "/");
     if (q.get("erreur_lien")) setNotice("Ce lien a expiré ou a déjà été utilisé. Recommencez la démarche.");
     const tx = q.get("paiement");
     if (q.get("erreur_lien") || tx) window.history.replaceState(null, "", "/");
@@ -407,7 +410,7 @@ export function KibaruApp() {
     if (!status.etat.compte || reinit)
       return (
         <AuthScreen
-          initial={reinit ? "nouveau" : parrain ? "inscription" : "connexion"}
+          initial={reinit ? "nouveau" : parrain || inscription ? "inscription" : "connexion"}
           notice={notice ?? undefined}
           parrain={parrain}
           onDone={() => {
