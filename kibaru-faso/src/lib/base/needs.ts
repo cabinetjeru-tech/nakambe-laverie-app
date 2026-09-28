@@ -46,7 +46,7 @@ const RULES: [RegExp, Need][] = [
   [/\bevaluation|\bcontrole\b|\bsujet blanc|\bcomposition\b|\bexamen blanc|\bgrille criteriee/, "evaluation"],
   [/\bcorrig|\bcorrection/, "correction"],
   [/\bbareme/, "bareme"],
-  [/\bremedia|n'ont pas compris|ne comprennent pas|\bdifficultes? (a|en|de|pour)\b/, "remediation"],
+  [/\bremedia|n'ont pas compris|ne comprennent pas|\bdifficultes? (a|en|pour)\b|\bont (des difficultes|du mal)\b/, "remediation"],
   [/\bdifferenci|\bclasse (faible|avancee)|eleves (en difficulte|avances)|\bniveaux? (1|2|3)\b/, "differenciation"],
   [/\brevision|\breviser/, "revision"],
   [/\bsituation[- ]probleme|situation de depart/, "situation_probleme"],

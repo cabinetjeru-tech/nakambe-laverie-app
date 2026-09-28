@@ -1,14 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TeacherContext } from "@/lib/conversation";
+import { TYPES_SEANCE, type TeacherContext } from "@/lib/conversation";
 import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
 import { downloadWord, printHtml } from "@/lib/export";
 import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
-import { DISCIPLINES, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
+import { DISCIPLINES, FICHE_COMMANDS, MODIFICATIONS, TEMPLATES, type Template } from "@/lib/templates";
+import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
 
 type LibraryDoc = {
@@ -53,6 +54,7 @@ export function KibaruApp() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  const [ficheOpen, setFicheOpen] = useState(false);
   // Rubrique de l'action rapide choisie, retenue tant que l'enseignant garde le début du texte proposé.
   const [pendingCategory, setPendingCategory] = useState<{ category: Category; prefix: string } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -108,18 +110,19 @@ export function KibaruApp() {
     });
   };
 
-  async function send(text: string, ctxOverride?: TeacherContext) {
+  async function send(text: string, ctxOverride?: TeacherContext, fresh?: { category: Category }) {
     const ctx = ctxOverride ?? context;
     const content = text.trim();
     if (!content || busy) return;
     setInput("");
     setSidebar(false);
-    let convId = currentId;
+    // « fresh » : nouvelle préparation (ex. fiche lancée depuis le formulaire), même si une conversation est ouverte.
+    let convId = fresh ? null : currentId;
     const userMsg: StoredMessage = { role: "user", content };
-    const base = current?.messages ?? [];
+    const base = fresh ? [] : current?.messages ?? [];
     if (!convId) {
       convId = newId();
-      const conv: Conversation = { id: convId, title: conversationTitle(content), category: pendingCategory && content.startsWith(pendingCategory.prefix) ? pendingCategory.category : classify(content), updatedAt: Date.now(), messages: [userMsg] };
+      const conv: Conversation = { id: convId, title: conversationTitle(content), category: fresh?.category ?? (pendingCategory && content.startsWith(pendingCategory.prefix) ? pendingCategory.category : classify(content)), updatedAt: Date.now(), messages: [userMsg] };
       setPendingCategory(null);
       persist((list) => [conv, ...list]);
       setCurrentId(convId);
@@ -226,6 +229,10 @@ export function KibaruApp() {
   }
 
   function applyTemplate(t: Template) {
+    if (t.action === "fiche-form") {
+      setFicheOpen(true);
+      return;
+    }
     const text = t.build(context);
     if (!currentId) setPendingCategory({ category: t.category, prefix: text.slice(0, Math.min(20, text.indexOf("[") >= 0 ? text.indexOf("[") : 20)) });
     prefill(text);
@@ -268,12 +275,27 @@ export function KibaruApp() {
         </div>
       )}
 
+      {ficheOpen && (
+        <FicheFormDialog
+          context={context}
+          onClose={() => setFicheOpen(false)}
+          onSubmit={(message, patch) => {
+            const next = { ...context, ...patch };
+            updateContext(patch);
+            setFicheOpen(false);
+            setCurrentId(null);
+            void send(message, next, { category: "cours" });
+          }}
+        />
+      )}
+
       <div className="flex min-h-0 flex-1">
         <aside
           id="panneau"
           className={`${sidebar ? "fixed inset-x-0 top-[53px] bottom-0 z-20 block" : "hidden"} w-full overflow-y-auto border-r border-line bg-white lg:static lg:block lg:w-80 lg:shrink-0`}
         >
           <ContextPanel context={context} onChange={updateContext} />
+          <ProfilePanel context={context} onChange={updateContext} />
           <DocumentsPanel library={status.library} history={status.history} pending={status.pending} docs={docs} onChange={updateDocs} context={context} />
           <HistoryPanel
             conversations={conversations}
@@ -294,7 +316,7 @@ export function KibaruApp() {
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-4 py-6">
               {messages.length === 0 ? (
-                <Welcome context={context} onTemplate={applyTemplate} libraryCount={status.library.length} />
+                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} libraryCount={status.library.length} />
               ) : (
                 <div className="space-y-5">
                   {messages.map((m, i) =>
@@ -335,7 +357,7 @@ export function KibaruApp() {
                     <div>
                       <div className="mb-1.5 text-xs font-semibold text-muted">Choisir la matière</div>
                       <div className="flex flex-wrap gap-2">
-                        {DISCIPLINES.slice(0, 10).map((m) => (
+                        {[...new Set([last.decision?.matiereSuggeree, ...DISCIPLINES.slice(0, 10)].filter((x): x is string => !!x))].map((m) => (
                           <button
                             key={m}
                             type="button"
@@ -353,9 +375,9 @@ export function KibaruApp() {
                   )}
                   {!busy && last?.role === "assistant" && !last.error && !last.decision?.missing?.length && (
                     <div>
-                      <div className="mb-1.5 text-xs font-semibold text-muted">Modifier cette production</div>
+                      <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : "Modifier cette production"}</div>
                       <div className="flex flex-wrap gap-2">
-                        {MODIFICATIONS.map((m) => (
+                        {(last.decision?.fiche ? FICHE_COMMANDS : MODIFICATIONS).map((m) => (
                           <button
                             key={m.label}
                             type="button"
@@ -411,7 +433,10 @@ export function KibaruApp() {
               )}
             </div>
             <p className="mx-auto mt-1.5 max-w-3xl text-[11px] text-muted">
-              PÉDAGOGUE.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.
+              PÉDAGOGUE.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.{" "}
+              <button type="button" onClick={() => setFicheOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+                Générateur de fiches
+              </button>
             </p>
           </form>
         </main>
@@ -474,14 +499,27 @@ function AccessGate({ onGranted }: { onGranted: () => void }) {
   );
 }
 
-function Welcome({ context, onTemplate, libraryCount }: { context: TeacherContext; onTemplate: (t: Template) => void; libraryCount: number }) {
+function Welcome({ context, onTemplate, onFiche, libraryCount }: { context: TeacherContext; onTemplate: (t: Template) => void; onFiche: () => void; libraryCount: number }) {
   const main = TEMPLATES.filter((t) => t.main);
   const others = TEMPLATES.filter((t) => !t.main);
   return (
     <div className="fade-in">
       <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
       <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
-      <p className="mt-3 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
+      <button
+        type="button"
+        onClick={onFiche}
+        className="mt-4 flex w-full items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm"
+      >
+        <span aria-hidden className="text-2xl leading-none">
+          📋
+        </span>
+        <span>
+          <span className="block font-bold text-faso-dark">Générateur de fiches pédagogiques</span>
+          <span className="mt-0.5 block text-xs text-ink">Formulaire guidé : classe, discipline, thème, type de séance, durée… Fiche documentée, déroulement minuté, trace écrite, évaluation, corrigé.</span>
+        </span>
+      </button>
+      <p className="mt-4 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {main.map((t) => (
           <button
@@ -754,8 +792,15 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
           <input value={context.effectif ?? ""} onChange={(e) => onChange({ effectif: e.target.value })} placeholder="85 élèves" className={inputCls} />
         </label>
         <label className="text-xs font-medium text-muted">
-          Établissement
-          <input value={context.etablissement ?? ""} onChange={(e) => onChange({ etablissement: e.target.value })} placeholder="Lycée…" className={inputCls} />
+          Type de séance
+          <select value={context.typeSeance ?? ""} onChange={(e) => onChange({ typeSeance: e.target.value || undefined })} className={inputCls}>
+            <option value="">—</option>
+            {TYPES_SEANCE.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <p className="mt-2 text-[11px] text-muted">Ces informations accompagnent chacune de vos demandes. Elles restent enregistrées sur cet appareil.</p>
@@ -897,6 +942,51 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
         </button>
         {error && <p className="mt-2 text-rouge">{error}</p>}
       </div>
+    </Section>
+  );
+}
+
+/** Profil de l'enseignant (Module 01, section 5) : personnalisation uniquement, conservé sur cet appareil. */
+function ProfilePanel({ context, onChange }: { context: TeacherContext; onChange: (p: Partial<TeacherContext>) => void }) {
+  return (
+    <Section title="Mon profil" defaultOpen={false}>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="col-span-2 text-xs font-medium text-muted">
+          Nom de l&apos;enseignant
+          <input value={context.enseignant ?? ""} onChange={(e) => onChange({ enseignant: e.target.value })} placeholder="M. / Mme …" className={inputCls} />
+        </label>
+        <label className="col-span-2 text-xs font-medium text-muted">
+          Établissement
+          <input value={context.etablissement ?? ""} onChange={(e) => onChange({ etablissement: e.target.value })} placeholder="Lycée…" className={inputCls} />
+        </label>
+        <label className="text-xs font-medium text-muted">
+          Ville
+          <input value={context.ville ?? ""} onChange={(e) => onChange({ ville: e.target.value })} placeholder="Tenkodogo" className={inputCls} />
+        </label>
+        <label className="text-xs font-medium text-muted">
+          Année scolaire
+          <input value={context.anneeScolaire ?? ""} onChange={(e) => onChange({ anneeScolaire: e.target.value })} placeholder="2026-2027" className={inputCls} />
+        </label>
+        <label className="col-span-2 text-xs font-medium text-muted">
+          Préférences pédagogiques
+          <textarea
+            value={context.preferences ?? ""}
+            onChange={(e) => onChange({ preferences: e.target.value })}
+            rows={2}
+            placeholder="Travail en groupes, beaucoup d'exemples concrets…"
+            className={`${inputCls} resize-y`}
+          />
+        </label>
+        <label className="col-span-2 text-xs font-medium text-muted">
+          Format habituel des fiches
+          <select value={context.mode ?? "standard"} onChange={(e) => onChange({ mode: e.target.value })} className={inputCls}>
+            <option value="standard">Standard (fiche complète)</option>
+            <option value="expert">Expert (plus de détails)</option>
+            <option value="rapide">Rapide (l&apos;essentiel)</option>
+          </select>
+        </label>
+      </div>
+      <p className="mt-2 text-[11px] text-muted">Ces informations personnalisent les fiches (identification, format) sans modifier les exigences officielles. Elles restent sur cet appareil.</p>
     </Section>
   );
 }

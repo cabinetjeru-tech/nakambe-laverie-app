@@ -4,14 +4,36 @@ import { z } from "zod";
 
 export const MAX_TEACHER_DOCS_CHARS = 1_500_000;
 
+/** Types de séance (Module 01 — fiches pédagogiques). */
+export const TYPES_SEANCE = ["découverte", "apprentissage", "application", "consolidation", "révision", "remédiation", "évaluation"] as const;
+/** Modes de production d'une fiche : standard, expert (plus de détails), rapide (l'essentiel). */
+export const MODES = ["standard", "expert", "rapide"] as const;
+
+const txt = (max: number) => z.string().max(max).optional();
+
 export const teacherContextSchema = z.object({
-  etablissement: z.string().max(160).optional(),
-  classe: z.string().max(40).optional(),
-  discipline: z.string().max(80).optional(),
-  theme: z.string().max(300).optional(),
-  duree: z.string().max(60).optional(),
-  niveau: z.string().max(300).optional(),
-  effectif: z.string().max(40).optional(),
+  // Classe et séance
+  classe: txt(40),
+  discipline: txt(80),
+  theme: txt(300),
+  sousTheme: txt(300),
+  typeSeance: txt(40),
+  duree: txt(60),
+  effectif: txt(40),
+  niveau: txt(300),
+  // Informations pédagogiques facultatives (jamais bloquantes)
+  prerequis: txt(500),
+  materiel: txt(500),
+  methode: txt(300),
+  contexteParticulier: txt(500),
+  objectifPersonnel: txt(500),
+  // Profil de l'enseignant (personnalisation uniquement)
+  enseignant: txt(120),
+  etablissement: txt(160),
+  ville: txt(120),
+  anneeScolaire: txt(20),
+  preferences: txt(500),
+  mode: txt(20),
 });
 export type TeacherContext = z.infer<typeof teacherContextSchema>;
 
@@ -36,13 +58,25 @@ export const chatRequestSchema = z.object({
 export type ChatRequest = z.infer<typeof chatRequestSchema>;
 
 const LABELS: Record<keyof TeacherContext, string> = {
-  etablissement: "Établissement",
   classe: "Classe",
   discipline: "Discipline",
   theme: "Thème / chapitre",
+  sousTheme: "Sous-thème / notion",
+  typeSeance: "Type de séance",
   duree: "Durée de la séance",
-  niveau: "Niveau et difficultés de la classe",
-  effectif: "Effectif",
+  effectif: "Nombre approximatif d'apprenants",
+  niveau: "Niveau général et difficultés de la classe",
+  prerequis: "Prérequis déjà maîtrisés",
+  materiel: "Matériel disponible",
+  methode: "Méthode souhaitée",
+  contexteParticulier: "Contexte particulier",
+  objectifPersonnel: "Objectif personnel de la séance",
+  enseignant: "Enseignant",
+  etablissement: "Établissement",
+  ville: "Ville",
+  anneeScolaire: "Année scolaire",
+  preferences: "Préférences pédagogiques (personnalisation, sans effet sur les exigences officielles)",
+  mode: "Mode de production souhaité",
 };
 
 export function formatContextBlock(ctx: TeacherContext): string {
@@ -72,5 +106,5 @@ export function searchQuery(messages: ChatRequest["messages"], ctx: TeacherConte
   const users = messages.filter((m) => m.role === "user").map((m) => m.content);
   const current = users[users.length - 1] ?? "";
   const previous = users.slice(-3, -1).join(" ").slice(0, 600);
-  return [current, current, previous, ctx.theme, ctx.discipline].filter(Boolean).join(" ");
+  return [current, current, previous, ctx.theme, ctx.sousTheme, ctx.sousTheme, ctx.typeSeance, ctx.discipline].filter(Boolean).join(" ");
 }

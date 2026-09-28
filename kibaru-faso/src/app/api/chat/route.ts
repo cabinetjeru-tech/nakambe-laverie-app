@@ -108,6 +108,9 @@ export async function POST(req: Request) {
           confidence: decision.confidence,
           needs: profile.needs,
           questionExpected: !!profile.question,
+          fiche: profile.fiche,
+          mode: profile.mode,
+          dureeAnnoncee: profile.duree,
         });
         send({ type: "done", check });
       } catch (e) {

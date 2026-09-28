@@ -7,7 +7,17 @@ import type { Category } from "./documents";
  * `main` : les sept choix du message de démarrage (configuration V2, section 30).
  */
 
-export type Template = { id: string; label: string; hint: string; icon?: string; main?: boolean; category: Category; build: (c: TeacherContext) => string };
+export type Template = {
+  id: string;
+  label: string;
+  hint: string;
+  icon?: string;
+  main?: boolean;
+  category: Category;
+  /** « fiche-form » : ouvre le formulaire du générateur de fiches (Module 01) au lieu de pré-remplir. */
+  action?: "fiche-form";
+  build: (c: TeacherContext) => string;
+};
 
 const v = (value: string | undefined, placeholder: string) => (value?.trim() ? value.trim() : `[${placeholder}]`);
 const classe = (c: TeacherContext) => v(c.classe, "classe");
@@ -88,6 +98,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "fiche",
+    action: "fiche-form",
     label: "Fiche pédagogique",
     hint: "Tableau enseignant / élèves, prête à imprimer",
     category: "cours",
@@ -159,6 +170,19 @@ export const MODIFICATIONS: { label: string; prompt: string }[] = [
   { label: "Transformer en devoir", prompt: "Transforme cette production en devoir, avec sujet, corrigé et barème séparés." },
   { label: "Transformer en fiche", prompt: "Transforme cette production en fiche pédagogique." },
   { label: "Résumer", prompt: "Résume cette production." },
+];
+
+/** Commandes naturelles sur une fiche pédagogique (Module 01, section 19). */
+export const FICHE_COMMANDS: { label: string; prompt: string }[] = [
+  { label: "Plus simple", prompt: "Fais-la plus simple." },
+  { label: "Version 50 minutes", prompt: "Fais une version [50] minutes." },
+  { label: "Ajouter une évaluation", prompt: "Ajoute une évaluation." },
+  { label: "Ajouter le corrigé", prompt: "Ajoute le corrigé." },
+  { label: "Classe faible", prompt: "Fais une version pour une classe faible." },
+  { label: "Activité pour les meilleurs élèves", prompt: "Fais une activité pour les meilleurs élèves." },
+  { label: "Mode expert", prompt: "Mode expert : reprends cette fiche avec les choix pédagogiques, les difficultés anticipées et les erreurs fréquentes." },
+  { label: "Mode rapide", prompt: "Mode rapide : reprends cette fiche en version courte." },
+  { label: "Fiche imprimable", prompt: "Transforme en fiche imprimable." },
 ];
 
 /** Suggestions de disciplines (saisie libre possible). */

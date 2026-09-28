@@ -23,6 +23,15 @@ export type RequestProfile = {
   classe?: string;
   matiere?: string;
   theme?: string;
+  sousTheme?: string;
+  /** Type de séance (découverte, apprentissage, application, consolidation, révision, remédiation, évaluation). */
+  typeSeance?: string;
+  /** Mode de production : standard, expert ou rapide. */
+  mode: "standard" | "expert" | "rapide";
+  /** Demande de fiche pédagogique : Module 01 (structure imposée, contrôles de durée). */
+  fiche: boolean;
+  /** Matière déduite du thème, proposée à l'enseignant. */
+  matiereSuggeree?: string;
   duree?: string;
   typeDemande: Category;
   /** Besoins identifiés (section 3), éventuellement combinés. */
@@ -78,46 +87,115 @@ export function matiereInMessage(message: string): string | undefined {
 
 const DURATION = /\b\d+\s?(min|minutes|h|heures?)\b|\b(une|deux|trois) heures?\b/;
 
+/**
+ * Modèle de demande rapide (Module 01, section 20) : lignes « Clé : valeur ».
+ *   Classe : 6e / Matière : Mathématiques / Thème : Fractions / Durée : 55 minutes
+ *   Type : Séance d'apprentissage / Difficulté de la classe : moyenne
+ */
+export function parseQuickRequest(message: string): Partial<TeacherContext> {
+  const out: Partial<TeacherContext> = {};
+  for (const line of message.split(/\r?\n/)) {
+    const m = line.match(/^\s*[-•*]?\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/);
+    if (!m) continue;
+    const key = normalize(m[1]!).replace(/[^a-z ]/g, "").trim();
+    const value = m[2]!.trim().replace(/[.;,]+$/, "");
+    if (/^classe$/.test(key)) out.classe = value;
+    else if (/^(matiere|discipline)$/.test(key)) out.discipline = value;
+    else if (/^(theme|chapitre)$/.test(key)) out.theme = value;
+    else if (/^(sous ?theme|notion|sous theme notion)$/.test(key)) out.sousTheme = value;
+    else if (/^duree$/.test(key)) out.duree = value;
+    else if (/^(type|type de seance)$/.test(key)) out.typeSeance = value;
+    else if (/^(difficulte de la classe|niveau|niveau de la classe|niveau general)$/.test(key)) out.niveau = value;
+    else if (/^(effectif|nombre dapprenants|nombre d apprenants|apprenants)$/.test(key)) out.effectif = value;
+    else if (/^mode$/.test(key)) out.mode = value;
+  }
+  return out;
+}
+
+const SEANCE_TYPES: [RegExp, string][] = [
+  [/\bdecouverte\b/, "découverte"],
+  [/\bapprentissage\b/, "apprentissage"],
+  [/\b(seance|lecon|fiche) d'application|\bapplication\b/, "application"],
+  [/\bconsolidation\b/, "consolidation"],
+  [/\brevision\b/, "révision"],
+  [/\bremediation\b/, "remédiation"],
+  [/\b(seance|lecon|fiche) d'evaluation\b/, "évaluation"],
+];
+
+export function typeSeanceIn(text: string): string | undefined {
+  const n = normalize(text).replace(/’/g, "'");
+  return SEANCE_TYPES.find(([re]) => re.test(n))?.[1];
+}
+
+export function modeIn(text: string, ctxMode?: string): "standard" | "expert" | "rapide" {
+  const n = normalize(text);
+  if (/\bmode expert\b/.test(n)) return "expert";
+  if (/\bmode rapide\b/.test(n)) return "rapide";
+  const c = normalize(ctxMode ?? "");
+  return c === "expert" || c === "rapide" ? c : "standard";
+}
+
 /** Identification du besoin et du contexte. La demande écrite l'emporte sur le contexte de la classe. */
-export function identifyRequest(message: string, ctx: TeacherContext, needsFrom: string = message): RequestProfile {
-  const cm = classeInMessage(message);
-  const mm = matiereInMessage(message);
+export function identifyRequest(message: string, ctxIn: TeacherContext, needsFrom: string = message): RequestProfile {
+  // Les lignes « Classe : … », « Matière : … » du modèle de demande rapide priment sur le panneau « Ma classe ».
+  const quick = parseQuickRequest(message);
+  const ctx: TeacherContext = { ...ctxIn, ...quick };
+  const cm = quick.classe ? canonicalClasse(quick.classe) : classeInMessage(message);
+  const mm = quick.discipline ?? matiereInMessage(message);
   const classe = cm ?? (ctx.classe?.trim() ? canonicalClasse(ctx.classe) : undefined);
   const info = CLASS_INFO.find((c) => c.classe === classe);
-  const needs = identifyNeeds(needsFrom);
-  const fromTheme = !mm && !ctx.discipline?.trim() ? subjectFromTheme(message, ctx.theme) : undefined;
+  // Un modèle de demande rapide (classe, matière ou thème renseignés en lignes) vaut demande de fiche (Module 01).
+  const quickKeys = Object.keys(parseQuickRequest(needsFrom)).length;
+  const detected = identifyNeeds(needsFrom);
+  const needs: Need[] =
+    quickKeys >= 3 && !detected.includes("fiche_pedagogique")
+      ? ["fiche_pedagogique", ...detected.filter((n) => n !== "autre" && n !== "remediation" && n !== "seance")]
+      : detected;
+  const fromTheme = !mm && !ctx.discipline?.trim() ? subjectFromTheme(message, ctx.theme, ctx.sousTheme) : undefined;
   const matiere = mm ?? (ctx.discipline?.trim() || undefined) ?? fromTheme;
   const duree = ctx.duree?.trim() || normalize(message).match(DURATION)?.[0];
+  const typeSeance = typeSeanceIn(ctx.typeSeance ?? "") ?? typeSeanceIn(needsFrom) ?? (ctx.typeSeance?.trim() || undefined);
+  const mode = modeIn(needsFrom, ctx.mode);
+  const fiche = needs.includes("fiche_pedagogique");
 
   const missing: RequestProfile["missing"] = [];
   const assumptions: string[] = [];
   if (isSpecialized(needs)) {
     if (!classe) missing.push("classe");
-    if (!matiere) missing.push("matiere");
+    // Module 01 : pour une fiche, une matière seulement déduite du thème est confirmée auprès de l'enseignant.
+    if (!matiere || (fiche && fromTheme)) missing.push("matiere");
     const timed = needs.some((n) => ["preparation_cours", "fiche_pedagogique", "seance", "devoir", "interrogation", "evaluation", "revision"].includes(n));
     if (timed && !duree) assumptions.push("durée non précisée : retiens une durée usuelle et indique-la");
-    if (needs.includes("preparation_cours") && !/revision|nouvelle notion|introduction|decouverte/.test(normalize(message)))
-      assumptions.push("type de séance non précisé (nouvelle notion ou révision) : considère qu'il s'agit d'une nouvelle notion et indique-le");
-    if (fromTheme) assumptions.push(`matière déduite du thème (${fromTheme}) : à confirmer par l'enseignant`);
+    if ((needs.includes("preparation_cours") || fiche) && !typeSeance)
+      assumptions.push("type de séance non précisé : considère une séance d'apprentissage (nouvelle notion) et indique-le");
+    if (fromTheme && !fiche) assumptions.push(`matière déduite du thème (${fromTheme}) : à confirmer par l'enseignant`);
   }
-  const besoin = NEEDS[needs[0]!];
+  const besoin = fiche ? "fiche" : NEEDS[needs[0]!];
   let question: string | undefined;
   if (missing.includes("classe") && missing.includes("matiere"))
     question = `Pour quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale) et quelle matière souhaitez-vous cette ${besoin} ?`;
   else if (missing.includes("classe")) question = `Pour quelle classe souhaitez-vous cette ${besoin} : 6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale ?`;
-  else if (missing.includes("matiere")) question = `Pour quelle matière souhaitez-vous cette ${besoin} ?`;
+  else if (missing.includes("matiere"))
+    question = fromTheme
+      ? `Très bien. Pour quelle discipline souhaitez-vous cette ${besoin} : ${fromTheme} ou une autre matière ?`
+      : `Pour quelle matière souhaitez-vous cette ${besoin} ?`;
 
   return {
     pays: "Burkina Faso",
     niveau: info?.niveau,
     classe,
-    matiere,
+    matiere: fiche && fromTheme ? undefined : matiere,
+    matiereSuggeree: fromTheme,
     theme: ctx.theme?.trim() || undefined,
+    sousTheme: ctx.sousTheme?.trim() || undefined,
+    typeSeance,
+    mode,
+    fiche,
     duree,
     typeDemande: classify(needsFrom),
     needs,
     origineClasse: cm ? "message" : classe ? "contexte" : undefined,
-    origineMatiere: mm ? "message" : ctx.discipline?.trim() ? "contexte" : fromTheme ? "theme" : undefined,
+    origineMatiere: mm ? "message" : ctx.discipline?.trim() ? "contexte" : fromTheme && !fiche ? "theme" : undefined,
     missing,
     assumptions,
     question,
@@ -289,7 +367,7 @@ export function formatDecisionBlock(d: Decision): string {
   const lines = [
     "<decision_pedagogique>",
     `1. Besoin identifié : ${p.needs.map((n) => NEEDS[n]).join(" + ")}.`,
-    `2. Contexte minimal : pays = ${p.pays} ; niveau = ${p.niveau ?? "non précisé"} ; classe = ${p.classe ?? "NON PRÉCISÉE"}${src(p.origineClasse)} ; matière = ${p.matiere ?? "NON PRÉCISÉE"}${src(p.origineMatiere)}. Contexte pédagogique : thème = ${p.theme ?? "non précisé"} ; durée = ${p.duree ?? "non précisée"}.${p.assumptions.length ? ` Hypothèses à annoncer : ${p.assumptions.join(" ; ")}.` : ""}`,
+    `2. Contexte minimal : pays = ${p.pays} ; niveau = ${p.niveau ?? "non précisé"} ; classe = ${p.classe ?? "NON PRÉCISÉE"}${src(p.origineClasse)} ; matière = ${p.matiere ?? "NON PRÉCISÉE"}${src(p.origineMatiere)}. Contexte pédagogique : thème = ${p.theme ?? "non précisé"}${p.sousTheme ? ` ; sous-thème = ${p.sousTheme}` : ""} ; type de séance = ${p.typeSeance ?? "non précisé"} ; durée = ${p.duree ?? "non précisée"}.${p.assumptions.length ? ` Hypothèses à annoncer : ${p.assumptions.join(" ; ")}.` : ""}`,
     `3. Recherche dans la base : cible ${target ?? "non déterminable (classe inconnue)"} ; ordre de priorité : programme/curriculum, guide pédagogique, référentiel, progression, ressources institutionnelles, ressources pédagogiques, connaissances générales. Résultat : ${d.consultable.length} ressource(s) consultable(s), ${d.pending.length} NON ENCORE INTÉGRÉE(S)${d.pending.length ? ` [${d.pending.map((x) => `${id(x)} — ${x.title}`).join(" ; ")}]` : ""}, ${d.history.length} dans l'historique.`,
     `4. Sélection des sources (autorité, pertinence, actualité, statut, version, périmètre, cohérence) :${
       d.cards.length
@@ -303,6 +381,9 @@ export function formatDecisionBlock(d: Decision): string {
         ? `le contexte minimal manque (${p.missing.join(" et ")}). Ne produis pas encore la préparation : pose uniquement cette question, en une phrase : « ${p.question} » Tu peux ajouter une phrase indiquant ce que tu feras ensuite.`
         : INSTRUCTIONS[d.confidence]
     }`,
+    ...(p.fiche && !p.question
+      ? [`Module 01 — fiche pédagogique : actif ; mode ${p.mode.toUpperCase()} ; applique la structure et les contrôles du Module 01 (recherche ciblée : ${[p.pays, p.classe, p.matiere, p.theme, p.sousTheme, p.typeSeance].filter(Boolean).join(" + ")}).`]
+      : []),
     "Il te reste : raisonnement pédagogique, génération, puis contrôle final avant d'envoyer.",
     "</decision_pedagogique>",
   ];
@@ -319,6 +400,9 @@ export function decisionSummary(d: Decision) {
     matiere: d.profile.matiere ?? null,
     matiereDeduite: d.profile.origineMatiere === "theme",
     besoins: d.profile.needs.map((n) => NEEDS[n]),
+    fiche: d.profile.fiche,
+    mode: d.profile.mode,
+    matiereSuggeree: d.profile.matiereSuggeree ?? null,
     missing: d.profile.missing,
     actives: d.consultable.filter((x) => x.statut === "ACTIF").length,
     consultables: d.consultable.length,

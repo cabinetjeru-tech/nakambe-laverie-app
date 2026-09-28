@@ -19,6 +19,9 @@ Application indépendante des autres projets de ce dépôt. Elle fonctionne avec
   Chaque ressource a une fiche (ID unique, statut ACTIF, PROVISOIRE, À VÉRIFIER, REMPLACÉ ou ARCHIVE, priorité,
   dates…). Un document ancien n'est jamais obsolète par défaut, un document récent jamais applicable par défaut :
   seul un remplacement déclaré vers une ressource ACTIVE écarte l'ancienne, qui reste dans l'historique.
+- **Module 01 — Générateur de fiches pédagogiques** ([détail](docs/MODULE-01-FICHES.md)) : formulaire guidé ou
+  demande libre, fiche documentée en 13 rubriques, déroulement minuté dont la **somme des durées est vérifiée
+  automatiquement**, modes standard / expert / rapide, commandes « plus simple », « version 50 minutes »…
 - **Moteur de décision pédagogique** ([détail](docs/MOTEUR-DECISION-PEDAGOGIQUE.md)) : pour chaque demande,
   identification du besoin (24 catégories) et du contexte (une seule question si la classe ou la matière manque),
   recherche ciblée (`BF-6E-MATH`…), sélection des sources (autorité, pertinence, actualité, statut, version,
