@@ -2,6 +2,7 @@ import { normalize } from "../search";
 import type { Need } from "./needs";
 import type { Confidence } from "./decision";
 import { evaluationChecks, type EvalParams } from "../evaluation";
+import { remediationChecks } from "../remediation";
 
 /**
  * Contrôle final automatique (moteur de décision pédagogique, section 17).
@@ -25,6 +26,8 @@ export type CheckInput = {
   dureeAnnoncee?: string;
   /** Module 02 : paramètres de l'évaluation demandée. */
   evaluation?: EvalParams;
+  /** Module 03 : remédiation. */
+  remediation?: boolean;
 };
 
 /** « 55 minutes », « 1 h 30 », « 1h30 », « 2 heures », « 90 mn », « 15' » → minutes. */
@@ -148,6 +151,7 @@ export function finalCheck(c: CheckInput): string[] {
   if (/faire participer (les )?(eleves|apprenants)/.test(n)) out.push("Formulation d'activité trop vague (« faire participer les élèves ») : à préciser.");
   if (c.fiche && !c.questionExpected && text.length > 400) out.push(...ficheChecks(c, n));
   if (c.evaluation && !c.questionExpected && text.length > 400) out.push(...evaluationChecks(text, c.evaluation));
+  if (c.remediation && !c.questionExpected && text.length > 400) out.push(...remediationChecks(text));
 
   return out;
 }

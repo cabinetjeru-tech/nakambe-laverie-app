@@ -198,7 +198,7 @@ function partTotal(a: PartAnalysis): number | undefined {
 // Contrôle calculatoire : égalités numériques simples « 7 × 8 = 56 », « 2,5 + 1,5 = 4 », « 12 : 3 = 4 ».
 const NUMBER = "-?\\d+(?:[.,]\\d+)?";
 const OP = "[+\\-−×x*÷/:]";
-const EQUALITY = new RegExp(`(?<![\\d.,/×x*÷:+\\-−][ \\t]*)(${NUMBER}(?:[ \\t]*${OP}[ \\t]*${NUMBER})+)[ \\t]*=[ \\t]*(${NUMBER})(?![\\d.,]*[ \\t]*[/×x*÷:+\\-−][ \\t]*\\d)(?![\\d.,])`, "g");
+const EQUALITY = new RegExp(`(?<![\\d/×x*÷:+\\-−][ \\t]*)(?<![.,])(${NUMBER}(?:[ \\t]*${OP}[ \\t]*${NUMBER})+)[ \\t]*=[ \\t]*(${NUMBER})(?![\\d.,]*[ \\t]*[/×x*÷:+\\-−][ \\t]*\\d)(?!\\d|[.,]\\d)`, "g");
 
 function evaluate(expr: string): number | undefined {
   const tokens = expr.replace(/−/g, "-").match(/\d+(?:[.,]\d+)?|[+\-×x*÷/:]/g);

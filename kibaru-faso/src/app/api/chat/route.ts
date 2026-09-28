@@ -112,6 +112,7 @@ export async function POST(req: Request) {
           mode: profile.mode,
           dureeAnnoncee: profile.duree,
           evaluation: profile.module02 ? profile.evaluation : undefined,
+          remediation: profile.module03,
         });
         send({ type: "done", check });
       } catch (e) {

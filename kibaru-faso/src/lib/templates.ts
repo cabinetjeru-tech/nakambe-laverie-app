@@ -15,7 +15,7 @@ export type Template = {
   main?: boolean;
   category: Category;
   /** Ouvre le formulaire du générateur de fiches (Module 01) ou d'évaluations (Module 02) au lieu de pré-remplir. */
-  action?: "fiche-form" | "eval-form";
+  action?: "fiche-form" | "eval-form" | "remed-form";
   /** Type d'évaluation présélectionné dans le formulaire du Module 02. */
   evalType?: string;
   build: (c: TeacherContext) => string;
@@ -79,6 +79,7 @@ export const TEMPLATES: Template[] = [
   },
   {
     id: "remediation",
+    action: "remed-form",
     label: "Une activité de remédiation",
     hint: "Diagnostic, prérequis, activités, nouvelle vérification",
     icon: "🔄",
@@ -205,6 +206,18 @@ export const EVAL_COMMANDS: { label: string; prompt: string }[] = [
   { label: "Grille critériée", prompt: "Ajoute une grille critériée." },
   { label: "Tableau de spécification", prompt: "Ajoute le tableau de spécification." },
   { label: "Sujet imprimable", prompt: "Sujet imprimable." },
+];
+
+/** Commandes naturelles sur une remédiation (Module 03). */
+export const REMED_COMMANDS: { label: string; prompt: string }[] = [
+  { label: "Plus simple", prompt: "Plus simple." },
+  { label: "Ajouter des exercices", prompt: "Ajoute des exercices progressifs, avec leur corrigé." },
+  { label: "Pour un seul élève", prompt: "Version pour un seul élève." },
+  { label: "Pour toute la classe", prompt: "Version pour toute la classe." },
+  { label: "Avec du matériel concret", prompt: "Avec du matériel concret." },
+  { label: "Nouvelle vérification", prompt: "Propose une autre nouvelle vérification." },
+  { label: "Fiche élève imprimable", prompt: "Fiche élève imprimable." },
+  { label: "Tutorat entre pairs", prompt: "Organise un tutorat entre pairs." },
 ];
 
 /** Suggestions de disciplines (saisie libre possible). */
