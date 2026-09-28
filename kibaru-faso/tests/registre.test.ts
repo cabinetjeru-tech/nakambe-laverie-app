@@ -6,9 +6,12 @@ import { loadBase } from "@/lib/base/load";
 import { parseCsv, readRegistry, REGISTRY_COLUMNS, toCsv } from "@/lib/base/registry";
 import { ID_FORMAT, parseDocType, subjectCodes } from "@/lib/base/structure";
 
+/** Base du projet, résolue depuis ce fichier (indépendant du répertoire de lancement). */
+const BASE = path.resolve(import.meta.dirname, "..", "base-documentaire");
+
 describe("registre maître (fichier du projet)", () => {
   it("contient les 21 ressources initiales, au bon format, toutes À VÉRIFIER", async () => {
-    const content = await readFile(path.join(process.cwd(), "base-documentaire/REGISTRE_MAITRE.csv"), "utf8");
+    const content = await readFile(path.join(BASE, "REGISTRE_MAITRE.csv"), "utf8");
     const { entries, problems } = readRegistry(content);
     expect(problems).toEqual([]);
     expect(entries).toHaveLength(21);
@@ -24,7 +27,7 @@ describe("registre maître (fichier du projet)", () => {
     expect(entries.filter((e) => e.meta.priorite === "MOYENNE").map((e) => e.meta.documentId)).toEqual(["BF-6E-EPS-001", "BF-5E-EPS-001", "BF-4E-EPS-001"]);
   });
   it("n'a aucune erreur bloquante", async () => {
-    const base = await loadBase();
+    const base = await loadBase(BASE);
     expect(base.issues.filter((i) => i.level === "erreur")).toEqual([]);
     expect(base.pending).toHaveLength(21);
   });
