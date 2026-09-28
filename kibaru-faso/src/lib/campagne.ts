@@ -1,0 +1,50 @@
+/** Campagne de lancement : liens et messages prêts à partager (WhatsApp, Facebook, SMS). */
+
+export const SITE = "https://pedagogue-ia.vercel.app";
+
+export function lienDecouvrir(parrain?: string | null, origin = SITE): string {
+  return `${origin}/decouvrir${parrain ? `?parrain=${parrain}` : ""}`;
+}
+
+export type MessageCampagne = { titre: string; texte: string };
+
+export function messagesCampagne(lien: string, promo?: { code: string; remise_pct: number } | null): MessageCampagne[] {
+  const offre = promo ? `\n🎟️ Code *${promo.code}* : -${promo.remise_pct} % sur votre premier abonnement.` : "";
+  return [
+    {
+      titre: "Invitation courte (groupes WhatsApp d'enseignants)",
+      texte: `📚 *PÉDAGOGUE.IA* — l'assistant pédagogique des enseignants du Burkina Faso 🇧🇫
+Fiches de cours, devoirs avec corrigés et barèmes, remédiation, progressions : prêts en quelques minutes, de la 6e à la Terminale.
+🎁 24 h d'essai gratuit, sans paiement.${offre}
+👉 ${lien}`,
+    },
+    {
+      titre: "Message détaillé (collègues, direction, CAP)",
+      texte: `Chers collègues,
+Je vous recommande *PÉDAGOGUE.IA*, un assistant conçu pour les enseignants du secondaire au Burkina Faso :
+✅ fiches pédagogiques complètes avec déroulement minuté ;
+✅ devoirs et interrogations avec sujet, corrigé et barème (versions A/B/C) ;
+✅ activités de remédiation et progressions annuelles ;
+✅ téléchargement en PDF ou Word, prêt à imprimer.
+Il distingue toujours ce qui vient des documents officiels de ce qui est une proposition, et vérifie les calculs et les durées.
+🎁 Essai gratuit 24 h, puis 2 000 FCFA/mois ou 15 000 FCFA/an (Orange Money, Moov Money).${offre}
+Inscription : ${lien}`,
+    },
+    {
+      titre: "Parrainage (pour les enseignants abonnés)",
+      texte: `💰 Enseignant(e) abonné(e) à PÉDAGOGUE.IA ? Partagez votre lien de parrainage : vous touchez *20 %* de chaque abonnement de vos filleuls, chaque mois ou chaque année.
+Votre lien est dans « Mon compte ». Découvrir : ${lien}`,
+    },
+    {
+      titre: "Statut / publication Facebook",
+      texte: `🇧🇫 Enseignants du Burkina Faso : gagnez des heures chaque semaine !
+PÉDAGOGUE.IA prépare vos fiches, devoirs corrigés, remédiations et progressions, de la 6e à la Terminale.
+24 h gratuites pour essayer 👉 ${lien}${offre}
+#Enseignants #BurkinaFaso #Éducation #PédagogueIA`,
+    },
+    {
+      titre: "SMS (160 caractères)",
+      texte: `PEDAGOGUE.IA: fiches, devoirs corriges, remediation pour enseignants BF. 24h gratuites: ${lien.replace(/^https:\/\//, "")}`,
+    },
+  ];
+}

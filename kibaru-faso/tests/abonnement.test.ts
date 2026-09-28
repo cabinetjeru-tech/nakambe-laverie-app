@@ -81,3 +81,37 @@ describe("Nom des fichiers téléchargés", async () => {
     expect(fileName("«»", "doc")).toBe("pedagogue-ia.doc");
   });
 });
+
+describe("Codes promo", async () => {
+  const { normaliserCode, prixRemise, refusPromo } = await import("@/lib/abonnement");
+  const base = { code: "LANCEMENT", description: null, remise_pct: 25, actif: true, expire_le: null, max_utilisations: null };
+  it("calcule le prix remisé au multiple de 5 inférieur", () => {
+    expect(prixRemise(2000, 25)).toBe(1500);
+    expect(prixRemise(15000, 25)).toBe(11250);
+    expect(prixRemise(2000, 33)).toBe(1340);
+    expect(prixRemise(120, 90)).toBe(100);
+  });
+  it("normalise et vérifie les codes", () => {
+    expect(normaliserCode(" lancement ")).toBe("LANCEMENT");
+    expect(normaliserCode("a!")).toBeNull();
+    expect(refusPromo(base, 0, false)).toBeNull();
+    expect(refusPromo(null, 0, false)).toMatch(/inconnu/);
+    expect(refusPromo({ ...base, actif: false }, 0, false)).toMatch(/désactivé/);
+    expect(refusPromo({ ...base, expire_le: "2020-01-01T00:00:00Z" }, 0, false)).toMatch(/expiré/);
+    expect(refusPromo({ ...base, max_utilisations: 10 }, 10, false)).toMatch(/maximal/);
+    expect(refusPromo(base, 3, true)).toMatch(/déjà utilisé/);
+  });
+});
+
+describe("Messages de campagne", async () => {
+  const { lienDecouvrir, messagesCampagne } = await import("@/lib/campagne");
+  it("incluent le lien parrain et le code promo", () => {
+    const lien = lienDecouvrir("G5TE58");
+    expect(lien).toBe("https://pedagogue-ia.vercel.app/decouvrir?parrain=G5TE58");
+    const m = messagesCampagne(lien, { code: "LANCEMENT", remise_pct: 25 });
+    expect(m.length).toBe(5);
+    expect(m.every((x) => x.texte.includes("pedagogue-ia.vercel.app/decouvrir?parrain=G5TE58"))).toBe(true);
+    expect(m[0]!.texte).toContain("LANCEMENT");
+    expect(m.at(-1)!.texte.length).toBeLessThanOrEqual(160);
+  });
+});

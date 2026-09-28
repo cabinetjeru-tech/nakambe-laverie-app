@@ -1,7 +1,7 @@
 import { z } from "zod";
-import { nouvelleTransaction } from "@/lib/abonnement";
+import { normaliserCode, nouvelleTransaction, prixRemise } from "@/lib/abonnement";
 import { CONTACT } from "@/lib/contact";
-import { compteCourant, formules } from "@/lib/comptes";
+import { compteCourant, formules, verifierPromo } from "@/lib/comptes";
 import { initialiserPaiement, PaiementError, paiementDisponible } from "@/lib/paiement/cinetpay";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
@@ -23,16 +23,29 @@ export async function POST(req: Request) {
   const rl = rateLimit(`paiement:${compte.profil.id}:${clientIp(req)}`, 5, 10 * 60_000);
   if (!rl.ok) return Response.json({ error: "Trop de tentatives. Réessayez dans quelques minutes." }, { status: 429 });
 
-  const parsed = z.object({ formule: z.string().max(40) }).safeParse(await req.json().catch(() => null));
+  const parsed = z.object({ formule: z.string().max(40), promo: z.string().max(30).optional() }).safeParse(await req.json().catch(() => null));
   const formule = parsed.success ? (await formules()).find((f) => f.id === parsed.data.formule) : undefined;
   if (!formule) return Response.json({ error: "Formule inconnue." }, { status: 400 });
+
+  // Code promo : vérifié côté serveur, le prix envoyé à CinetPay est recalculé ici.
+  let montant = formule.prix_fcfa;
+  let codePromo: string | null = null;
+  if (parsed.data?.promo?.trim()) {
+    const code = normaliserCode(parsed.data.promo);
+    const v = code ? await verifierPromo(code, compte.profil.id) : { erreur: "Code promo invalide." };
+    if ("erreur" in v) return Response.json({ error: v.erreur }, { status: 400 });
+    montant = prixRemise(formule.prix_fcfa, v.promo.remise_pct);
+    codePromo = v.promo.code;
+  }
 
   const transactionId = nouvelleTransaction();
   const db = adminClient();
   const { error } = await db.from("paiements").insert({
     utilisateur_id: compte.profil.id,
     formule_id: formule.id,
-    montant_fcfa: formule.prix_fcfa,
+    montant_fcfa: montant,
+    prix_initial_fcfa: formule.prix_fcfa,
+    code_promo: codePromo,
     transaction_id: transactionId,
   });
   if (error) return Response.json({ error: "Paiement impossible pour le moment." }, { status: 500 });
@@ -41,7 +54,7 @@ export async function POST(req: Request) {
   try {
     const url = await initialiserPaiement({
       transactionId,
-      montant: formule.prix_fcfa,
+      montant,
       description: `PEDAGOGUE.IA ${formule.libelle}`,
       notifyUrl: `${base}/api/paiement/notification`,
       returnUrl: `${base}/?paiement=${transactionId}`,

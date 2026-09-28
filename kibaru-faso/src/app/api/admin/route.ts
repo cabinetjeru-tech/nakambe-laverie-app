@@ -19,14 +19,18 @@ export async function GET() {
   const a = await admin();
   if (a.error) return a.error;
   const db = adminClient();
-  const [profils, abos, paiements, preps, offres, coms] = await Promise.all([
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
     db.from("preparations").select("utilisateur_id").limit(100000),
     formules(true),
     db.from("commissions").select("id, parrain_id, filleul_id, montant_fcfa, taux, statut, versee_le, reference_versement, cree_le").order("cree_le", { ascending: false }).limit(2000),
+    db.from("codes_promo").select("*").order("cree_le", { ascending: false }),
+    db.from("paiements").select("code_promo").eq("statut", "reussi").not("code_promo", "is", null).limit(50000),
   ]);
+  const usages = new Map<string, number>();
+  for (const x of paiementsPromo.data ?? []) usages.set(x.code_promo as string, (usages.get(x.code_promo as string) ?? 0) + 1);
   const finPar = new Map<string, { fin: string }[]>();
   // Dernier abonnement de chaque enseignant (le plus lointain) : essai gratuit ou payé.
   const dernier = new Map<string, { fin: string; origine: string }>();
@@ -78,7 +82,9 @@ export async function GET() {
     paiements: (paiements.data ?? []).map((p) => ({ ...p, email: emails.get(p.utilisateur_id) ?? "—" })),
     formules: offres,
     commissions,
+    promos: (promos.data ?? []).map((p) => ({ ...p, utilisations: usages.get(p.code) ?? 0 })),
     moi: a.compte.profil.id,
+    codeParrainage: a.compte.profil.code_parrainage,
   });
 }
 
@@ -95,6 +101,15 @@ const actionSchema = z.discriminatedUnion("action", [
     active: z.boolean(),
   }),
   z.object({ action: z.literal("verifier_paiement"), transaction: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/) }),
+  z.object({
+    action: z.literal("promo"),
+    code: z.string().trim().toUpperCase().regex(/^[A-Z0-9]{3,20}$/),
+    description: z.string().trim().max(120).optional(),
+    remise_pct: z.number().int().min(1).max(90),
+    actif: z.boolean(),
+    expire_le: z.string().max(40).nullable().optional(),
+    max_utilisations: z.number().int().min(1).max(1_000_000).nullable().optional(),
+  }),
   z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
 ]);
 
@@ -123,6 +138,20 @@ export async function POST(req: Request) {
       if (!prixValide(x.prix_fcfa)) return Response.json({ error: "Prix invalide : nombre entier, multiple de 5, au moins 100 FCFA." }, { status: 400 });
       await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active });
       return Response.json({ ok: true });
+    case "promo": {
+      const expire = x.expire_le ? new Date(x.expire_le) : null;
+      if (expire && Number.isNaN(expire.getTime())) return Response.json({ error: "Date d'expiration invalide." }, { status: 400 });
+      const { error } = await db.from("codes_promo").upsert({
+        code: x.code,
+        description: x.description || null,
+        remise_pct: x.remise_pct,
+        actif: x.actif,
+        expire_le: expire?.toISOString() ?? null,
+        max_utilisations: x.max_utilisations ?? null,
+      });
+      if (error) return Response.json({ error: "Enregistrement impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
     case "commission": {
       const patch =
         x.statut === "versee"

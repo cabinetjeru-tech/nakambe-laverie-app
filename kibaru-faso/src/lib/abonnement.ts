@@ -94,3 +94,34 @@ export function nouveauCodeParrainage(): string {
 export function heuresRestantes(fin: Date | null, maintenant: Date): number {
   return fin && fin > maintenant ? Math.ceil((fin.getTime() - maintenant.getTime()) / 3_600_000) : 0;
 }
+
+// ---------------------------------------------------------------- Codes promo
+
+export type CodePromo = {
+  code: string;
+  description: string | null;
+  remise_pct: number;
+  actif: boolean;
+  expire_le: string | null;
+  max_utilisations: number | null;
+};
+
+export function normaliserCode(code: string | null | undefined): string | null {
+  const c = (code ?? "").trim().toUpperCase().replace(/\s+/g, "");
+  return /^[A-Z0-9]{3,20}$/.test(c) ? c : null;
+}
+
+/** Prix après remise, arrondi au multiple de 5 FCFA inférieur (exigence mobile money), au moins 100 FCFA. */
+export function prixRemise(prix: number, remisePct: number): number {
+  const p = Math.floor((prix * (100 - remisePct)) / 100 / 5) * 5;
+  return Math.max(100, p);
+}
+
+/** Raison pour laquelle un code n'est pas utilisable (null s'il l'est). */
+export function refusPromo(p: CodePromo | null, utilisations: number, dejaUtiliseParLui: boolean, maintenant = new Date()): string | null {
+  if (!p || !p.actif) return "Code promo inconnu ou désactivé.";
+  if (p.expire_le && new Date(p.expire_le) <= maintenant) return "Ce code promo a expiré.";
+  if (p.max_utilisations !== null && utilisations >= p.max_utilisations) return "Ce code promo a atteint son nombre maximal d'utilisations.";
+  if (dejaUtiliseParLui) return "Vous avez déjà utilisé ce code promo.";
+  return null;
+}
