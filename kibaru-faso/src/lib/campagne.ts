@@ -27,7 +27,7 @@ Je vous recommande *PÉDAGOGUE.IA*, un assistant conçu pour les enseignants du 
 ✅ activités de remédiation et progressions annuelles ;
 ✅ téléchargement en PDF ou Word, prêt à imprimer.
 Il distingue toujours ce qui vient des documents officiels de ce qui est une proposition, et vérifie les calculs et les durées.
-🎁 Essai gratuit 24 h, puis 2 000 FCFA/mois ou 15 000 FCFA/an (Orange Money, Moov Money).${offre}
+🎁 Essai gratuit 24 h, puis 200 FCFA la journée, 2 000 FCFA/mois ou 15 000 FCFA/an (Orange Money, Moov Money).${offre}
 Inscription : ${lien}`,
     },
     {

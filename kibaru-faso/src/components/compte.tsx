@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
+import { dureeFormule, formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { CONTACT } from "@/lib/contact";
 
@@ -282,7 +282,7 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
             {c.fin ? `Abonnement terminé le ${formatDate(c.fin)}.` : "Aucun abonnement en cours."} Choisissez une formule pour utiliser PÉDAGOGUE.IA.
           </p>
         )}
-        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className={`mt-3 grid grid-cols-1 gap-3 ${etat.formules.length >= 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
           {etat.formules.map((f) => (
             <div key={f.id} className="rounded-xl border-2 border-faso/30 bg-white p-4">
               <div className="font-semibold">{f.libelle}</div>
@@ -294,7 +294,7 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
               ) : (
                 <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
               )}
-              <div className="text-xs text-muted">{f.duree_jours} jours d&apos;accès complet</div>
+              <div className="text-xs text-muted">{dureeFormule(f.duree_jours)} d&apos;accès complet</div>
               <button
                 type="button"
                 disabled={!!busy || !etat.paiementDisponible || c.suspendu}

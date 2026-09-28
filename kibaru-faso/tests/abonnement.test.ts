@@ -115,3 +115,16 @@ describe("Messages de campagne", async () => {
     expect(m.at(-1)!.texte.length).toBeLessThanOrEqual(160);
   });
 });
+
+describe("Durée des formules", async () => {
+  const { dureeFormule, montantCommission, prixRemise } = await import("@/lib/abonnement");
+  it("affiche le pass journalier en heures", () => {
+    expect(dureeFormule(1)).toBe("24 h");
+    expect(dureeFormule(30)).toBe("30 jours");
+    expect(dureeFormule(365)).toBe("1 an");
+  });
+  it("applique commission et remise au pass journalier de 200 FCFA", () => {
+    expect(montantCommission(200, 20)).toBe(40);
+    expect(prixRemise(200, 25)).toBe(150);
+  });
+});

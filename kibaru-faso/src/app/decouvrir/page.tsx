@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 async function offres() {
-  const defaut = { mensuel: 2000, annuel: 15000, promo: null as CodePromo | null };
+  const defaut = { journalier: 200 as number | null, mensuel: 2000, annuel: 15000, promo: null as CodePromo | null };
   if (!accountsEnabled()) return defaut;
   try {
     const db = adminClient();
@@ -27,7 +27,7 @@ async function offres() {
     ]);
     const prix = Object.fromEntries((f ?? []).map((x) => [x.id, x.prix_fcfa as number]));
     const promo = ((p ?? []) as CodePromo[]).find((x) => !x.expire_le || new Date(x.expire_le) > new Date()) ?? null;
-    return { mensuel: prix.mensuel ?? defaut.mensuel, annuel: prix.annuel ?? defaut.annuel, promo };
+    return { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? defaut.mensuel, annuel: prix.annuel ?? defaut.annuel, promo };
   } catch {
     return defaut;
   }
@@ -126,12 +126,19 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
 
       <section className="mx-auto max-w-5xl px-4 py-12">
         <h2 className="text-2xl font-extrabold text-faso-dark">Tarifs simples</h2>
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className={`mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 ${o.journalier ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
           <div className="rounded-2xl border-2 border-or bg-or-50 p-5">
             <div className="font-bold">Essai gratuit</div>
             <div className="mt-1 text-3xl font-extrabold">0 FCFA</div>
             <div className="text-sm text-muted">24 h d&apos;accès complet dès l&apos;inscription</div>
           </div>
+          {o.journalier && (
+            <div className="rounded-2xl border-2 border-faso/30 p-5">
+              <div className="font-bold">Pass journalier</div>
+              <div className="mt-1 text-3xl font-extrabold text-faso-dark">{formatFcfa(o.journalier)}</div>
+              <div className="text-sm text-muted">24 h d&apos;accès complet, pour un besoin ponctuel</div>
+            </div>
+          )}
           <div className="rounded-2xl border-2 border-faso/30 p-5">
             <div className="font-bold">Mensuel</div>
             <div className="mt-1 text-3xl font-extrabold text-faso-dark">{formatFcfa(o.mensuel)}</div>
@@ -164,7 +171,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           {(
             [
               ["Faut-il payer pour essayer ?", "Non : l'inscription donne 24 h d'accès complet, sans paiement."],
-              ["Comment payer ?", "Par Orange Money, Moov Money ou carte bancaire, via la plateforme sécurisée CinetPay."],
+              ["Comment payer ?", "Par Orange Money, Moov Money ou carte bancaire, via la plateforme sécurisée CinetPay. Pass journalier (24 h), mensuel ou annuel, au choix."],
               ["Les contenus sont-ils officiels ?", "PÉDAGOGUE.IA s'appuie en priorité sur sa base documentaire et indique toujours ce qui est une proposition. L'enseignant reste maître de ses préparations."],
               ["Mes préparations sont-elles sauvegardées ?", "Oui : vous les retrouvez sur votre téléphone comme sur votre ordinateur, et vous pouvez les télécharger en PDF ou Word."],
             ] as const
