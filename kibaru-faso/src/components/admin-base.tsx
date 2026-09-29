@@ -397,7 +397,7 @@ export function BaseDocumentaire() {
       {d.enAttente.length > 0 && (
         <section className="rounded-xl border border-line bg-white p-4 text-sm">
           <h2 className="font-bold text-faso-dark">Ressources du registre à déposer ({d.enAttente.length})</h2>
-          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. Procurez-vous le fichier, puis cliquez sur « Déposer ».</p>
+          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. « Télécharger » ouvre le document sur le site officiel quand son lien est connu ; enregistrez-le, puis cliquez sur « Déposer ». Les curricula de la réforme (API) priment sur les anciens guides pour les classes où la réforme est appliquée.</p>
           <ul className="mt-2 divide-y divide-line">
             {d.enAttente.map((p) => (
               <li key={p.documentId ?? p.titre} className="flex flex-wrap items-center justify-between gap-2 py-2">
@@ -405,9 +405,16 @@ export function BaseDocumentaire() {
                   <span className="font-mono text-xs text-muted">{p.documentId}</span> <strong>{p.titre}</strong>
                   <span className="text-muted"> · {[p.classes.join(", "), p.disciplines.join(", "), p.priorite && `priorité ${p.priorite.toLowerCase()}`].filter(Boolean).join(" · ")}</span>
                 </span>
-                <button type="button" onClick={() => deposerPour(p)} className="rounded-lg border border-faso px-3 py-1 text-xs font-semibold text-faso">
-                  Déposer
-                </button>
+                <span className="flex items-center gap-2">
+                  {p.url && (
+                    <a href={p.url} target="_blank" rel="noopener" className="text-xs font-semibold text-faso underline underline-offset-2">
+                      Télécharger
+                    </a>
+                  )}
+                  <button type="button" onClick={() => deposerPour(p)} className="rounded-lg border border-faso px-3 py-1 text-xs font-semibold text-faso">
+                    Déposer
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
