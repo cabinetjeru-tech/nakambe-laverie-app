@@ -252,6 +252,7 @@ export function BaseDocumentaire() {
 
   if (!d) return <p className="text-sm text-muted">{message ?? "Chargement de la base documentaire…"}</p>;
   const importables = d.enAttente.filter((p) => p.url && p.documentId).map((p) => p.documentId!);
+  const idsRegistre = new Set(importables.map((x) => x.toUpperCase()));
   const actifs = d.documents.filter((x) => x.statut === "ACTIF").length;
 
   return (
@@ -412,9 +413,32 @@ export function BaseDocumentaire() {
             />
           </label>
         </div>
-        <button type="submit" disabled={busy || texte.length < 200} className="rounded-lg bg-faso px-4 py-2 font-semibold text-white disabled:opacity-40">
-          {busy ? "Patientez…" : "Ajouter à la base documentaire"}
-        </button>
+        {texte.length < 200 && f.url && f.id && idsRegistre.has(f.id.toUpperCase()) ? (
+          <div className="rounded-lg bg-faso-50 p-3">
+            <p className="text-xs text-faso-dark">Pas besoin de fichier : ce document a un lien officiel connu. Le serveur peut le télécharger et le lire lui-même.</p>
+            <button
+              type="button"
+              disabled={!!importEnCours}
+              onClick={async () => {
+                const ok = await importer(f.id.toUpperCase());
+                await charger();
+                setMessage(ok ? `${f.id} importé : PÉDAGOGUE.IA le consulte dès maintenant (statut À VÉRIFIER).` : `Import de ${f.id} impossible : la raison est indiquée sous le bouton. Vous pouvez aussi télécharger le document puis le choisir en haut du formulaire.`);
+                if (ok) setF(VIDE);
+              }}
+              className="mt-2 rounded-lg bg-faso px-4 py-2 font-semibold text-white disabled:opacity-50"
+            >
+              {importEnCours ? "Téléchargement et lecture en cours…" : "Importer depuis le lien officiel"}
+            </button>
+            {f.id && imports[f.id.toUpperCase()] && <p className="mt-1 text-xs">{imports[f.id.toUpperCase()]}</p>}
+          </div>
+        ) : (
+          <div>
+            <button type="submit" disabled={busy || texte.length < 200} className="rounded-lg bg-faso px-4 py-2 font-semibold text-white disabled:opacity-40">
+              {busy ? "Patientez…" : "Ajouter à la base documentaire"}
+            </button>
+            {texte.length < 200 && <p className="mt-1 text-xs text-muted">Choisissez d&apos;abord le fichier (tout en haut du formulaire) : le bouton s&apos;active une fois son texte lu.</p>}
+          </div>
+        )}
       </form>
 
       {d.enAttente.length > 0 && (
