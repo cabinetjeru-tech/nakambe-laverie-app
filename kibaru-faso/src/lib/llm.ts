@@ -1,5 +1,6 @@
 import "server-only";
 import Anthropic from "@anthropic-ai/sdk";
+import type { Consommation } from "./couts";
 import { SYSTEM_PROMPT } from "./prompt";
 
 /** Appel à Claude en flux (streaming) avec le prompt système PÉDAGOGUE.IA. */
@@ -19,7 +20,7 @@ export function aiErrorMessage(e: unknown): string {
   if (e instanceof AiUnavailableError) return e.message;
   if (e instanceof Anthropic.AuthenticationError) return "La clé API configurée (ANTHROPIC_API_KEY) est invalide ou a été supprimée. Prévenez l'administrateur.";
   if (e instanceof Anthropic.PermissionDeniedError) return "La clé API n'a pas l'autorisation d'utiliser ce service ou ce modèle. Prévenez l'administrateur.";
-  if (e instanceof Anthropic.NotFoundError) return `Le modèle configuré (${aiConfig().model}) n'est pas accessible avec cette clé API. Prévenez l'administrateur (variable KIBARU_MODEL).`;
+  if (e instanceof Anthropic.NotFoundError) return `Le modèle configuré (${aiConfig().model}) n'est pas accessible avec cette clé API. Prévenez l'administrateur (variables KIBARU_MODEL / KIBARU_MODEL_EXPERT).`;
   if (e instanceof Anthropic.RateLimitError) return "Le service est très sollicité ou la limite de dépenses du compte est atteinte. Réessayez dans une minute.";
   if (e instanceof Anthropic.BadRequestError) {
     const detail = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message;
@@ -33,8 +34,15 @@ export function aiErrorMessage(e: unknown): string {
 const EFFORTS = ["low", "medium", "high"] as const;
 type Effort = (typeof EFFORTS)[number];
 
-export function aiConfig() {
-  const model = process.env.KIBARU_MODEL?.trim() || "claude-opus-5";
+/**
+ * Modèle « mixte » : Sonnet pour les préparations courantes, Opus pour le mode expert (analyse plus poussée).
+ * Réglables par KIBARU_MODEL et KIBARU_MODEL_EXPERT.
+ */
+export function aiConfig(mode?: string) {
+  const model =
+    mode === "expert"
+      ? process.env.KIBARU_MODEL_EXPERT?.trim() || "claude-opus-5-5"
+      : process.env.KIBARU_MODEL?.trim() || "claude-sonnet-5-5";
   const e = process.env.KIBARU_EFFORT?.trim() as Effort | undefined;
   const effort: Effort = e && (EFFORTS as readonly string[]).includes(e) ? e : "medium";
   return { model, effort, configured: !!process.env.ANTHROPIC_API_KEY };
@@ -43,10 +51,15 @@ export function aiConfig() {
 // Modèles pour lesquels l'API propose le repli automatique en cas de refus.
 const FALLBACK_MODELS = /^claude-(opus-5|fable-5)/;
 
-export type StreamEnd = "ok" | "refusal" | "max_tokens";
+export type StreamEnd = {
+  fin: "ok" | "refusal" | "max_tokens";
+  /** Modèle réellement utilisé (peut différer en cas de repli automatique). */
+  modele: string;
+  consommation: Consommation;
+};
 
-export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[]): AsyncGenerator<string, StreamEnd, void> {
-  const { model, effort, configured } = aiConfig();
+export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[], mode?: string): AsyncGenerator<string, StreamEnd, void> {
+  const { model, effort, configured } = aiConfig(mode);
   if (!configured) throw new AiUnavailableError();
   const client = new Anthropic();
   const stream = client.beta.messages.stream({
@@ -62,7 +75,13 @@ export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[])
     if (event.type === "content_block_delta" && event.delta.type === "text_delta") yield event.delta.text;
   }
   const final = await stream.finalMessage();
-  if (final.stop_reason === "refusal") return "refusal";
-  if (final.stop_reason === "max_tokens") return "max_tokens";
-  return "ok";
+  const u = final.usage;
+  const consommation: Consommation = {
+    entree: u?.input_tokens ?? 0,
+    sortie: u?.output_tokens ?? 0,
+    cacheLecture: u?.cache_read_input_tokens ?? 0,
+    cacheEcriture: u?.cache_creation_input_tokens ?? 0,
+  };
+  const fin = final.stop_reason === "refusal" ? "refusal" : final.stop_reason === "max_tokens" ? "max_tokens" : "ok";
+  return { fin, modele: final.model || model, consommation };
 }

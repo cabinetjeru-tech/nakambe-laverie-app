@@ -60,6 +60,7 @@ type CompteReponse = {
   paiementDisponible?: boolean;
   paiements?: PaiementInfo[];
   parrainage?: EtatCompte["parrainage"];
+  quota?: EtatCompte["quota"];
 };
 const PARRAIN_KEY = "kibaru:parrain";
 
@@ -137,7 +138,7 @@ export function KibaruApp() {
       const a = (await (await fetch("/api/compte")).json()) as CompteReponse;
       const etat: EtatCompte | undefined =
         a.mode === "comptes"
-          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted, parrainage: a.parrainage ?? null }
+          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted, parrainage: a.parrainage ?? null, quota: a.quota ?? null }
           : undefined;
       applyScope(a.mode === "comptes" ? (a.compte?.email.toLowerCase() ?? null) : null);
       if (!a.granted && a.mode !== "libre") {
@@ -312,7 +313,7 @@ export function KibaruApp() {
       if (!res.ok || !res.body) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
         // Session expirée ou abonnement terminé : l'écran de connexion ou d'abonnement reprend la main.
-        if (status.mode === "comptes" && [401, 402, 403].includes(res.status)) void loadStatus();
+        if (status.mode === "comptes" && [401, 402, 403, 429].includes(res.status)) void loadStatus();
         throw new Error(j.error || "Le service n'a pas répondu.");
       }
       const reader = res.body.getReader();
@@ -456,7 +457,7 @@ export function KibaruApp() {
           {compte && (
             <button
               type="button"
-              onClick={() => setCompteOpen(true)}
+              onClick={() => (setCompteOpen(true), void loadStatus())}
               className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-line px-2 py-1.5 text-sm font-semibold text-faso-dark hover:border-faso sm:px-3"
               aria-label="Mon compte"
             >
@@ -484,7 +485,7 @@ export function KibaruApp() {
       {compte?.essai && (
         <div className="border-b border-or/40 bg-or-50 px-4 py-2 text-sm">
           🎁 Essai gratuit : il vous reste <strong>{compte.heuresRestantes} h</strong>.{" "}
-          <button type="button" onClick={() => setCompteOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+          <button type="button" onClick={() => (setCompteOpen(true), void loadStatus())} className="font-semibold text-faso underline underline-offset-2">
             S&apos;abonner
           </button>
         </div>
@@ -492,7 +493,7 @@ export function KibaruApp() {
       {compte && !compte.essai && compte.role !== "admin" && compte.joursRestants > 0 && compte.joursRestants <= 5 && (
         <div className="border-b border-or/40 bg-or-50 px-4 py-2 text-sm">
           Votre abonnement se termine dans {compte.joursRestants} jour{compte.joursRestants > 1 ? "s" : ""}.{" "}
-          <button type="button" onClick={() => setCompteOpen(true)} className="font-semibold text-faso underline underline-offset-2">
+          <button type="button" onClick={() => (setCompteOpen(true), void loadStatus())} className="font-semibold text-faso underline underline-offset-2">
             Prolonger
           </button>
         </div>

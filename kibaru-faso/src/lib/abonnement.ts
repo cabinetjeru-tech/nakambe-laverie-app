@@ -3,7 +3,16 @@
  * Un abonnement payé ou accordé avant la fin du précédent le prolonge : l'enseignant ne perd aucun jour.
  */
 
-export type Formule = { id: string; libelle: string; prix_fcfa: number; duree_jours: number; active: boolean; ordre: number };
+export type Formule = {
+  id: string;
+  libelle: string;
+  prix_fcfa: number;
+  duree_jours: number;
+  active: boolean;
+  ordre: number;
+  /** Générations par jour (null = illimité). */
+  quota_jour?: number | null;
+};
 export type Periode = { debut: Date; fin: Date };
 
 const JOUR = 86_400_000;

@@ -38,6 +38,8 @@ export type EtatCompte = {
   paiements: PaiementInfo[];
   granted: boolean;
   parrainage?: ParrainageInfo | null;
+  /** Générations utilisées aujourd'hui et limite (null = illimité). */
+  quota?: { limite: number | null; utilisees: number } | null;
 };
 
 /** Lien d'invitation d'un parrain : page de présentation (aperçu soigné sur WhatsApp), puis inscription parrainée. */
@@ -294,7 +296,10 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
               ) : (
                 <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
               )}
-              <div className="text-xs text-muted">{dureeFormule(f.duree_jours)} d&apos;accès complet</div>
+              <div className="text-xs text-muted">
+                {dureeFormule(f.duree_jours)} d&apos;accès complet
+                {f.quota_jour ? ` · ${f.quota_jour} générations par jour` : ""}
+              </div>
               <button
                 type="button"
                 disabled={!!busy || !etat.paiementDisponible || c.suspendu}
@@ -306,6 +311,23 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
             </div>
           ))}
         </div>
+        {etat.quota && etat.quota.limite !== null && actif && (
+          <div className="mt-3 rounded-lg border border-line p-3 text-sm">
+            <div className="flex justify-between">
+              <span>Générations aujourd&apos;hui</span>
+              <strong>
+                {etat.quota.utilisees} / {etat.quota.limite}
+              </strong>
+            </div>
+            <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-faso-50">
+              <div
+                className={`h-full rounded-full ${etat.quota.utilisees >= etat.quota.limite ? "bg-rouge" : "bg-faso"}`}
+                style={{ width: `${Math.min(100, (etat.quota.utilisees / Math.max(1, etat.quota.limite)) * 100)}%` }}
+              />
+            </div>
+            <p className="mt-1 text-xs text-muted">Le compteur repart à zéro chaque jour à minuit. Les questions de précision ne sont pas comptées.</p>
+          </div>
+        )}
         {c.role !== "admin" && (
           <form onSubmit={appliquerPromo} className="mt-3 flex flex-wrap items-center gap-2">
             <input

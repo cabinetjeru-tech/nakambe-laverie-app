@@ -24,6 +24,8 @@ type Enseignant = {
   code_parrainage: string;
   parrain_id: string | null;
   filleuls: number;
+  generations30j: number;
+  cout30jFcfa: number;
 };
 type Commission = {
   id: string;
@@ -45,6 +47,10 @@ type Donnees = {
     enEssai: number;
     parraines: number;
     commissionsDues: number;
+    generationsJour: number;
+    coutJourFcfa: number;
+    coutMoisFcfa: number;
+    tauxUsdFcfa: number;
     preparations: number;
     recettesMois: number;
     recettesTotal: number;
@@ -183,6 +189,13 @@ function Tableau({ d }: { d: Donnees }) {
         <Carte label="En essai gratuit (24 h)" valeur={String(s.enEssai)} detail="à convertir en abonnés" />
         <Carte label="Recettes du mois" valeur={formatFcfa(s.recettesMois)} detail={`Total : ${formatFcfa(s.recettesTotal)}`} />
         <Carte label="Commissions à verser" valeur={formatFcfa(s.commissionsDues)} detail="onglet Parrainage" />
+        <Carte label="Générations aujourd'hui" valeur={String(s.generationsJour)} detail={`Coût IA : ${formatFcfa(s.coutJourFcfa)}`} />
+        <Carte label="Coût de l'IA ce mois" valeur={formatFcfa(s.coutMoisFcfa)} detail={`estimé, 1 $ = ${s.tauxUsdFcfa} FCFA`} />
+        <Carte
+          label="Marge du mois"
+          valeur={formatFcfa(s.recettesMois - s.coutMoisFcfa - s.commissionsDues)}
+          detail="recettes − coût IA − commissions dues"
+        />
         <Carte label="Préparations sauvegardées" valeur={String(s.preparations)} />
       </div>
       <div className="rounded-xl border border-line bg-white p-4">
@@ -252,6 +265,8 @@ function Enseignants({ d, action }: { d: Donnees; action: (b: Record<string, unk
                   Inscrit le {formatDate(e.cree_le)} · {e.preparations} préparation{e.preparations > 1 ? "s" : ""}
                   <br />
                   Code {e.code_parrainage} · {e.filleuls} filleul{e.filleuls > 1 ? "s" : ""}
+                  <br />
+                  30 j : {e.generations30j} génération{e.generations30j > 1 ? "s" : ""} · coût IA {formatFcfa(e.cout30jFcfa)}
                   {e.parrain_id ? ` · parrainé par ${d.enseignants.find((x) => x.id === e.parrain_id)?.email ?? "—"}` : ""}
                 </div>
               </div>
@@ -597,7 +612,10 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
   const [edits, setEdits] = useState<Record<string, Formule>>(() => Object.fromEntries(d.formules.map((f) => [f.id, f])));
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted">Les nouveaux prix s&apos;appliquent aux prochains paiements. Montants en FCFA, multiples de 5.</p>
+      <p className="text-sm text-muted">
+        Les nouveaux prix s&apos;appliquent aux prochains paiements. Montants en FCFA, multiples de 5. Le quota limite le nombre de générations par jour et par
+        enseignant (laisser vide = illimité) ; il protège la marge, car chaque génération a un coût d&apos;IA (voir le tableau de bord). Essai gratuit : 5 par jour.
+      </p>
       {Object.values(edits).map((f) => (
         <div key={f.id} className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-white p-3">
           <label className="text-xs font-medium text-muted">
@@ -612,12 +630,27 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
             Durée (jours)
             <input inputMode="numeric" value={f.duree_jours} onChange={(e) => setEdits({ ...edits, [f.id]: { ...f, duree_jours: Number(e.target.value.replace(/\D/g, "")) } })} className={`${input} mt-1 block w-24`} />
           </label>
+          <label className="text-xs font-medium text-muted">
+            Générations / jour
+            <input
+              inputMode="numeric"
+              value={f.quota_jour ?? ""}
+              placeholder="illimité"
+              onChange={(e) => setEdits({ ...edits, [f.id]: { ...f, quota_jour: e.target.value.replace(/\D/g, "") ? Number(e.target.value.replace(/\D/g, "")) : null } })}
+              className={`${input} mt-1 block w-24`}
+            />
+          </label>
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" className="accent-faso" checked={f.active} onChange={(e) => setEdits({ ...edits, [f.id]: { ...f, active: e.target.checked } })} /> Proposée
           </label>
           <button
             type="button"
-            onClick={() => void action({ action: "formule", id: f.id, libelle: f.libelle, prix_fcfa: f.prix_fcfa, duree_jours: f.duree_jours, active: f.active }, `Formule « ${f.libelle} » enregistrée`)}
+            onClick={() =>
+              void action(
+                { action: "formule", id: f.id, libelle: f.libelle, prix_fcfa: f.prix_fcfa, duree_jours: f.duree_jours, active: f.active, quota_jour: f.quota_jour ?? null },
+                `Formule « ${f.libelle} » enregistrée`,
+              )
+            }
             className="rounded-lg bg-faso px-3 py-1.5 text-sm font-semibold text-white"
           >
             Enregistrer
