@@ -195,6 +195,11 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
             {CONTACT.email}
           </a>
         </p>
+        <p className="mt-2">
+          <a href="/conditions" className="underline underline-offset-2">
+            Conditions d&apos;utilisation et de vente · Données personnelles
+          </a>
+        </p>
         <p className="mt-2">© {new Date().getFullYear()} PÉDAGOGUE.IA — L&apos;intelligence au service de la pédagogie</p>
       </footer>
     </main>

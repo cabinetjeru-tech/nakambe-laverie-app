@@ -75,6 +75,10 @@ export function Contact({ className = "" }: { className?: string }) {
       ·{" "}
       <a href={`mailto:${CONTACT.email}`} className="font-semibold text-faso underline underline-offset-2">
         {CONTACT.email}
+      </a>{" "}
+      ·{" "}
+      <a href="/conditions" target="_blank" className="underline underline-offset-2">
+        Conditions
       </a>
     </p>
   );
@@ -193,6 +197,15 @@ export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: {
             </button>
           )}
         </div>
+        {vue === "inscription" && (
+          <p className="mt-3 text-center text-xs text-muted">
+            En créant un compte, vous acceptez les{" "}
+            <a href="/conditions" target="_blank" className="underline">
+              conditions d&apos;utilisation et de vente
+            </a>
+            .
+          </p>
+        )}
         <Contact className="mt-5 border-t border-line pt-3 text-center" />
       </form>
     </div>
@@ -364,7 +377,14 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
                   {formatDate(p.cree_le)} · {formatFcfa(p.montant_fcfa)}
                   {p.moyen ? ` · ${p.moyen}` : ""}
                 </span>
-                <span className={p.statut === "reussi" ? "font-semibold text-faso" : p.statut === "en_attente" ? "text-muted" : "text-rouge"}>{STATUTS[p.statut] ?? p.statut}</span>
+                <span className={p.statut === "reussi" ? "font-semibold text-faso" : p.statut === "en_attente" ? "text-muted" : "text-rouge"}>
+                  {STATUTS[p.statut] ?? p.statut}
+                  {p.statut === "reussi" && (
+                    <a href={`/recu/${encodeURIComponent(p.transaction_id)}`} target="_blank" className="ml-2 font-normal underline underline-offset-2">
+                      Reçu
+                    </a>
+                  )}
+                </span>
               </li>
             ))}
           </ul>
