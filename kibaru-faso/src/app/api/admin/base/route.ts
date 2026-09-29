@@ -1,12 +1,14 @@
 import { z } from "zod";
 import { DOC_TYPES, STATUTS } from "@/lib/base/structure";
+import { ImportError, ligneDepuisRegistre, telechargerEtExtraire } from "@/lib/base/import-officiel";
 import { exigerAdmin } from "@/lib/garde-admin";
+import { journaliserErreur } from "@/lib/journal";
 import { getBase, invaliderBaseEnLigne } from "@/lib/library";
 import { adminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 /** Texte extrait au plus (≈ 3 Mo en UTF-8, sous la limite de 4,5 Mo des requêtes Vercel). */
 const TEXTE_MAX = 1_500_000;
@@ -75,6 +77,7 @@ const schema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("modifier"), id: idSchema, ...champs }),
   z.object({ action: z.literal("supprimer"), id: idSchema }),
+  z.object({ action: z.literal("importer"), id: idSchema }),
 ]);
 
 export async function POST(req: Request) {
@@ -86,7 +89,24 @@ export async function POST(req: Request) {
   const db = adminClient();
   const maintenant = new Date().toISOString();
   let r;
-  if (x.action === "supprimer") r = await db.from("base_documents").delete().eq("id", x.id);
+  if (x.action === "importer") {
+    // Import automatique d'une ressource du registre depuis son lien officiel.
+    const base = await getBase();
+    const entree = base.registry.find((e) => e.meta.documentId?.toUpperCase() === x.id);
+    if (!entree?.meta.url) return Response.json({ error: `${x.id} : aucun lien officiel connu dans le registre.` }, { status: 400 });
+    try {
+      const { texte, fichierNom } = await telechargerEtExtraire(entree.meta.url);
+      r = await db.from("base_documents").upsert(ligneDepuisRegistre(entree.meta, entree.meta.url, texte, fichierNom, a.compte.profil.id));
+      if (!r.error) {
+        invaliderBaseEnLigne();
+        return Response.json({ ok: true, message: `${x.id} importé (${texte.length.toLocaleString("fr-FR")} caractères).` });
+      }
+    } catch (e) {
+      const msg = e instanceof ImportError ? e.message : `Import impossible : ${(e as Error).message}`;
+      await journaliserErreur("import", `${x.id} — ${entree.meta.url} — ${msg}`, a.compte.profil.id);
+      return Response.json({ error: `${x.id} : ${msg}` }, { status: 502 });
+    }
+  } else if (x.action === "supprimer") r = await db.from("base_documents").delete().eq("id", x.id);
   else if (x.action === "modifier") {
     const { action: _a, id, ...patch } = x;
     r = await db.from("base_documents").update({ ...patch, maj_le: maintenant }).eq("id", id);
