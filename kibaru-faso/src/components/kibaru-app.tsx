@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TYPES_SEANCE, type TeacherContext } from "@/lib/conversation";
 import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments, type Category } from "@/lib/documents";
-import { downloadPdf, downloadWord, printHtml } from "@/lib/export";
+import { downloadPdf, downloadWord, printHtml, type OptionsDocument } from "@/lib/export";
 import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
 import { CLASSES } from "@/lib/search";
@@ -620,7 +620,7 @@ export function KibaruApp() {
                         {m.content}
                       </div>
                     ) : (
-                      <AssistantMessage key={i} message={m} streaming={busy && i === messages.length - 1} context={context} admin={compte?.role === "admin"} />
+                      <AssistantMessage key={i} message={m} streaming={busy && i === messages.length - 1} context={context} admin={compte?.role === "admin"} compte={compte} />
                     ),
                   )}
                   {busy && last?.role === "user" && (
@@ -954,7 +954,19 @@ async function publierFiche(contenu: string, context: TeacherContext) {
   alert(r?.ok ? `Fiche publiée : ${j.message ?? ""}` : `Publication impossible : ${j.error ?? "erreur réseau"}`);
 }
 
-function AssistantMessage({ message, streaming, context, admin = false }: { message: StoredMessage; streaming: boolean; context: TeacherContext; admin?: boolean }) {
+function AssistantMessage({
+  message,
+  streaming,
+  context,
+  admin = false,
+  compte = null,
+}: {
+  message: StoredMessage;
+  streaming: boolean;
+  context: TeacherContext;
+  admin?: boolean;
+  compte?: Pick<CompteInfo, "nom" | "etablissement" | "ville"> | null;
+}) {
   const fullRef = useRef<HTMLDivElement | null>(null);
   const partRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [copied, setCopied] = useState(false);
@@ -965,14 +977,30 @@ function AssistantMessage({ message, streaming, context, admin = false }: { mess
   const exportPart = (kind: "print" | "word" | "pdf", key: string | null, label: string) => {
     const el = key ? partRefs.current[key] : fullRef.current;
     if (!el) return;
-    const withFooter = !isStudentCopy(label); // le sujet distribué aux élèves ne porte pas de mention PÉDAGOGUE.IA
+    const copieEleve = isStudentCopy(label); // le sujet distribué aux élèves ne porte ni mention PÉDAGOGUE.IA ni nom de l'enseignant
     // Copie élève : ni mention de la plateforme dans le pied de page, ni dans le titre (imprimé en en-tête par les navigateurs).
-    const title = withFooter ? `${baseTitle} — ${label}` : [context.discipline, context.classe, label].filter(Boolean).join(" — ");
-    if (kind === "print") printHtml(title, el.innerHTML, withFooter);
-    else if (kind === "word") downloadWord(title, el.innerHTML, withFooter);
+    const title = !copieEleve ? `${baseTitle} — ${label}` : [context.discipline, context.classe, label].filter(Boolean).join(" — ");
+    const options: OptionsDocument = {
+      pied: !copieEleve,
+      copieEleve,
+      intitule: key ? label : undefined,
+      entete: {
+        administration: context.administration,
+        etablissement: context.etablissement || compte?.etablissement || undefined,
+        ville: context.ville || compte?.ville || undefined,
+        anneeScolaire: context.anneeScolaire,
+        enseignant: context.enseignant || compte?.nom || undefined,
+        discipline: context.discipline,
+        classe: context.classe,
+        duree: context.duree,
+        theme: context.theme,
+      },
+    };
+    if (kind === "print") printHtml(title, el.innerHTML, options);
+    else if (kind === "word") downloadWord(title, el.innerHTML, options);
     else {
       setPdfBusy(label);
-      downloadPdf(title, el.innerHTML, withFooter)
+      downloadPdf(title, el.innerHTML, options)
         .catch((e) => (console.error("[pdf]", e), alert("Téléchargement PDF impossible sur cet appareil : utilisez « Imprimer » puis « Enregistrer en PDF ».")))
         .finally(() => setPdfBusy(null));
     }
@@ -1331,6 +1359,15 @@ function ProfilePanel({ context, onChange }: { context: TeacherContext; onChange
           <input value={context.enseignant ?? ""} onChange={(e) => onChange({ enseignant: e.target.value })} placeholder="M. / Mme …" className={inputCls} />
         </label>
         <label className="col-span-2 text-xs font-medium text-muted">
+          En-tête administratif (facultatif)
+          <input
+            value={context.administration ?? ""}
+            onChange={(e) => onChange({ administration: e.target.value })}
+            placeholder="Ministère… / Direction régionale…"
+            className={inputCls}
+          />
+        </label>
+        <label className="col-span-2 text-xs font-medium text-muted">
           Établissement
           <input value={context.etablissement ?? ""} onChange={(e) => onChange({ etablissement: e.target.value })} placeholder="Lycée…" className={inputCls} />
         </label>
@@ -1361,7 +1398,10 @@ function ProfilePanel({ context, onChange }: { context: TeacherContext; onChange
           </select>
         </label>
       </div>
-      <p className="mt-2 text-[11px] text-muted">Ces informations personnalisent les fiches (identification, format) sans modifier les exigences officielles. Elles restent sur cet appareil.</p>
+      <p className="mt-2 text-[11px] text-muted">
+        Ces informations remplissent l&apos;en-tête des documents imprimés (établissement, enseignant, année scolaire) sans modifier les exigences officielles. Elles
+        restent sur cet appareil.
+      </p>
     </Section>
   );
 }
