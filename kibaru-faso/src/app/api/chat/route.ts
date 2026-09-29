@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
-import { compteCourant } from "@/lib/comptes";
+import { compteCourant, enregistrerUsage, etatQuota } from "@/lib/comptes";
 import { CONTACT } from "@/lib/contact";
 import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
@@ -22,12 +22,23 @@ function jsonError(status: number, message: string) {
 export async function POST(req: Request) {
   // Comptes enseignants : connexion et abonnement en cours obligatoires. Sinon, code d'accès partagé.
   let who = clientIp(req);
+  let utilisateurId: string | null = null;
   if (accountsEnabled()) {
     const compte = await compteCourant().catch(() => null);
     if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
     if (compte.profil.suspendu) return jsonError(403, `Votre compte est suspendu. Contactez ${CONTACT.entreprise} au ${CONTACT.telephone}.`);
     if (!compte.acces) return jsonError(402, "Votre abonnement n'est pas actif : abonnez-vous dans « Mon compte » pour continuer.");
     who = compte.profil.id;
+    utilisateurId = compte.profil.id;
+    // Quota du jour : protège la rentabilité (chaque génération a un coût d'IA).
+    const q = await etatQuota(compte);
+    if (q.limite !== null && q.utilisees >= q.limite)
+      return jsonError(
+        429,
+        compte.essai
+          ? `Vous avez utilisé les ${q.limite} générations de votre essai gratuit pour aujourd'hui. Abonnez-vous dans « Mon compte » pour continuer.`
+          : `Vous avez atteint votre limite de ${q.limite} générations pour aujourd'hui. Elle se renouvelle à minuit. Besoin de plus ? Contactez ${CONTACT.entreprise} au ${CONTACT.telephone}.`,
+      );
   } else if (!hasAccess(req)) return jsonError(401, "Code d'accès requis.");
   const perMinute = Number(process.env.KIBARU_RATE_LIMIT) || 12;
   const rl = rateLimit(`chat:${who}`, perMinute, 60_000);
@@ -101,7 +112,7 @@ export async function POST(req: Request) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
       send({ type: "meta", sources, libraryCount: catalogue.length, decision: decisionSummary(decision) });
       try {
-        const gen = streamAnswer(messages);
+        const gen = streamAnswer(messages, profile.mode);
         let answer = "";
         let r = await gen.next();
         while (!r.done) {
@@ -109,8 +120,16 @@ export async function POST(req: Request) {
           send({ type: "delta", text: r.value });
           r = await gen.next();
         }
-        if (r.value === "refusal") send({ type: "delta", text: "\n\n_Je ne peux pas traiter cette demande. Reformulez-la en lien avec votre préparation pédagogique._" });
-        if (r.value === "max_tokens") send({ type: "delta", text: "\n\n_(Production interrompue car trop longue : demandez « continue » pour la suite.)_" });
+        // Attendu avant la fin de la réponse : sur Vercel, le travail en arrière-plan peut être interrompu.
+        await enregistrerUsage({
+          utilisateurId,
+          modele: r.value.modele,
+          consommation: r.value.consommation,
+          besoin: profile.needs.join(","),
+          decompte: !profile.question,
+        }).catch(() => undefined);
+        if (r.value.fin === "refusal") send({ type: "delta", text: "\n\n_Je ne peux pas traiter cette demande. Reformulez-la en lien avec votre préparation pédagogique._" });
+        if (r.value.fin === "max_tokens") send({ type: "delta", text: "\n\n_(Production interrompue car trop longue : demandez « continue » pour la suite.)_" });
         // Contrôle final automatique : signale à l'enseignant ce qui mérite relecture (la réponse n'est pas modifiée).
         const check = finalCheck({
           answer,

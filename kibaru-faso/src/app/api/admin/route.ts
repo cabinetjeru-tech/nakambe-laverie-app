@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { finAbonnement, prixValide } from "@/lib/abonnement";
 import { activerAbonnement, compteCourant, formules, traiterPaiement, type Profil } from "@/lib/comptes";
+import { debutJour, tauxUsdFcfa, usdEnFcfa } from "@/lib/couts";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -19,7 +20,8 @@ export async function GET() {
   const a = await admin();
   if (a.error) return a.error;
   const db = adminClient();
-  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo] = await Promise.all([
+  const il30j = new Date(Date.now() - 30 * 86_400_000).toISOString();
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
@@ -28,7 +30,30 @@ export async function GET() {
     db.from("commissions").select("id, parrain_id, filleul_id, montant_fcfa, taux, statut, versee_le, reference_versement, cree_le").order("cree_le", { ascending: false }).limit(2000),
     db.from("codes_promo").select("*").order("cree_le", { ascending: false }),
     db.from("paiements").select("code_promo").eq("statut", "reussi").not("code_promo", "is", null).limit(50000),
+    db.from("usages").select("utilisateur_id, cree_le, cout_usd, decompte").gte("cree_le", il30j).limit(200000),
   ]);
+  // Coût de l'IA : aujourd'hui, depuis le début du mois, et par enseignant sur 30 jours.
+  const taux = tauxUsdFcfa();
+  const jour = debutJour().toISOString();
+  const debutMoisIso = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
+  let coutJour = 0;
+  let coutMois = 0;
+  let generationsJour = 0;
+  const parEnseignant = new Map<string, { generations: number; cout: number }>();
+  for (const u of conso.data ?? []) {
+    const cout = Number(u.cout_usd);
+    if (u.cree_le >= jour) {
+      coutJour += cout;
+      if (u.decompte) generationsJour++;
+    }
+    if (u.cree_le >= debutMoisIso) coutMois += cout;
+    if (u.utilisateur_id) {
+      const e = parEnseignant.get(u.utilisateur_id) ?? { generations: 0, cout: 0 };
+      if (u.decompte) e.generations++;
+      e.cout += cout;
+      parEnseignant.set(u.utilisateur_id, e);
+    }
+  }
   const usages = new Map<string, number>();
   for (const x of paiementsPromo.data ?? []) usages.set(x.code_promo as string, (usages.get(x.code_promo as string) ?? 0) + 1);
   const finPar = new Map<string, { fin: string }[]>();
@@ -52,6 +77,8 @@ export async function GET() {
       essai: actif && dernier.get(p.id)?.origine === "essai",
       preparations: prepsPar.get(p.id) ?? 0,
       filleuls: 0,
+      generations30j: parEnseignant.get(p.id)?.generations ?? 0,
+      cout30jFcfa: usdEnFcfa(parEnseignant.get(p.id)?.cout ?? 0, taux),
     };
   });
   const emails = new Map(enseignants.map((e) => [e.id, e.email]));
@@ -74,6 +101,10 @@ export async function GET() {
       enEssai: enseignants.filter((e) => e.essai).length,
       parraines: enseignants.filter((e) => parrainDe.get(e.id)).length,
       commissionsDues: commissions.filter((c) => c.statut === "due").reduce((s, c) => s + c.montant_fcfa, 0),
+      generationsJour,
+      coutJourFcfa: usdEnFcfa(coutJour, taux),
+      coutMoisFcfa: usdEnFcfa(coutMois, taux),
+      tauxUsdFcfa: taux,
       preparations: preps.data?.length ?? 0,
       recettesMois: reussis.filter((p) => new Date(p.cree_le) >= debutMois).reduce((s, p) => s + p.montant_fcfa, 0),
       recettesTotal: reussis.reduce((s, p) => s + p.montant_fcfa, 0),
@@ -99,6 +130,7 @@ const actionSchema = z.discriminatedUnion("action", [
     prix_fcfa: z.number().int(),
     duree_jours: z.number().int().min(1).max(730),
     active: z.boolean(),
+    quota_jour: z.number().int().min(1).max(10000).nullable().optional(),
   }),
   z.object({ action: z.literal("verifier_paiement"), transaction: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/) }),
   z.object({
@@ -136,7 +168,7 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     case "formule":
       if (!prixValide(x.prix_fcfa)) return Response.json({ error: "Prix invalide : nombre entier, multiple de 5, au moins 100 FCFA." }, { status: 400 });
-      await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active });
+      await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active, quota_jour: x.quota_jour ?? null });
       return Response.json({ ok: true });
     case "promo": {
       const expire = x.expire_le ? new Date(x.expire_le) : null;

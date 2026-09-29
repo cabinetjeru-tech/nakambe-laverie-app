@@ -1,5 +1,6 @@
 import "server-only";
 import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, refusPromo, tauxCommission, type CodePromo, type Formule } from "./abonnement";
+import { coutUsd, debutJour, type Consommation } from "./couts";
 import { verifierPaiement } from "./paiement/cinetpay";
 import { adminClient, sessionClient } from "./supabase/server";
 
@@ -27,6 +28,8 @@ export type Compte = {
   heuresRestantes: number;
   /** Accès en cours issu de l'essai gratuit de 24 h (et non d'un paiement). */
   essai: boolean;
+  /** Abonnement qui couvre le moment présent (pour le quota du jour). */
+  enCours: { origine: string; formule_id: string | null } | null;
 };
 
 /** Adresses e-mail des administrateurs (variable ADMIN_EMAILS, séparées par des virgules). */
@@ -68,7 +71,16 @@ export async function chargerCompte(user: { id: string; email: string }): Promis
   const fin = finAbonnement(abos ?? []);
   const now = new Date();
   const acces = aAcces(profil, fin, now);
+  const { data: couvrant } = await db
+    .from("abonnements")
+    .select("origine, formule_id")
+    .eq("utilisateur_id", user.id)
+    .lte("debut", now.toISOString())
+    .gt("fin", now.toISOString())
+    .order("debut", { ascending: false })
+    .limit(1);
   return {
+    enCours: couvrant?.[0] ?? null,
     profil,
     fin,
     acces,
@@ -208,4 +220,63 @@ export async function verifierPromo(code: string, utilisateurId: string): Promis
   ]);
   const refus = refusPromo(promo ?? null, utilisations ?? 0, (siens ?? 0) > 0);
   return refus ? { erreur: refus } : { promo: promo! };
+}
+
+// ---------------------------------------------------------------- Quotas et coût de l'IA
+
+/** Quota quotidien de l'essai gratuit (QUOTA_ESSAI_JOUR, 10 par défaut). */
+export function quotaEssai(): number {
+  const q = Number(process.env.QUOTA_ESSAI_JOUR);
+  return Number.isInteger(q) && q > 0 ? q : 5;
+}
+
+/** Quota par défaut d'un accès accordé par l'administration (QUOTA_DEFAUT_JOUR, 30 par défaut). */
+export function quotaDefaut(): number {
+  const q = Number(process.env.QUOTA_DEFAUT_JOUR);
+  return Number.isInteger(q) && q > 0 ? q : 5;
+}
+
+/** Nombre maximal de générations aujourd'hui (null = illimité, pour l'administration). */
+export async function quotaJour(compte: Compte): Promise<number | null> {
+  if (compte.profil.role === "admin") return null;
+  const c = compte.enCours;
+  if (!c) return 0;
+  if (c.origine === "essai") return quotaEssai();
+  if (!c.formule_id) return quotaDefaut();
+  const { data } = await adminClient().from("formules").select("quota_jour").eq("id", c.formule_id).maybeSingle<{ quota_jour: number | null }>();
+  return data ? data.quota_jour : quotaDefaut();
+}
+
+/** Générations comptées depuis minuit (heure du Burkina Faso = UTC). */
+export async function generationsDuJour(utilisateurId: string): Promise<number> {
+  const { count } = await adminClient()
+    .from("usages")
+    .select("id", { count: "exact", head: true })
+    .eq("utilisateur_id", utilisateurId)
+    .eq("decompte", true)
+    .gte("cree_le", debutJour().toISOString());
+  return count ?? 0;
+}
+
+export async function etatQuota(compte: Compte): Promise<{ limite: number | null; utilisees: number }> {
+  const [limite, utilisees] = await Promise.all([quotaJour(compte), generationsDuJour(compte.profil.id)]);
+  return { limite, utilisees };
+}
+
+/** Enregistre la consommation d'un appel à l'IA (coût estimé au tarif public du modèle). */
+export async function enregistrerUsage(u: { utilisateurId: string | null; modele: string; consommation: Consommation; besoin?: string; decompte: boolean }) {
+  const { error } = await adminClient()
+    .from("usages")
+    .insert({
+      utilisateur_id: u.utilisateurId,
+      modele: u.modele,
+      jetons_entree: u.consommation.entree,
+      jetons_sortie: u.consommation.sortie,
+      jetons_cache_lecture: u.consommation.cacheLecture,
+      jetons_cache_ecriture: u.consommation.cacheEcriture,
+      cout_usd: coutUsd(u.modele, u.consommation),
+      besoin: u.besoin ?? null,
+      decompte: u.decompte,
+    });
+  if (error) console.error("[usage]", error.message);
 }
