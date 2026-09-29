@@ -16,6 +16,22 @@ import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
 import { CONTACT } from "@/lib/contact";
 import { BoutonInstaller } from "./installer";
+import {
+  IconeAccueil,
+  IconeClasse,
+  IconeCompte,
+  IconeDevoir,
+  IconeDossier,
+  IconeEnvoyer,
+  IconeFiche,
+  IconeInfo,
+  IconeModele,
+  IconePlus,
+  IconeProgression,
+  IconeRemediation,
+  IconeReprendre,
+  IconeRetour,
+} from "./icones";
 import { AbonnementScreen, AuthScreen, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
 
 type LibraryDoc = {
@@ -94,6 +110,8 @@ export function KibaruApp() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [sidebar, setSidebar] = useState(false);
+  /** Sur téléphone, le panneau montre soit « Ma classe », soit « Mes préparations » (barre de navigation du bas). */
+  const [vuePanneau, setVuePanneau] = useState<"classe" | "preparations">("classe");
   const [ficheOpen, setFicheOpen] = useState(false);
   /** Formulaire du Module 02 ouvert, avec le type d'évaluation présélectionné. */
   const [evalOpen, setEvalOpen] = useState<string | null>(null);
@@ -445,21 +463,17 @@ export function KibaruApp() {
     <div className="flex h-dvh flex-col">
       <header className="flex items-center gap-2 border-b border-line bg-white px-3 py-2.5 sm:gap-3 sm:px-4">
         {currentId && (
-          <button type="button" onClick={goHome} className="whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm font-semibold text-faso hover:border-faso" aria-label="Retour à l'accueil">
-            ← <span className="hidden sm:inline">Accueil</span>
+          <button
+            type="button"
+            onClick={goHome}
+            className="flex items-center gap-1 whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm font-semibold text-faso hover:border-faso"
+            aria-label="Retour à l'accueil"
+          >
+            <IconeRetour className="h-4 w-4" /> <span className="hidden sm:inline">Accueil</span>
           </button>
         )}
-        <button
-          type="button"
-          className="whitespace-nowrap rounded-md border border-line px-2 py-1 text-sm lg:hidden"
-          onClick={() => setSidebar((s) => !s)}
-          aria-expanded={sidebar}
-          aria-controls="panneau"
-        >
-          Ma classe
-        </button>
-        <Brand compact={!!currentId} />
-        <div className="ml-auto flex items-center gap-2">
+        <Brand />
+        <div className="ml-auto hidden items-center gap-2 lg:flex">
           {compte && (
             <button
               type="button"
@@ -473,9 +487,8 @@ export function KibaruApp() {
               <span className="hidden md:inline">Mon compte</span>
             </button>
           )}
-          <button type="button" onClick={newConversation} className="whitespace-nowrap rounded-lg bg-faso px-2.5 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark sm:px-3">
-            <span className="sm:hidden">Nouveau</span>
-            <span className="hidden sm:inline">Nouvelle préparation</span>
+          <button type="button" onClick={newConversation} className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-faso px-3 py-1.5 text-sm font-semibold text-white hover:bg-faso-dark">
+            <IconePlus className="h-4 w-4" /> Nouvelle préparation
           </button>
         </div>
       </header>
@@ -587,11 +600,14 @@ export function KibaruApp() {
       <div className="flex min-h-0 flex-1">
         <aside
           id="panneau"
-          className={`${sidebar ? "fixed inset-x-0 top-[53px] bottom-0 z-20 block" : "hidden"} w-full overflow-y-auto border-r border-line bg-white lg:static lg:block lg:w-80 lg:shrink-0`}
+          className={`${sidebar ? "fixed inset-x-0 top-[53px] bottom-[60px] z-20 block" : "hidden"} w-full overflow-y-auto border-r border-line bg-white lg:static lg:block lg:w-80 lg:shrink-0`}
         >
-          <ContextPanel context={context} onChange={updateContext} />
-          <ProfilePanel context={context} onChange={updateContext} />
-          <DocumentsPanel library={status.library} history={status.history} pending={status.pending} docs={docs} onChange={updateDocs} context={context} />
+          <div className={vuePanneau === "preparations" ? "hidden lg:block" : ""}>
+            <ContextPanel context={context} onChange={updateContext} />
+            <ProfilePanel context={context} onChange={updateContext} />
+            <DocumentsPanel library={status.library} history={status.history} pending={status.pending} docs={docs} onChange={updateDocs} context={context} />
+          </div>
+          <div className={vuePanneau === "classe" ? "hidden lg:block" : ""}>
           <HistoryPanel
             conversations={conversations}
             currentId={currentId}
@@ -605,13 +621,25 @@ export function KibaruApp() {
               if (id === currentId) setCurrentId(null);
             }}
           />
+          </div>
         </aside>
 
         <main className="flex min-w-0 flex-1 flex-col">
           <div className="flex-1 overflow-y-auto">
             <div className="mx-auto max-w-3xl px-4 py-6">
               {messages.length === 0 ? (
-                <Welcome context={context} onTemplate={applyTemplate} onFiche={() => setFicheOpen(true)} onEval={() => setEvalOpen("devoir surveillé")} onRemed={() => setRemedOpen(true)} onProg={() => setProgOpen(true)} libraryCount={status.library.length} />
+                <Welcome
+                  context={context}
+                  onTemplate={applyTemplate}
+                  onFiche={() => setFicheOpen(true)}
+                  onEval={() => setEvalOpen("devoir surveillé")}
+                  onRemed={() => setRemedOpen(true)}
+                  onProg={() => setProgOpen(true)}
+                  libraryCount={status.library.length}
+                  prenom={prenomDe(context.enseignant || compte?.nom)}
+                  derniere={conversations.reduce<Conversation | null>((a, c) => (!a || c.updatedAt > a.updatedAt ? c : a), null)}
+                  onOpen={(id) => setCurrentId(id)}
+                />
               ) : (
                 <div className="space-y-5">
                   {messages.map((m, i) =>
@@ -722,43 +750,71 @@ export function KibaruApp() {
                   Arrêter
                 </button>
               ) : (
-                <button type="submit" disabled={!input.trim()} className="h-[52px] rounded-xl bg-faso px-5 text-sm font-semibold text-white disabled:opacity-40">
-                  Envoyer
+                <button
+                  type="submit"
+                  disabled={!input.trim()}
+                  aria-label="Envoyer"
+                  className="flex h-[52px] items-center gap-2 rounded-xl bg-faso px-4 text-sm font-semibold text-white disabled:opacity-40 sm:px-5"
+                >
+                  <IconeEnvoyer className="h-5 w-5" /> <span className="hidden sm:inline">Envoyer</span>
                 </button>
               )}
             </div>
-            <p className="mx-auto mt-1.5 max-w-3xl text-[11px] text-muted">
-              PÉDAGOGUE.IA est un assistant : vérifiez, adaptez et validez chaque contenu avant de l&apos;utiliser en classe.{" "}
-              <button type="button" onClick={() => setFicheOpen(true)} className="font-semibold text-faso underline underline-offset-2">
-                Générateur de fiches
-              </button>{" "}
-              ·{" "}
-              <button type="button" onClick={() => setEvalOpen("devoir surveillé")} className="font-semibold text-faso underline underline-offset-2">
-                Devoirs et évaluations
-              </button>{" "}
-              ·{" "}
-              <button type="button" onClick={() => setRemedOpen(true)} className="font-semibold text-faso underline underline-offset-2">
-                Remédiation
-              </button>{" "}
-              ·{" "}
-              <button type="button" onClick={() => setProgOpen(true)} className="font-semibold text-faso underline underline-offset-2">
-                Progressions
-              </button>
-            </p>
+            <p className="mx-auto mt-1.5 max-w-3xl truncate text-[11px] text-muted">Vérifiez et adaptez chaque contenu avant de l&apos;utiliser en classe.</p>
           </form>
         </main>
       </div>
+
+      <nav className="grid grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Navigation principale">
+        {(
+          [
+            ["Accueil", IconeAccueil, !sidebar && !currentId, () => (setSidebar(false), currentId ? goHome() : undefined)],
+            ["Préparations", IconeDossier, sidebar && vuePanneau === "preparations", () => (setVuePanneau("preparations"), setSidebar((v) => !(v && vuePanneau === "preparations")))],
+            ["Nouveau", IconePlus, false, newConversation],
+            ["Ma classe", IconeClasse, sidebar && vuePanneau === "classe", () => (setVuePanneau("classe"), setSidebar((v) => !(v && vuePanneau === "classe")))],
+            ["Compte", IconeCompte, compteOpen, () => (compte ? (setCompteOpen(true), void loadStatus()) : undefined)],
+          ] as [string, (p: { className?: string }) => React.ReactNode, boolean, () => void][]
+        ).map(([libelle, Icone, actif, action]) =>
+          libelle === "Nouveau" ? (
+            <button key={libelle} type="button" onClick={action} className="flex flex-col items-center justify-end gap-1 pb-2 pt-1 text-[11px] font-semibold text-faso">
+              <span className="-mt-5 flex h-12 w-12 items-center justify-center rounded-full bg-faso text-white shadow-md ring-4 ring-white">
+                <Icone className="h-6 w-6" />
+              </span>
+              {libelle}
+            </button>
+          ) : (
+            <button
+              key={libelle}
+              type="button"
+              onClick={action}
+              disabled={libelle === "Compte" && !compte}
+              aria-current={actif ? "page" : undefined}
+              className={`flex flex-col items-center justify-end gap-1 pb-2 pt-1 text-[11px] font-medium disabled:opacity-30 ${actif ? "text-faso" : "text-muted"}`}
+            >
+              <Icone className="h-5 w-5" />
+              {libelle}
+            </button>
+          ),
+        )}
+      </nav>
     </div>
   );
 }
 
-/** `compact` : sur petit écran, logo seul (place pour le bouton retour). */
-function Brand({ compact = false }: { compact?: boolean }) {
+/** Prénom ou civilité pour l'accueil : « M. Issa Ouédraogo » → « M. Ouédraogo », « Awa Traoré » → « Awa ». */
+function prenomDe(nom: string | null | undefined): string | null {
+  const mots = (nom ?? "").trim().split(/\s+/).filter(Boolean);
+  if (!mots.length) return null;
+  if (/^(m\.?|mme|mlle|monsieur|madame|dr)$/i.test(mots[0]!)) return mots.length > 1 ? `${mots[0]} ${mots[mots.length - 1]}` : null;
+  return mots[0]!;
+}
+
+function Brand() {
   return (
     <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/icon.svg" alt="" width={32} height={32} className="h-7 w-7 shrink-0 rounded-lg sm:h-8 sm:w-8" />
-      <div className={`leading-tight ${compact ? "hidden min-[400px]:block" : ""}`}>
+      <div className="leading-tight">
         <div className="whitespace-nowrap text-[13px] font-extrabold tracking-wide text-faso-dark sm:text-[15px]">PÉDAGOGUE.IA</div>
         <div className="hidden text-[11px] text-muted sm:block">L&apos;intelligence au service de la pédagogie</div>
       </div>
@@ -815,6 +871,9 @@ function Welcome({
   onRemed,
   onProg,
   libraryCount,
+  prenom,
+  derniere,
+  onOpen,
 }: {
   context: TeacherContext;
   onTemplate: (t: Template) => void;
@@ -823,73 +882,94 @@ function Welcome({
   onRemed: () => void;
   onProg: () => void;
   libraryCount: number;
+  prenom: string | null;
+  derniere: Conversation | null;
+  onOpen: (id: string) => void;
 }) {
-  const main = TEMPLATES.filter((t) => t.main);
-  const others = TEMPLATES.filter((t) => !t.main);
+  const [tous, setTous] = useState(false);
+  const raccourcis = tous ? TEMPLATES : TEMPLATES.filter((t) => t.main);
+  const generateurs: [string, string, (p: { className?: string }) => React.ReactNode, () => void][] = [
+    ["Fiche pédagogique", "Déroulement minuté, trace écrite, évaluation", IconeFiche, onFiche],
+    ["Devoir et évaluation", "Sujet, corrigé, barème, versions A/B/C", IconeDevoir, onEval],
+    ["Remédiation", "Diagnostic et activités de soutien", IconeRemediation, onRemed],
+    ["Progression", "Répartition par semaine et par chapitre", IconeProgression, onProg],
+  ];
+  const heure = new Date().getHours();
+  const salut = heure >= 18 || heure < 4 ? "Bonsoir" : "Bonjour";
   return (
     <div className="fade-in">
-      <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
-      <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
+      <h1 className="text-2xl font-bold text-faso-dark">
+        {salut}
+        {prenom ? ` ${prenom}` : ""}
+      </h1>
+      <p className="mt-1 text-[15px] text-muted">Que préparez-vous aujourd&apos;hui ?</p>
       <BoutonInstaller className="mt-3" />
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <button type="button" onClick={onFiche} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
-          <span aria-hidden className="text-2xl leading-none">
-            📋
+
+      {derniere && (
+        <button
+          type="button"
+          onClick={() => onOpen(derniere.id)}
+          className="mt-4 flex w-full items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-left transition hover:border-faso"
+        >
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-or-50 text-[#7a5a00]">
+            <IconeReprendre />
           </span>
-          <span>
-            <span className="block font-bold text-faso-dark">Générateur de fiches pédagogiques</span>
-            <span className="mt-0.5 block text-xs text-ink">Fiche documentée, déroulement minuté vérifié, trace écrite, évaluation, corrigé.</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold uppercase tracking-wide text-muted">Reprendre</span>
+            <span className="block truncate font-semibold text-ink">{derniere.title}</span>
           </span>
-        </button>
-        <button type="button" onClick={onEval} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
-          <span aria-hidden className="text-2xl leading-none">
-            📝
-          </span>
-          <span>
-            <span className="block font-bold text-faso-dark">Générateur de devoirs et évaluations</span>
-            <span className="mt-0.5 block text-xs text-ink">Sujet, corrigé, barème, versions A/B/C ; points et calculs vérifiés.</span>
-          </span>
-        </button>
-        <button type="button" onClick={onRemed} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
-          <span aria-hidden className="text-2xl leading-none">
-            🔄
-          </span>
-          <span>
-            <span className="block font-bold text-faso-dark">Générateur de remédiation</span>
-            <span className="mt-0.5 block text-xs text-ink">Hypothèses, diagnostic, activités, nouvelle vérification, consolidation.</span>
+          <span aria-hidden className="text-muted">
+            ›
           </span>
         </button>
-        <button type="button" onClick={onProg} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
-          <span aria-hidden className="text-2xl leading-none">
-            📅
-          </span>
-          <span>
-            <span className="block font-bold text-faso-dark">Générateur de progressions</span>
-            <span className="mt-0.5 block text-xs text-ink">Répartition par semaine et par chapitre ; volume horaire et évaluations vérifiés.</span>
-          </span>
-        </button>
-      </div>
-      <p className="mt-4 text-lg font-semibold">Que souhaitez-vous préparer aujourd&apos;hui ?</p>
-      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {main.map((t) => (
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        {generateurs.map(([titre, detail, Icone, action]) => (
           <button
-            key={t.id}
+            key={titre}
             type="button"
-            onClick={() => onTemplate(t)}
-            className="flex items-start gap-3 rounded-xl border border-line bg-white p-3.5 text-left transition hover:border-faso hover:shadow-sm"
+            onClick={action}
+            className="flex flex-col gap-2 rounded-xl border border-faso/25 bg-white p-3.5 text-left shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition hover:border-faso hover:shadow-sm sm:flex-row sm:items-start sm:gap-3 sm:p-4"
           >
-            <span aria-hidden className="text-xl leading-none">
-              {t.icon}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-faso-50 text-faso">
+              <Icone className="h-5 w-5" />
             </span>
             <span>
-              <span className="block font-semibold text-faso-dark">{t.label}</span>
-              <span className="mt-0.5 block text-xs text-muted">{t.hint}</span>
+              <span className="block text-[15px] font-bold leading-snug text-faso-dark">{titre}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted">{detail}</span>
             </span>
           </button>
         ))}
       </div>
-      <p className="mt-4 text-[15px] text-muted">
-        Indiquez simplement votre classe, votre matière et ce dont vous avez besoin — dans le panneau « Ma classe » ou directement dans votre message.
+
+      <div className="mt-6">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted">Demandes rapides</div>
+        <div className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+          {raccourcis.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              title={t.hint}
+              onClick={() => onTemplate(t)}
+              className="flex shrink-0 items-center gap-1.5 rounded-full border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-faso hover:text-faso"
+            >
+              <IconeModele id={t.id} className="h-4 w-4 text-faso" />
+              {t.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setTous((v) => !v)}
+            className="shrink-0 rounded-full border border-dashed border-faso/50 px-3 py-1.5 text-sm font-semibold text-faso hover:bg-faso-50"
+          >
+            {tous ? "Moins" : `Plus (${TEMPLATES.length - TEMPLATES.filter((t) => t.main).length})`}
+          </button>
+        </div>
+      </div>
+
+      <p className="mt-5 text-sm text-muted">
+        Indiquez votre classe, votre matière et votre besoin dans « Ma classe » ou directement dans votre message.
         {context.classe || context.discipline ? (
           <>
             {" "}
@@ -897,34 +977,20 @@ function Welcome({
           </>
         ) : null}
       </p>
-      <div className="mt-5">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted">Autres actions</div>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {others.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              title={t.hint}
-              onClick={() => onTemplate(t)}
-              className="rounded-full border border-line bg-white px-3 py-1.5 text-sm text-ink hover:border-faso hover:text-faso"
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="mt-6 rounded-xl border border-line bg-white p-4 text-sm leading-6">
-        <div className="font-semibold">Transparence des contenus</div>
-        <p className="mt-1 text-muted">Chaque production distingue :</p>
-        <ul className="mt-1 space-y-1">
+
+      <details className="mt-4 rounded-xl border border-line bg-white px-4 py-3 text-sm leading-6">
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-semibold text-ink">
+          <IconeInfo className="h-4 w-4 text-faso" /> Comment lire les étiquettes des réponses ?
+        </summary>
+        <ul className="mt-2 space-y-1">
           <li>
-            <span className="badge badge-source">SOURCE PÉDAGOGUE.IA</span> information issue d&apos;une ressource intégrée de la base, avec son renvoi <span className="cite">R1</span> ;
+            <span className="badge badge-source">SOURCE PÉDAGOGUE.IA</span> information issue d&apos;une ressource de la base, avec son renvoi <span className="cite">R1</span> ;
           </li>
           <li>
             <span className="badge badge-proposition">PROPOSITION PÉDAGOGUE.IA</span> production pédagogique de l&apos;IA, à partir des sources disponibles ;
           </li>
           <li>
-            <span className="badge badge-general">CONNAISSANCE GÉNÉRALE</span> information issue des connaissances générales de l&apos;IA, pas de la base ;
+            <span className="badge badge-general">CONNAISSANCE GÉNÉRALE</span> connaissance générale de l&apos;IA, pas de la base ;
           </li>
           <li>
             <span className="badge badge-verifier">À VÉRIFIER</span> information sans confirmation documentaire suffisante.
@@ -932,10 +998,10 @@ function Welcome({
         </ul>
         <p className="mt-2 text-muted">
           {libraryCount > 0
-            ? `${libraryCount} ressource(s) consultable(s) dans la base documentaire PÉDAGOGUE.IA. Au-dessus de chaque réponse, la « confiance documentaire » indique sur quoi elle s'appuie.`
-            : "La base documentaire PÉDAGOGUE.IA ne contient encore aucun document : les réponses sont des propositions ou des connaissances générales, jamais des prescriptions officielles."}
+            ? `${libraryCount} ressource(s) dans la base documentaire. Ces étiquettes ne sont pas imprimées.`
+            : "Les réponses sont des propositions à vérifier, jamais des prescriptions officielles. Ces étiquettes ne sont pas imprimées."}
         </p>
-      </div>
+      </details>
     </div>
   );
 }
