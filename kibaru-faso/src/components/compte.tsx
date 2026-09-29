@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { dureeFormule, formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { CONTACT } from "@/lib/contact";
@@ -371,6 +371,8 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
 
       {etat.parrainage && <Parrainage p={etat.parrainage} telephone={c.telephone} />}
 
+      <DonnerAvis />
+
       {etat.paiements.length > 0 && (
         <section>
           <h3 className="font-bold text-faso-dark">Mes paiements</h3>
@@ -529,5 +531,85 @@ export function AbonnementScreen({ etat, onChange, message }: { etat: EtatCompte
         </div>
       </div>
     </div>
+  );
+}
+
+/** Avis de l'enseignant : publié sur la page de présentation après relecture par l'administration. */
+function DonnerAvis() {
+  const [note, setNote] = useState(5);
+  const [texte, setTexte] = useState("");
+  const [fonction, setFonction] = useState("");
+  const [etat, setEtat] = useState<"chargement" | "vide" | "envoye" | "publie">("chargement");
+  const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/avis")
+      .then((r) => r.json())
+      .then((j: { avis?: { texte: string; note: number; fonction: string | null; publie: boolean } | null }) => {
+        if (j.avis) {
+          setTexte(j.avis.texte);
+          setNote(j.avis.note);
+          setFonction(j.avis.fonction ?? "");
+          setEtat(j.avis.publie ? "publie" : "envoye");
+        } else setEtat("vide");
+      })
+      .catch(() => setEtat("vide"));
+  }, []);
+
+  async function envoyer(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErreur(null);
+    const r = await fetch("/api/avis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ texte, note, fonction }) }).catch(() => null);
+    const j = (await r?.json().catch(() => ({}))) as { error?: string };
+    setBusy(false);
+    if (!r?.ok) return setErreur(j?.error ?? "Envoi impossible. Réessayez.");
+    setEtat("envoye");
+  }
+
+  if (etat === "chargement") return null;
+  return (
+    <section className="rounded-xl border border-line p-4">
+      <h3 className="font-bold text-faso-dark">⭐ Votre avis compte</h3>
+      <p className="mt-1 text-sm text-muted">
+        {etat === "publie"
+          ? "Merci ! Votre avis est publié sur la page de présentation. Vous pouvez le modifier (il sera relu à nouveau)."
+          : etat === "envoye"
+            ? "Merci ! Votre avis sera publié après relecture. Vous pouvez encore le modifier."
+            : "Dites en quelques mots ce que PÉDAGOGUE.IA vous apporte. Votre prénom et l'initiale de votre nom seront affichés avec votre avis."}
+      </p>
+      <form onSubmit={envoyer} className="mt-3 space-y-2">
+        <div className="flex gap-1" role="radiogroup" aria-label="Note sur 5">
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} type="button" role="radio" aria-checked={note === n} aria-label={`${n} sur 5`} onClick={() => setNote(n)} className={`text-2xl leading-none ${n <= note ? "text-or" : "text-line"}`}>
+              ★
+            </button>
+          ))}
+        </div>
+        <textarea
+          value={texte}
+          onChange={(e) => setTexte(e.target.value)}
+          maxLength={600}
+          rows={3}
+          required
+          aria-label="Votre avis"
+          placeholder="Ex. : Je prépare mes fiches de SVT deux fois plus vite, et les devoirs avec barème sont prêts à photocopier."
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm"
+        />
+        <input
+          value={fonction}
+          onChange={(e) => setFonction(e.target.value)}
+          maxLength={80}
+          aria-label="Votre fonction"
+          placeholder="Votre fonction (ex. : Professeur de mathématiques, lycée de Koudougou)"
+          className="w-full rounded-lg border border-line px-3 py-2 text-sm"
+        />
+        {erreur && <p className="text-sm text-rouge">{erreur}</p>}
+        <button type="submit" disabled={busy || texte.trim().length < 10} className="rounded-lg bg-faso px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          {busy ? "Envoi…" : etat === "vide" ? "Envoyer mon avis" : "Mettre à jour mon avis"}
+        </button>
+      </form>
+    </section>
   );
 }

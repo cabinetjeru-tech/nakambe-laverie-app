@@ -1,6 +1,7 @@
 /** Campagne de lancement : liens et messages prêts à partager (WhatsApp, Facebook, SMS). */
 
-export const SITE = "https://pedagogue-ia.vercel.app";
+/** Adresse publique du site (NEXT_PUBLIC_APP_URL quand un nom de domaine est branché). */
+export const SITE = (process.env.NEXT_PUBLIC_APP_URL?.trim() || "https://pedagogue-ia.vercel.app").replace(/\/$/, "");
 
 export function lienDecouvrir(parrain?: string | null, origin = SITE): string {
   return `${origin}/decouvrir${parrain ? `?parrain=${parrain}` : ""}`;

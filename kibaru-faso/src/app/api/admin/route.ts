@@ -6,6 +6,7 @@ import { diagnosticCinetpay } from "@/lib/paiement/cinetpay";
 import { emailConfigure, envoyerEmail, expediteur } from "@/lib/email/envoi";
 import { emailTest } from "@/lib/email/modeles";
 import { site } from "@/lib/email/notifications";
+import { resumeDe, slugifier } from "@/lib/vitrine";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -26,7 +27,7 @@ export async function GET() {
   const db = adminClient();
   const il30j = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const debutMoisUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
-  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails] = await Promise.all([
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails, temoignages, fiches] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
@@ -37,6 +38,8 @@ export async function GET() {
     db.from("paiements").select("code_promo").eq("statut", "reussi").not("code_promo", "is", null).limit(50000),
     db.from("usages").select("utilisateur_id, cree_le, cout_usd, decompte").gte("cree_le", il30j).limit(200000),
     db.from("emails_envoyes").select("cle", { count: "exact", head: true }).gte("cree_le", debutMoisUtc),
+    db.from("temoignages").select("*").order("publie").order("ordre").order("cree_le", { ascending: false }).limit(500),
+    db.from("fiches_publiques").select("slug, titre, classe, discipline, publie, vues, cree_le").order("cree_le", { ascending: false }).limit(1000),
   ]);
   // Coût de l'IA : aujourd'hui, depuis le début du mois, et par enseignant sur 30 jours.
   const taux = tauxUsdFcfa();
@@ -125,6 +128,8 @@ export async function GET() {
     promos: (promos.data ?? []).map((p) => ({ ...p, utilisations: usages.get(p.code) ?? 0 })),
     moi: a.compte.profil.id,
     codeParrainage: a.compte.profil.code_parrainage,
+    temoignages: temoignages.data ?? [],
+    fiches: fiches.data ?? [],
   });
 }
 
@@ -153,6 +158,23 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("email_test") }),
   z.object({ action: z.literal("test_cinetpay") }),
+  z.object({
+    action: z.literal("temoignage_ajouter"),
+    nom: z.string().trim().min(2).max(80),
+    fonction: z.string().trim().max(80).optional(),
+    ville: z.string().trim().max(80).optional(),
+    texte: z.string().trim().min(10).max(600),
+    note: z.number().int().min(1).max(5),
+  }),
+  z.object({ action: z.literal("temoignage"), id: z.uuid(), publie: z.boolean().optional(), ordre: z.number().int().min(0).max(999).optional(), supprimer: z.boolean().optional() }),
+  z.object({
+    action: z.literal("fiche_publier"),
+    titre: z.string().trim().min(3).max(160),
+    classe: z.string().trim().max(40).optional(),
+    discipline: z.string().trim().max(80).optional(),
+    contenu: z.string().trim().min(50).max(100_000),
+  }),
+  z.object({ action: z.literal("fiche"), slug: z.string().regex(/^[a-z0-9-]{3,120}$/), publie: z.boolean().optional(), supprimer: z.boolean().optional() }),
   z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
 ]);
 
@@ -202,6 +224,42 @@ export async function POST(req: Request) {
           : { statut: x.statut, versee_le: null, reference_versement: null };
       const { error } = await db.from("commissions").update(patch).eq("id", x.id);
       if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
+    case "temoignage_ajouter": {
+      const { error } = await db.from("temoignages").insert({ nom: x.nom, fonction: x.fonction || null, ville: x.ville || null, texte: x.texte, note: x.note, publie: true });
+      if (error) return Response.json({ error: "Enregistrement impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
+    case "temoignage": {
+      const r = x.supprimer
+        ? await db.from("temoignages").delete().eq("id", x.id)
+        : await db
+            .from("temoignages")
+            .update({ ...(x.publie !== undefined ? { publie: x.publie } : {}), ...(x.ordre !== undefined ? { ordre: x.ordre } : {}) })
+            .eq("id", x.id);
+      if (r.error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
+    case "fiche_publier": {
+      const slug = slugifier([x.titre, x.discipline, x.classe].filter(Boolean).join(" "));
+      const { error } = await db.from("fiches_publiques").insert({
+        slug,
+        titre: x.titre,
+        classe: x.classe || null,
+        discipline: x.discipline || null,
+        resume: resumeDe(x.contenu) || null,
+        contenu: x.contenu,
+        auteur_id: moi,
+      });
+      if (error) return Response.json({ error: "Publication impossible." }, { status: 500 });
+      return Response.json({ ok: true, message: `${site()}/fiches/${slug}` });
+    }
+    case "fiche": {
+      const r = x.supprimer
+        ? await db.from("fiches_publiques").delete().eq("slug", x.slug)
+        : await db.from("fiches_publiques").update({ publie: !!x.publie, maj_le: new Date().toISOString() }).eq("slug", x.slug);
+      if (r.error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
       return Response.json({ ok: true });
     }
     case "test_cinetpay": {
