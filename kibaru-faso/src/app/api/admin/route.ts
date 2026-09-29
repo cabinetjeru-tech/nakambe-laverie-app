@@ -3,6 +3,7 @@ import { finAbonnement, prixValide } from "@/lib/abonnement";
 import { activerAbonnement, compteCourant, formules, traiterPaiement, type Profil } from "@/lib/comptes";
 import { debutJour, tauxUsdFcfa, usdEnFcfa } from "@/lib/couts";
 import { diagnosticCinetpay } from "@/lib/paiement/cinetpay";
+import { testerIA } from "@/lib/llm";
 import { emailConfigure, envoyerEmail, expediteur } from "@/lib/email/envoi";
 import { emailTest } from "@/lib/email/modeles";
 import { site } from "@/lib/email/notifications";
@@ -27,7 +28,7 @@ export async function GET() {
   const db = adminClient();
   const il30j = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const debutMoisUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
-  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails, temoignages, fiches] = await Promise.all([
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails, temoignages, fiches, erreurs] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
@@ -40,6 +41,7 @@ export async function GET() {
     db.from("emails_envoyes").select("cle", { count: "exact", head: true }).gte("cree_le", debutMoisUtc),
     db.from("temoignages").select("*").order("publie").order("ordre").order("cree_le", { ascending: false }).limit(500),
     db.from("fiches_publiques").select("slug, titre, classe, discipline, publie, vues, cree_le").order("cree_le", { ascending: false }).limit(1000),
+    db.from("journal_erreurs").select("id, cree_le, source, detail").order("cree_le", { ascending: false }).limit(15),
   ]);
   // Coût de l'IA : aujourd'hui, depuis le début du mois, et par enseignant sur 30 jours.
   const taux = tauxUsdFcfa();
@@ -130,6 +132,7 @@ export async function GET() {
     codeParrainage: a.compte.profil.code_parrainage,
     temoignages: temoignages.data ?? [],
     fiches: fiches.data ?? [],
+    erreurs: erreurs.data ?? [],
   });
 }
 
@@ -158,6 +161,7 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("email_test") }),
   z.object({ action: z.literal("test_cinetpay") }),
+  z.object({ action: z.literal("test_ia") }),
   z.object({
     action: z.literal("temoignage_ajouter"),
     nom: z.string().trim().min(2).max(80),
@@ -261,6 +265,11 @@ export async function POST(req: Request) {
         : await db.from("fiches_publiques").update({ publie: !!x.publie, maj_le: new Date().toISOString() }).eq("slug", x.slug);
       if (r.error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
       return Response.json({ ok: true });
+    }
+    case "test_ia": {
+      const [standard, expert] = await Promise.all([testerIA(), testerIA("expert")]);
+      const message = `Préparations : ${standard.message} · Mode expert : ${expert.message}`;
+      return standard.ok && expert.ok ? Response.json({ ok: true, message }) : Response.json({ error: message }, { status: 502 });
     }
     case "test_cinetpay": {
       const r = await diagnosticCinetpay();

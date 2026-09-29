@@ -67,6 +67,7 @@ type Donnees = {
   formules: Formule[];
   moi: string;
   temoignages: Temoignage[];
+  erreurs: { id: number; cree_le: string; source: string; detail: string }[];
   fiches: { slug: string; titre: string; classe: string | null; discipline: string | null; publie: boolean; vues: number; cree_le: string }[];
 };
 type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "vitrine" | "tarifs";
@@ -206,6 +207,7 @@ function Tableau({ d, action }: { d: Donnees; action: (b: Record<string, unknown
         />
         <Carte label="Préparations sauvegardées" valeur={String(s.preparations)} />
       </div>
+      <ServiceIA d={d} action={action} />
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4 text-sm">
         <div>
           <h2 className="font-bold text-faso-dark">E-mails automatiques</h2>
@@ -832,6 +834,50 @@ function Vitrine({ d, action }: { d: Donnees; action: (b: Record<string, unknown
           {!d.fiches.length && <li className="py-2 text-muted">Aucune fiche publiée pour le moment.</li>}
         </ul>
       </section>
+    </div>
+  );
+}
+
+/** Santé du service d'IA : test en direct et dernières erreurs enregistrées (IA, paiement…). */
+function ServiceIA({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
+  const [test, setTest] = useState(false);
+  const erreursIA = d.erreurs.filter((e) => e.source === "ia");
+  return (
+    <div className="rounded-xl border border-line bg-white p-4 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-bold text-faso-dark">Service d&apos;IA</h2>
+          <p className={erreursIA.length ? "text-rouge" : "text-muted"}>
+            {erreursIA.length
+              ? `${erreursIA.length} erreur(s) récente(s), dernière le ${new Date(erreursIA[0]!.cree_le).toLocaleString("fr-FR")}.`
+              : "Aucune erreur enregistrée récemment."}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={test}
+          onClick={async () => {
+            setTest(true);
+            await action({ action: "test_ia" }, "Test de l'IA réussi");
+            setTest(false);
+          }}
+          className="rounded-lg border border-faso px-3 py-1.5 font-semibold text-faso disabled:opacity-50"
+        >
+          {test ? "Test en cours (jusqu'à 1 min)…" : "Tester l'IA"}
+        </button>
+      </div>
+      {d.erreurs.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-muted">Journal des erreurs ({d.erreurs.length})</summary>
+          <ul className="mt-2 space-y-1.5">
+            {d.erreurs.map((e) => (
+              <li key={e.id} className="break-words rounded bg-surface px-2 py-1 font-mono text-[11px]">
+                {new Date(e.cree_le).toLocaleString("fr-FR")} · {e.source} · {e.detail}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }
