@@ -15,9 +15,22 @@ export class AiUnavailableError extends Error {
  * Message affiché à l'enseignant selon l'erreur du service d'IA : la cause réelle (crédit, clé, accès au modèle…)
  * pour que l'administrateur sache quoi corriger. Les erreurs de connexion ou de surcharge restent « réessayez ».
  */
+/** Clé copiée tronquée depuis la console (« sk-ant-…abcd ») ou avec des espaces : elle ne peut même pas être envoyée. */
+export class CleInvalideError extends Error {
+  constructor() {
+    super(
+      "La clé ANTHROPIC_API_KEY enregistrée dans Vercel est incomplète (elle contient « … » ou un espace) : c'est la version masquée affichée par la console Anthropic. L'administrateur doit créer une nouvelle clé et la copier en entier au moment de sa création.",
+    );
+  }
+}
+
+export function cleApiValide(cle = process.env.ANTHROPIC_API_KEY ?? ""): boolean {
+  return /^[\x21-\x7e]+$/.test(cle.trim());
+}
+
 export function aiErrorMessage(e: unknown): string {
   const retry = "PÉDAGOGUE.IA n'a pas pu répondre (service momentanément indisponible). Réessayez dans un instant.";
-  if (e instanceof AiUnavailableError) return e.message;
+  if (e instanceof AiUnavailableError || e instanceof CleInvalideError) return e.message;
   if (e instanceof Anthropic.AuthenticationError) return "La clé API configurée (ANTHROPIC_API_KEY) est invalide ou a été supprimée. Prévenez l'administrateur.";
   if (e instanceof Anthropic.PermissionDeniedError) return "La clé API n'a pas l'autorisation d'utiliser ce service ou ce modèle. Prévenez l'administrateur.";
   if (e instanceof Anthropic.NotFoundError) return `Le modèle configuré (${aiConfig().model}) n'est pas accessible avec cette clé API. Prévenez l'administrateur (variables KIBARU_MODEL / KIBARU_MODEL_EXPERT).`;
@@ -72,6 +85,7 @@ export type StreamEnd = {
 export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[], mode?: string): AsyncGenerator<string, StreamEnd, void> {
   const { model, effort, configured } = aiConfig(mode);
   if (!configured) throw new AiUnavailableError();
+  if (!cleApiValide()) throw new CleInvalideError();
   const client = new Anthropic();
   const stream = client.beta.messages.stream({
     model,
@@ -104,6 +118,7 @@ export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[],
 export async function testerIA(mode?: string): Promise<{ ok: boolean; message: string }> {
   const { model, configured } = aiConfig(mode);
   if (!configured) return { ok: false, message: "ANTHROPIC_API_KEY absente dans Vercel." };
+  if (!cleApiValide()) return { ok: false, message: new CleInvalideError().message };
   const debut = Date.now();
   try {
     const client = new Anthropic({ maxRetries: 0 });
