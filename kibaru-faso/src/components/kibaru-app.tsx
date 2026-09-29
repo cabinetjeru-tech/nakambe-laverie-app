@@ -620,7 +620,7 @@ export function KibaruApp() {
                         {m.content}
                       </div>
                     ) : (
-                      <AssistantMessage key={i} message={m} streaming={busy && i === messages.length - 1} context={context} />
+                      <AssistantMessage key={i} message={m} streaming={busy && i === messages.length - 1} context={context} admin={compte?.role === "admin"} />
                     ),
                   )}
                   {busy && last?.role === "user" && (
@@ -940,7 +940,21 @@ function Welcome({
   );
 }
 
-function AssistantMessage({ message, streaming, context }: { message: StoredMessage; streaming: boolean; context: TeacherContext }) {
+/** Administration : publier une préparation dans la bibliothèque publique (/fiches). */
+async function publierFiche(contenu: string, context: TeacherContext) {
+  const titreParDefaut = (contenu.match(/^#{1,3}\s+(.+)$/m)?.[1] ?? context.theme ?? "").replace(/[*_`]/g, "").trim();
+  const titre = window.prompt("Titre de la fiche publique (visible sur Google) :", titreParDefaut);
+  if (!titre?.trim()) return;
+  const r = await fetch("/api/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "fiche_publier", titre: titre.trim(), classe: context.classe || undefined, discipline: context.discipline || undefined, contenu }),
+  }).catch(() => null);
+  const j = (await r?.json().catch(() => ({}))) as { error?: string; message?: string };
+  alert(r?.ok ? `Fiche publiée : ${j.message ?? ""}` : `Publication impossible : ${j.error ?? "erreur réseau"}`);
+}
+
+function AssistantMessage({ message, streaming, context, admin = false }: { message: StoredMessage; streaming: boolean; context: TeacherContext; admin?: boolean }) {
   const fullRef = useRef<HTMLDivElement | null>(null);
   const partRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [copied, setCopied] = useState(false);
@@ -1014,6 +1028,7 @@ function AssistantMessage({ message, streaming, context }: { message: StoredMess
           <ActionButton onClick={() => exportPart("pdf", null, "Document complet")}>{pdfBusy === "Document complet" ? "Préparation du PDF…" : "⬇ Télécharger PDF"}</ActionButton>
           <ActionButton onClick={() => exportPart("print", null, "Document complet")}>Imprimer</ActionButton>
           <ActionButton onClick={() => exportPart("word", null, "Document complet")}>Word</ActionButton>
+          {admin && <ActionButton onClick={() => void publierFiche(message.content, context)}>🌍 Publier dans la bibliothèque</ActionButton>}
           {parts.map((p) => (
             <span key={p.key} className="contents">
               <ActionButton onClick={() => exportPart("pdf", p.key, p.title)}>{pdfBusy === p.title ? "Préparation…" : `⬇ PDF : ${p.title.toLowerCase()}`}</ActionButton>

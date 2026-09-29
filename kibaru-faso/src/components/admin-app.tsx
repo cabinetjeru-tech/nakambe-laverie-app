@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate, formatFcfa, type CodePromo, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
+import type { Temoignage } from "@/lib/vitrine";
 import { deconnexion, Logo } from "./compte";
 
 /** Espace administration : tableau de bord, enseignants, paiements, tarifs. */
@@ -65,8 +66,10 @@ type Donnees = {
   paiements: Paiement[];
   formules: Formule[];
   moi: string;
+  temoignages: Temoignage[];
+  fiches: { slug: string; titre: string; classe: string | null; discipline: string | null; publie: boolean; vues: number; cree_le: string }[];
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "vitrine" | "tarifs";
 /** Objectif de lancement : 5 000 enseignants abonnés. */
 const OBJECTIF_ABONNES = 5000;
 
@@ -118,6 +121,7 @@ export function AdminApp() {
     ["paiements", "Paiements"],
     ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
     ["campagne", "Campagne"],
+    ["vitrine", `Vitrine${d.temoignages.some((t) => !t.publie) ? " •" : ""}`],
     ["tarifs", "Tarifs"],
   ];
 
@@ -154,6 +158,7 @@ export function AdminApp() {
         {onglet === "paiements" && <Paiements d={d} action={action} />}
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
         {onglet === "campagne" && <Campagne d={d} action={action} />}
+        {onglet === "vitrine" && <Vitrine d={d} action={action} />}
         {onglet === "tarifs" && <Tarifs d={d} action={action} />}
       </main>
     </div>
@@ -701,6 +706,132 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
           </button>
         </div>
       ))}
+    </div>
+  );
+}
+
+function Vitrine({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
+  const [nouveau, setNouveau] = useState({ nom: "", fonction: "", ville: "", texte: "", note: 5 });
+  const enAttente = d.temoignages.filter((t) => !t.publie).length;
+  return (
+    <div className="space-y-4">
+      <section className="rounded-xl border border-line bg-white p-4">
+        <h2 className="font-bold text-faso-dark">Témoignages {enAttente > 0 && <span className="text-sm font-normal text-rouge">({enAttente} à relire)</span>}</h2>
+        <p className="mt-1 text-sm text-muted">
+          Les enseignants déposent leur avis dans « Mon compte » ; seuls les avis publiés apparaissent sur la page Découvrir (6 au plus, par ordre croissant).
+        </p>
+        <ul className="mt-3 divide-y divide-line">
+          {d.temoignages.map((t) => (
+            <li key={t.id} className="flex flex-wrap items-start justify-between gap-3 py-3 text-sm">
+              <div className="min-w-0 flex-1">
+                <div>
+                  <span className="text-or">{"★".repeat(t.note)}</span> <strong>{t.nom}</strong>
+                  {(t.fonction || t.ville) && <span className="text-muted"> — {[t.fonction, t.ville].filter(Boolean).join(", ")}</span>}
+                  {!t.utilisateur_id && <span className="text-xs text-muted"> · saisi par l&apos;administration</span>}
+                </div>
+                <p className="mt-1">« {t.texte} »</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="text-xs text-muted">
+                  Ordre{" "}
+                  <input
+                    type="number"
+                    min={0}
+                    max={999}
+                    defaultValue={t.ordre}
+                    onBlur={(e) => Number(e.target.value) !== t.ordre && void action({ action: "temoignage", id: t.id, ordre: Number(e.target.value) || 0 }, "Ordre enregistré")}
+                    className={`${input} w-16`}
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => void action({ action: "temoignage", id: t.id, publie: !t.publie }, t.publie ? "Avis retiré de la page" : "Avis publié")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${t.publie ? "border border-line" : "bg-faso text-white"}`}
+                >
+                  {t.publie ? "Retirer" : "Publier"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => confirm("Supprimer définitivement cet avis ?") && void action({ action: "temoignage", id: t.id, supprimer: true }, "Avis supprimé")}
+                  className="text-xs text-rouge underline"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </li>
+          ))}
+          {!d.temoignages.length && <li className="py-3 text-sm text-muted">Aucun avis pour le moment.</li>}
+        </ul>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void action({ action: "temoignage_ajouter", ...nouveau }, "Témoignage ajouté et publié").then(() => setNouveau({ nom: "", fonction: "", ville: "", texte: "", note: 5 }));
+          }}
+          className="mt-3 grid gap-2 border-t border-line pt-3 sm:grid-cols-3"
+        >
+          <div className="text-sm font-semibold sm:col-span-3">Ajouter un témoignage reçu par WhatsApp ou de vive voix (avec l&apos;accord de l&apos;enseignant)</div>
+          <input required value={nouveau.nom} onChange={(e) => setNouveau({ ...nouveau, nom: e.target.value })} placeholder="Nom affiché (ex. Awa T.)" aria-label="Nom affiché" className={input} />
+          <input value={nouveau.fonction} onChange={(e) => setNouveau({ ...nouveau, fonction: e.target.value })} placeholder="Fonction (ex. Professeure de SVT)" aria-label="Fonction" className={input} />
+          <input value={nouveau.ville} onChange={(e) => setNouveau({ ...nouveau, ville: e.target.value })} placeholder="Ville" aria-label="Ville" className={input} />
+          <textarea
+            required
+            minLength={10}
+            maxLength={600}
+            value={nouveau.texte}
+            onChange={(e) => setNouveau({ ...nouveau, texte: e.target.value })}
+            placeholder="Témoignage"
+            aria-label="Témoignage"
+            rows={2}
+            className={`${input} sm:col-span-2`}
+          />
+          <div className="flex items-center gap-2">
+            <select value={nouveau.note} onChange={(e) => setNouveau({ ...nouveau, note: Number(e.target.value) })} aria-label="Note" className={input}>
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>
+                  {n} ★
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="rounded-lg bg-faso px-3 py-1.5 text-sm font-semibold text-white">
+              Ajouter
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section className="rounded-xl border border-line bg-white p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-bold text-faso-dark">Bibliothèque de fiches gratuites ({d.fiches.filter((f) => f.publie).length} publiées)</h2>
+          <a href="/fiches" target="_blank" className="text-sm font-semibold text-faso underline">
+            Voir la page publique
+          </a>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          Pour publier : générez une préparation dans l&apos;application, relisez-la, puis cliquez sur « 🌍 Publier dans la bibliothèque » sous la réponse. Les fiches sont
+          visibles par tous et indexées par Google : chacune attire des enseignants vers l&apos;essai gratuit.
+        </p>
+        <ul className="mt-3 divide-y divide-line text-sm">
+          {d.fiches.map((f) => (
+            <li key={f.slug} className="flex flex-wrap items-center justify-between gap-2 py-2">
+              <span className="min-w-0">
+                <a href={`/fiches/${f.slug}`} target="_blank" className={`font-semibold underline-offset-2 hover:underline ${f.publie ? "text-faso-dark" : "text-muted line-through"}`}>
+                  {f.titre}
+                </a>
+                <span className="text-muted"> · {[f.discipline, f.classe].filter(Boolean).join(" · ")} · {f.vues} vue{f.vues > 1 ? "s" : ""}</span>
+              </span>
+              <span className="flex gap-3">
+                <button type="button" onClick={() => void action({ action: "fiche", slug: f.slug, publie: !f.publie }, f.publie ? "Fiche retirée" : "Fiche republiée")} className="text-xs text-faso underline">
+                  {f.publie ? "Retirer" : "Republier"}
+                </button>
+                <button type="button" onClick={() => confirm("Supprimer définitivement cette fiche ?") && void action({ action: "fiche", slug: f.slug, supprimer: true }, "Fiche supprimée")} className="text-xs text-rouge underline">
+                  Supprimer
+                </button>
+              </span>
+            </li>
+          ))}
+          {!d.fiches.length && <li className="py-2 text-muted">Aucune fiche publiée pour le moment.</li>}
+        </ul>
+      </section>
     </div>
   );
 }

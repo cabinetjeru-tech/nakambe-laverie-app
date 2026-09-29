@@ -3,6 +3,7 @@ import { formatFcfa, type CodePromo } from "@/lib/abonnement";
 import { CONTACT } from "@/lib/contact";
 import { ExempleFiche } from "@/components/exemple-fiche";
 import { BoutonInstaller } from "@/components/installer";
+import { compteursPublics, fichesPubliees, temoignagesPublies } from "@/lib/vitrine-serveur";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +55,12 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
   const brut = typeof q.parrain === "string" ? q.parrain.trim().toUpperCase() : "";
   const parrain = /^[A-Z0-9]{6}$/.test(brut) ? brut : null;
   const inscription = parrain ? `/?parrain=${parrain}` : "/?inscription=1";
-  const o = await offres();
+  const [o, avis, compteurs, fiches] = await Promise.all([
+    offres(),
+    temoignagesPublies().catch(() => []),
+    compteursPublics().catch(() => ({ enseignants: null, preparations: null })),
+    fichesPubliees(3).catch(() => []),
+  ]);
 
   const Cta = ({ className = "" }: { className?: string }) => (
     <a href={inscription} className={`inline-block rounded-xl bg-or px-6 py-3 text-center text-base font-extrabold text-ink shadow hover:brightness-95 ${className}`}>
@@ -87,6 +93,12 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
             <Cta />
             <span className="text-sm text-white/85">Sans paiement pour l&apos;essai · Orange Money, Moov Money</span>
           </div>
+          {(compteurs.enseignants || compteurs.preparations) && (
+            <p className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-white/95">
+              {compteurs.enseignants && <span>👩🏾‍🏫 Déjà {compteurs.enseignants.toLocaleString("fr-FR")} enseignants inscrits</span>}
+              {compteurs.preparations && <span>📚 {compteurs.preparations.toLocaleString("fr-FR")} préparations réalisées</span>}
+            </p>
+          )}
           <BoutonInstaller className="mt-4" clair />
           {parrain && <p className="mt-4 text-sm text-white/85">Vous êtes invité(e) par un collègue (code {parrain}).</p>}
         </div>
@@ -130,6 +142,46 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           <ExempleFiche />
         </div>
       </section>
+
+      {avis.length > 0 && (
+        <section className="mx-auto max-w-5xl px-4 py-12">
+          <h2 className="text-2xl font-extrabold text-faso-dark">Ce qu&apos;en disent les enseignants</h2>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {avis.map((t) => (
+              <figure key={t.id} className="flex flex-col rounded-2xl border border-line bg-white p-5 shadow-sm">
+                <div className="text-or" aria-label={`${t.note} sur 5`}>
+                  {"★".repeat(t.note)}
+                  <span className="text-line">{"★".repeat(5 - t.note)}</span>
+                </div>
+                <blockquote className="mt-2 flex-1 text-[15px] leading-relaxed">« {t.texte} »</blockquote>
+                <figcaption className="mt-3 text-sm">
+                  <strong className="text-faso-dark">{t.nom}</strong>
+                  {(t.fonction || t.ville) && <span className="text-muted"> — {[t.fonction, t.ville].filter(Boolean).join(", ")}</span>}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {fiches.length > 0 && (
+        <section className="bg-faso-50 px-4 py-12">
+          <div className="mx-auto max-w-5xl">
+            <h2 className="text-2xl font-extrabold text-faso-dark">📚 Fiches gratuites à consulter</h2>
+            <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              {fiches.map((f) => (
+                <a key={f.slug} href={`/fiches/${f.slug}`} className="rounded-2xl border border-line bg-white p-4 hover:border-faso">
+                  <div className="text-xs font-semibold uppercase text-faso">{[f.discipline, f.classe].filter(Boolean).join(" · ")}</div>
+                  <div className="mt-1 font-bold text-faso-dark">{f.titre}</div>
+                </a>
+              ))}
+            </div>
+            <a href="/fiches" className="mt-4 inline-block font-semibold text-faso underline underline-offset-2">
+              Voir toutes les fiches gratuites →
+            </a>
+          </div>
+        </section>
+      )}
 
       <section className="px-4 py-12">
         <div className="mx-auto max-w-5xl">
@@ -218,6 +270,10 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           </a>
         </p>
         <p className="mt-2">
+          <a href="/fiches" className="underline underline-offset-2">
+            Fiches gratuites
+          </a>{" "}
+          ·{" "}
           <a href="/conditions" className="underline underline-offset-2">
             Conditions d&apos;utilisation et de vente · Données personnelles
           </a>
