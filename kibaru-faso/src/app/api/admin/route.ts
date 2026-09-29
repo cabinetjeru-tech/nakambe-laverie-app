@@ -2,6 +2,7 @@ import { z } from "zod";
 import { finAbonnement, prixValide } from "@/lib/abonnement";
 import { activerAbonnement, compteCourant, formules, traiterPaiement, type Profil } from "@/lib/comptes";
 import { debutJour, tauxUsdFcfa, usdEnFcfa } from "@/lib/couts";
+import { diagnosticCinetpay } from "@/lib/paiement/cinetpay";
 import { emailConfigure, envoyerEmail, expediteur } from "@/lib/email/envoi";
 import { emailTest } from "@/lib/email/modeles";
 import { site } from "@/lib/email/notifications";
@@ -151,6 +152,7 @@ const actionSchema = z.discriminatedUnion("action", [
     max_utilisations: z.number().int().min(1).max(1_000_000).nullable().optional(),
   }),
   z.object({ action: z.literal("email_test") }),
+  z.object({ action: z.literal("test_cinetpay") }),
   z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
 ]);
 
@@ -201,6 +203,10 @@ export async function POST(req: Request) {
       const { error } = await db.from("commissions").update(patch).eq("id", x.id);
       if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
       return Response.json({ ok: true });
+    }
+    case "test_cinetpay": {
+      const r = await diagnosticCinetpay();
+      return r.ok ? Response.json({ ok: true, message: r.message }) : Response.json({ error: r.message }, { status: 502 });
     }
     case "email_test": {
       if (!emailConfigure()) return Response.json({ error: "E-mails non configurés : ajoutez BREVO_API_KEY dans Vercel." }, { status: 400 });

@@ -93,8 +93,8 @@ export function AdminApp() {
   async function action(body: Record<string, unknown>, ok: string) {
     setMessage(null);
     const r = await fetch("/api/admin", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    const j = (await r.json().catch(() => ({}))) as { error?: string; statut?: string; fin?: string };
-    setMessage(r.ok ? `${ok}${j.statut ? ` : ${STATUTS[j.statut] ?? j.statut}` : ""}${j.fin ? ` — accès jusqu'au ${formatDate(j.fin)}` : ""}.` : `Erreur : ${j.error ?? "action impossible"}`);
+    const j = (await r.json().catch(() => ({}))) as { error?: string; statut?: string; fin?: string; message?: string };
+    setMessage(r.ok ? `${ok}${j.message ? ` : ${j.message}` : ""}${j.statut ? ` : ${STATUTS[j.statut] ?? j.statut}` : ""}${j.fin ? ` — accès jusqu'au ${formatDate(j.fin)}` : ""}.` : `Erreur : ${j.error ?? "action impossible"}`);
     await charger();
   }
 
@@ -345,53 +345,71 @@ function Enseignants({ d, action }: { d: Donnees; action: (b: Record<string, unk
 }
 
 function Paiements({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
+  const [test, setTest] = useState(false);
   return (
-    <div className="overflow-x-auto rounded-xl border border-line bg-white">
-      <table className="w-full text-left text-sm">
-        <thead className="bg-surface text-xs uppercase text-muted">
-          <tr>
-            <th className="px-3 py-2">Date</th>
-            <th className="px-3 py-2">Enseignant</th>
-            <th className="px-3 py-2">Formule</th>
-            <th className="px-3 py-2">Montant</th>
-            <th className="px-3 py-2">Statut</th>
-            <th className="px-3 py-2">Transaction</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line">
-          {d.paiements.map((p) => (
-            <tr key={p.id}>
-              <td className="whitespace-nowrap px-3 py-2">{formatDate(p.cree_le)}</td>
-              <td className="px-3 py-2">{p.email}</td>
-              <td className="px-3 py-2">{p.formule_id}</td>
-              <td className="whitespace-nowrap px-3 py-2">{formatFcfa(p.montant_fcfa)}</td>
-              <td className="px-3 py-2">
-                <span className={p.statut === "reussi" ? "font-semibold text-faso" : p.statut === "en_attente" ? "text-muted" : "text-rouge"}>{STATUTS[p.statut] ?? p.statut}</span>
-                {p.moyen && <span className="text-xs text-muted"> · {p.moyen}</span>}
-                {p.statut === "reussi" && (
-                  <a href={`/recu/${encodeURIComponent(p.transaction_id)}`} target="_blank" className="ml-2 text-xs text-faso underline">
-                    Reçu
-                  </a>
-                )}
-                {p.statut === "en_attente" && (
-                  <button type="button" onClick={() => void action({ action: "verifier_paiement", transaction: p.transaction_id }, "Paiement revérifié")} className="ml-2 text-xs text-faso underline">
-                    Vérifier
-                  </button>
-                )}
-              </td>
-              <td className="px-3 py-2 font-mono text-xs">{p.transaction_id}</td>
-            </tr>
-          ))}
-          {!d.paiements.length && (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-line bg-white p-3 text-sm">
+        <span className="text-muted">Vérifie que le serveur joint CinetPay et que les clés (CINETPAY_API_KEY, CINETPAY_SITE_ID) sont acceptées.</span>
+        <button
+          type="button"
+          disabled={test}
+          onClick={async () => {
+            setTest(true);
+            await action({ action: "test_cinetpay" }, "Test CinetPay réussi");
+            setTest(false);
+          }}
+          className="rounded-lg border border-faso px-3 py-1.5 font-semibold text-faso disabled:opacity-50"
+        >
+          {test ? "Test en cours…" : "Tester la connexion CinetPay"}
+        </button>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-line bg-white">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-surface text-xs uppercase text-muted">
             <tr>
-              <td colSpan={6} className="px-3 py-4 text-muted">
-                Aucun paiement pour le moment.
-              </td>
+              <th className="px-3 py-2">Date</th>
+              <th className="px-3 py-2">Enseignant</th>
+              <th className="px-3 py-2">Formule</th>
+              <th className="px-3 py-2">Montant</th>
+              <th className="px-3 py-2">Statut</th>
+              <th className="px-3 py-2">Transaction</th>
             </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-line">
+            {d.paiements.map((p) => (
+              <tr key={p.id}>
+                <td className="whitespace-nowrap px-3 py-2">{formatDate(p.cree_le)}</td>
+                <td className="px-3 py-2">{p.email}</td>
+                <td className="px-3 py-2">{p.formule_id}</td>
+                <td className="whitespace-nowrap px-3 py-2">{formatFcfa(p.montant_fcfa)}</td>
+                <td className="px-3 py-2">
+                  <span className={p.statut === "reussi" ? "font-semibold text-faso" : p.statut === "en_attente" ? "text-muted" : "text-rouge"}>{STATUTS[p.statut] ?? p.statut}</span>
+                  {p.moyen && <span className="text-xs text-muted"> · {p.moyen}</span>}
+                  {p.statut === "reussi" && (
+                    <a href={`/recu/${encodeURIComponent(p.transaction_id)}`} target="_blank" className="ml-2 text-xs text-faso underline">
+                      Reçu
+                    </a>
+                  )}
+                  {p.statut === "en_attente" && (
+                    <button type="button" onClick={() => void action({ action: "verifier_paiement", transaction: p.transaction_id }, "Paiement revérifié")} className="ml-2 text-xs text-faso underline">
+                      Vérifier
+                    </button>
+                  )}
+                </td>
+                <td className="px-3 py-2 font-mono text-xs">{p.transaction_id}</td>
+              </tr>
+            ))}
+            {!d.paiements.length && (
+              <tr>
+                <td colSpan={6} className="px-3 py-4 text-muted">
+                  Aucun paiement pour le moment.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+  </div>
   );
 }
 
