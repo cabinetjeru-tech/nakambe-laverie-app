@@ -15,6 +15,7 @@ import { EvalFormDialog } from "./eval-form";
 import { FicheFormDialog } from "./fiche-form";
 import { Markdown } from "./markdown";
 import { CONTACT } from "@/lib/contact";
+import { BoutonInstaller } from "./installer";
 import { AbonnementScreen, AuthScreen, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
 
 type LibraryDoc = {
@@ -165,6 +166,11 @@ export function KibaruApp() {
       if (/^[A-Z0-9]{6}$/.test(code)) setParrain(code);
     }
     if (q.get("inscription")) setInscription(true);
+    // Raccourci de l'application installée (appui long sur l'icône) : « Mon compte ».
+    if (q.get("compte")) {
+      setCompteOpen(true);
+      window.history.replaceState(null, "", "/");
+    }
     if ((q.get("parrain") || q.get("inscription")) && !q.get("paiement") && !q.get("reinit")) window.history.replaceState(null, "", "/");
     if (q.get("erreur_lien")) setNotice("Ce lien a expiré ou a déjà été utilisé. Recommencez la démarche.");
     const tx = q.get("paiement");
@@ -824,6 +830,7 @@ function Welcome({
     <div className="fade-in">
       <h1 className="text-2xl font-bold text-faso-dark">🇧🇫 Bienvenue sur PÉDAGOGUE.IA</h1>
       <p className="mt-1 text-[15px] text-ink">Votre assistant pédagogique intelligent.</p>
+      <BoutonInstaller className="mt-3" />
       <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <button type="button" onClick={onFiche} className="flex items-center gap-3 rounded-xl border-2 border-faso bg-faso-50 p-4 text-left transition hover:shadow-sm">
           <span aria-hidden className="text-2xl leading-none">

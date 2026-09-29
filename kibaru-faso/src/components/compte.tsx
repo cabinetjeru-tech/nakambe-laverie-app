@@ -77,6 +77,10 @@ export function Contact({ className = "" }: { className?: string }) {
         {CONTACT.email}
       </a>{" "}
       ·{" "}
+      <a href={CONTACT.whatsapp} target="_blank" rel="noopener" className="font-semibold text-faso underline underline-offset-2">
+        WhatsApp
+      </a>{" "}
+      ·{" "}
       <a href="/conditions" target="_blank" className="underline underline-offset-2">
         Conditions
       </a>

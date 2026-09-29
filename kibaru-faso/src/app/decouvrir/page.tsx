@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { formatFcfa, type CodePromo } from "@/lib/abonnement";
 import { CONTACT } from "@/lib/contact";
+import { ExempleFiche } from "@/components/exemple-fiche";
+import { BoutonInstaller } from "@/components/installer";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -85,6 +87,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
             <Cta />
             <span className="text-sm text-white/85">Sans paiement pour l&apos;essai · Orange Money, Moov Money</span>
           </div>
+          <BoutonInstaller className="mt-4" clair />
           {parrain && <p className="mt-4 text-sm text-white/85">Vous êtes invité(e) par un collègue (code {parrain}).</p>}
         </div>
       </section>
@@ -110,6 +113,25 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
       </section>
 
       <section className="bg-surface px-4 py-12">
+        <div className="mx-auto grid max-w-5xl items-start gap-8 lg:grid-cols-2">
+          <div>
+            <h2 className="text-2xl font-extrabold text-faso-dark">Voyez le résultat avant de vous inscrire</h2>
+            <p className="mt-3">
+              Vous indiquez la classe, la discipline, la leçon et la durée. En quelques minutes, PÉDAGOGUE.IA rédige une fiche complète, structurée comme celles
+              attendues par les conseillers pédagogiques, avec le devoir, le corrigé et le barème.
+            </p>
+            <ul className="mt-4 space-y-2">
+              <li>✅ Durées additionnées et comparées à la durée de la séance</li>
+              <li>✅ Points du barème vérifiés, calculs du corrigé contrôlés</li>
+              <li>✅ Téléchargement en PDF ou Word, prêt pour la photocopie</li>
+            </ul>
+            <Cta className="mt-6" />
+          </div>
+          <ExempleFiche />
+        </div>
+      </section>
+
+      <section className="px-4 py-12">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl font-extrabold text-faso-dark">Un assistant sérieux, pas un gadget</h2>
           <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -202,6 +224,15 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
         </p>
         <p className="mt-2">© {new Date().getFullYear()} PÉDAGOGUE.IA — L&apos;intelligence au service de la pédagogie</p>
       </footer>
+      <a
+        href={`${CONTACT.whatsapp}?text=${encodeURIComponent("Bonjour, j'ai une question sur PÉDAGOGUE.IA.")}`}
+        target="_blank"
+        rel="noopener"
+        className="fixed bottom-4 right-4 z-20 flex items-center gap-2 rounded-full bg-[#25d366] px-4 py-3 text-sm font-bold text-white shadow-lg hover:brightness-95"
+        aria-label="Poser une question sur WhatsApp"
+      >
+        <span aria-hidden className="text-lg leading-none">💬</span> Une question ? WhatsApp
+      </a>
     </main>
   );
 }
