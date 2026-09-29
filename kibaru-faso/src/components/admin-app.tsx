@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatDate, formatFcfa, type CodePromo, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import type { Temoignage } from "@/lib/vitrine";
+import { BaseDocumentaire } from "./admin-base";
 import { deconnexion, Logo } from "./compte";
 
 /** Espace administration : tableau de bord, enseignants, paiements, tarifs. */
@@ -70,7 +71,7 @@ type Donnees = {
   erreurs: { id: number; cree_le: string; source: string; detail: string }[];
   fiches: { slug: string; titre: string; classe: string | null; discipline: string | null; publie: boolean; vues: number; cree_le: string }[];
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "vitrine" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "vitrine" | "base" | "tarifs";
 /** Objectif de lancement : 5 000 enseignants abonnés. */
 const OBJECTIF_ABONNES = 5000;
 
@@ -123,6 +124,7 @@ export function AdminApp() {
     ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
     ["campagne", "Campagne"],
     ["vitrine", `Vitrine${d.temoignages.some((t) => !t.publie) ? " •" : ""}`],
+    ["base", "Base documentaire"],
     ["tarifs", "Tarifs"],
   ];
 
@@ -160,6 +162,7 @@ export function AdminApp() {
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
         {onglet === "campagne" && <Campagne d={d} action={action} />}
         {onglet === "vitrine" && <Vitrine d={d} action={action} />}
+        {onglet === "base" && <BaseDocumentaire />}
         {onglet === "tarifs" && <Tarifs d={d} action={action} />}
       </main>
     </div>
