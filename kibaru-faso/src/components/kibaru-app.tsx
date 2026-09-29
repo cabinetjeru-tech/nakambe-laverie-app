@@ -20,6 +20,7 @@ import {
   IconeAccueil,
   IconeClasse,
   IconeCompte,
+  IconeCorrige,
   IconeDevoir,
   IconeDossier,
   IconeEnvoyer,
@@ -112,6 +113,7 @@ export function KibaruApp() {
   const [sidebar, setSidebar] = useState(false);
   /** Sur téléphone, le panneau montre soit « Ma classe », soit « Mes préparations » (barre de navigation du bas). */
   const [vuePanneau, setVuePanneau] = useState<"classe" | "preparations">("classe");
+  const [commandesOuvertes, setCommandesOuvertes] = useState(false);
   const [ficheOpen, setFicheOpen] = useState(false);
   /** Formulaire du Module 02 ouvert, avec le type d'évaluation présélectionné. */
   const [evalOpen, setEvalOpen] = useState<string | null>(null);
@@ -604,8 +606,6 @@ export function KibaruApp() {
         >
           <div className={vuePanneau === "preparations" ? "hidden lg:block" : ""}>
             <ContextPanel context={context} onChange={updateContext} />
-            <ProfilePanel context={context} onChange={updateContext} />
-            <DocumentsPanel library={status.library} history={status.history} pending={status.pending} docs={docs} onChange={updateDocs} context={context} />
           </div>
           <div className={vuePanneau === "classe" ? "hidden lg:block" : ""}>
           <HistoryPanel
@@ -621,6 +621,18 @@ export function KibaruApp() {
               if (id === currentId) setCurrentId(null);
             }}
           />
+          </div>
+          <div className={vuePanneau === "preparations" ? "hidden lg:block" : ""}>
+            <ProfilePanel context={context} onChange={updateContext} />
+            <DocumentsPanel
+              library={status.library}
+              history={status.history}
+              pending={status.pending}
+              docs={docs}
+              onChange={updateDocs}
+              context={context}
+              admin={compte?.role === "admin"}
+            />
           </div>
         </aside>
 
@@ -700,7 +712,10 @@ export function KibaruApp() {
                     <div>
                       <div className="mb-1.5 text-xs font-semibold text-muted">{last.decision?.fiche ? "Commandes de la fiche" : last.decision?.module02 ? "Commandes de l'évaluation" : last.decision?.module03 ? "Commandes de la remédiation" : last.decision?.module04 ? "Commandes de la progression" : "Modifier cette production"}</div>
                       <div className="flex flex-wrap gap-2">
-                        {(last.decision?.fiche ? FICHE_COMMANDS : last.decision?.module02 ? EVAL_COMMANDS : last.decision?.module03 ? REMED_COMMANDS : last.decision?.module04 ? PROG_COMMANDS : MODIFICATIONS).map((m) => (
+                        {(() => {
+                          const liste = last.decision?.fiche ? FICHE_COMMANDS : last.decision?.module02 ? EVAL_COMMANDS : last.decision?.module03 ? REMED_COMMANDS : last.decision?.module04 ? PROG_COMMANDS : MODIFICATIONS;
+                          return commandesOuvertes ? liste : liste.slice(0, 4);
+                        })().map((m) => (
                           <button
                             key={m.label}
                             type="button"
@@ -710,6 +725,13 @@ export function KibaruApp() {
                             {m.label}
                           </button>
                         ))}
+                        <button
+                          type="button"
+                          onClick={() => setCommandesOuvertes((v) => !v)}
+                          className="rounded-full border border-dashed border-faso/50 px-3 py-1 text-xs font-semibold text-faso hover:bg-faso-50"
+                        >
+                          {commandesOuvertes ? "Moins" : "Plus d'actions…"}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1175,10 +1197,17 @@ function DecisionBar({ d }: { d: DecisionSummary }) {
 
 /** Contrôle final automatique : points à relire signalés après la génération. */
 function CheckBox({ check }: { check: string[] }) {
-  if (!check.length) return <p className="mt-2 text-[11px] text-muted">Contrôle final automatique : aucun signal.</p>;
+  if (!check.length)
+    return (
+      <p className="mt-3 flex items-center gap-1.5 rounded-lg bg-faso-50 px-3 py-2 text-xs font-semibold text-faso-dark ring-1 ring-faso/20">
+        <IconeCorrige className="h-4 w-4" /> Vérifications automatiques réussies : durées, points, sources et étiquettes.
+      </p>
+    );
   return (
     <div className="mt-3 rounded-lg bg-or-50 px-3 py-2 text-xs text-[#6b4f00] ring-1 ring-or/50">
-      <div className="font-bold">Contrôle final automatique — {check.length} point(s) à relire</div>
+      <div className="font-bold">
+        À relire avant utilisation — {check.length} point{check.length > 1 ? "s" : ""}
+      </div>
       <ul className="mt-1 list-disc pl-4">
         {check.map((c) => (
           <li key={c}>{c}</li>
@@ -1277,7 +1306,23 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
   );
 }
 
-function DocumentsPanel({ library, history, pending, docs, onChange, context }: { library: LibraryDoc[]; history: LibraryDoc[]; pending: PendingDoc[]; docs: TeacherDoc[]; onChange: (d: TeacherDoc[]) => void; context: TeacherContext }) {
+function DocumentsPanel({
+  library,
+  history,
+  pending,
+  docs,
+  onChange,
+  context,
+  admin = false,
+}: {
+  library: LibraryDoc[];
+  history: LibraryDoc[];
+  pending: PendingDoc[];
+  docs: TeacherDoc[];
+  onChange: (d: TeacherDoc[]) => void;
+  context: TeacherContext;
+  admin?: boolean;
+}) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
@@ -1312,8 +1357,10 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
   );
 
   return (
-    <Section title="Documents">
-      <div className="text-xs text-muted">
+    <Section title="Documents" defaultOpen={false}>
+      {/* Base documentaire : visible par l'enseignant dès qu'elle contient des ressources ; le registre technique reste réservé à l'administration. */}
+      {(admin || library.length > 0) && (
+      <div className="mb-4 text-xs text-muted">
         <div className="font-semibold text-ink">Base documentaire PÉDAGOGUE.IA ({library.length})</div>
         {library.length === 0 ? (
           <p className="mt-1">Aucune ressource consultable n&apos;est encore intégrée.</p>
@@ -1344,7 +1391,7 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
             </div>
           </>
         )}
-        {pending.length > 0 && (
+        {admin && pending.length > 0 && (
           <details className="mt-2">
             <summary className="cursor-pointer">Registre : {pending.length} ressource(s) NON ENCORE INTÉGRÉE(S)</summary>
             <ul className="mt-1 space-y-1">
@@ -1357,7 +1404,7 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
             </ul>
           </details>
         )}
-        {history.length > 0 && (
+        {admin && history.length > 0 && (
           <details className="mt-2">
             <summary className="cursor-pointer">Historique des versions ({history.length}) — non consultées</summary>
             <ul className="mt-1 space-y-1">
@@ -1371,10 +1418,14 @@ function DocumentsPanel({ library, history, pending, docs, onChange, context }: 
           </details>
         )}
       </div>
+      )}
 
-      <div className="mt-4 text-xs">
+      <div className="text-xs">
         <div className="font-semibold text-ink">Ma bibliothèque ({docs.length})</div>
-        <p className="mt-1 text-muted">Vos documents personnels (PDF, Word, texte). Ils complètent la base PÉDAGOGUE.IA sans être considérés comme validés. Le texte est conservé sur cet appareil uniquement.</p>
+        <p className="mt-1 text-muted">
+          Ajoutez vos propres documents (programme, cours, sujets en PDF, Word ou texte) : PÉDAGOGUE.IA s&apos;en servira pour vos préparations. Ils restent sur cet
+          appareil.
+        </p>
         <ul className="mt-2 space-y-1.5">
           {docs.map((d) => (
             <li key={d.id} className="flex items-center gap-2">
@@ -1472,25 +1523,54 @@ function ProfilePanel({ context, onChange }: { context: TeacherContext; onChange
   );
 }
 
+/** Date courte d'une préparation : « aujourd'hui », « hier », « 12 sept. ». */
+function dateCourte(t: number): string {
+  const d = new Date(t);
+  const jour = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const ecart = Math.round((jour(new Date()) - jour(d)) / 86_400_000);
+  if (ecart === 0) return "aujourd'hui";
+  if (ecart === 1) return "hier";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", ...(d.getFullYear() !== new Date().getFullYear() ? { year: "numeric" } : {}) });
+}
+
 function HistoryPanel({ conversations, currentId, onOpen, onDelete }: { conversations: Conversation[]; currentId: string | null; onOpen: (id: string) => void; onDelete: (id: string) => void }) {
   const [filter, setFilter] = useState<Category | "tout">("tout");
+  const [recherche, setRecherche] = useState("");
   const counts = new Map<Category, number>();
   for (const c of conversations) {
     const k = c.category ?? classify(c.title);
     counts.set(k, (counts.get(k) ?? 0) + 1);
   }
-  const shown = filter === "tout" ? conversations : conversations.filter((c) => (c.category ?? classify(c.title)) === filter);
+  const q = recherche
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  const shown = [...conversations]
+    .filter((c) => filter === "tout" || (c.category ?? classify(c.title)) === filter)
+    .filter((c) => !q || c.title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes(q))
+    .sort((a, b) => b.updatedAt - a.updatedAt);
   const chip = (active: boolean) =>
-    `rounded-full border px-2 py-0.5 text-[11px] ${active ? "border-faso bg-faso text-white" : "border-line text-ink hover:border-faso"}`;
+    `shrink-0 rounded-full border px-2.5 py-1 text-[11px] ${active ? "border-faso bg-faso text-white" : "border-line text-ink hover:border-faso"}`;
   return (
     <Section title={`Mes préparations (${conversations.length})`}>
       {conversations.length === 0 ? (
-        <p className="text-xs text-muted">Vos cours, devoirs, corrigés, évaluations et progressions apparaîtront ici (enregistrés sur cet appareil).</p>
+        <p className="text-xs text-muted">Vos fiches, devoirs, corrigés, évaluations et progressions apparaîtront ici.</p>
       ) : (
         <>
-          <div className="mb-2 flex flex-wrap gap-1.5">
+          {conversations.length > 4 && (
+            <input
+              type="search"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="Rechercher (ex. digestion, 3e, Thalès)"
+              aria-label="Rechercher dans mes préparations"
+              className={`${inputCls} mb-2`}
+            />
+          )}
+          <div className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 lg:flex-wrap lg:overflow-visible">
             <button type="button" className={chip(filter === "tout")} onClick={() => setFilter("tout")}>
-              Historique ({conversations.length})
+              Tout ({conversations.length})
             </button>
             {(Object.keys(CATEGORIES) as Category[])
               .filter((k) => counts.get(k))
@@ -1500,17 +1580,22 @@ function HistoryPanel({ conversations, currentId, onOpen, onDelete }: { conversa
                 </button>
               ))}
           </div>
-          <ul className="space-y-1">
+          <ul className="space-y-0.5">
             {shown.map((c) => (
-              <li key={c.id} className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 text-sm ${c.id === currentId ? "bg-faso-50" : "hover:bg-surface"}`}>
-                <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 truncate text-left" title={c.title}>
-                  {c.title}
+              <li key={c.id} className={`group flex items-center gap-2 rounded-lg px-2 py-2 text-sm ${c.id === currentId ? "bg-faso-50" : "hover:bg-surface"}`}>
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-faso-50 text-faso">
+                  <IconeModele id={(c.category ?? classify(c.title)) === "cours" ? "lecon" : (c.category ?? classify(c.title))} className="h-4 w-4" />
+                </span>
+                <button type="button" onClick={() => onOpen(c.id)} className="min-w-0 flex-1 text-left" title={c.title}>
+                  <span className="block truncate">{c.title}</span>
+                  <span className="block text-[11px] text-muted">{dateCourte(c.updatedAt)}</span>
                 </button>
-                <button type="button" onClick={() => onDelete(c.id)} className="text-xs text-muted hover:text-rouge" aria-label="Supprimer">
+                <button type="button" onClick={() => onDelete(c.id)} className="px-1 text-xs text-muted hover:text-rouge" aria-label={`Supprimer ${c.title}`}>
                   ✕
                 </button>
               </li>
             ))}
+            {shown.length === 0 && <li className="px-2 py-2 text-xs text-muted">Aucune préparation ne correspond.</li>}
           </ul>
         </>
       )}
