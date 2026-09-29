@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { EnregistrementSW } from "@/components/installer";
 import "./globals.css";
 
@@ -12,11 +13,14 @@ export const metadata: Metadata = {
   openGraph: { siteName: "PÉDAGOGUE.IA", locale: "fr_BF", type: "website" },
 };
 
+/** Police de la marque, servie par le site lui-même (aucun appel à Google depuis le téléphone de l'enseignant). */
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-inter" });
+
 export const viewport: Viewport = { themeColor: "#00843d", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" className={inter.variable}>
       <body>
         {children}
         <EnregistrementSW />
