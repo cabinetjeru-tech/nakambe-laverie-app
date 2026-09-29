@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { notifierBienvenue } from "@/lib/email/notifications";
 import { sessionClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -16,8 +17,10 @@ export async function GET(req: Request) {
   const target = new URL(/^\/(?![/\\])/.test(next) && !next.includes("\\") ? next : "/", url.origin);
   if (target.origin !== url.origin) target.href = `${url.origin}/`;
   if (code) {
-    const { error } = await (await sessionClient()).auth.exchangeCodeForSession(code);
+    const { data, error } = await (await sessionClient()).auth.exchangeCodeForSession(code);
     if (error) target.searchParams.set("erreur_lien", "1");
+    // Adresse confirmée : message de bienvenue (une seule fois, sans effet pour un mot de passe oublié déjà accueilli).
+    else if (data.user) await notifierBienvenue(data.user.id);
   }
   return NextResponse.redirect(target, 303);
 }

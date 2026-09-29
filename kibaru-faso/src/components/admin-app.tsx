@@ -51,6 +51,9 @@ type Donnees = {
     coutJourFcfa: number;
     coutMoisFcfa: number;
     tauxUsdFcfa: number;
+    emailsActifs: boolean;
+    emailsMois: number;
+    expediteur: string;
     preparations: number;
     recettesMois: number;
     recettesTotal: number;
@@ -146,7 +149,7 @@ export function AdminApp() {
       </nav>
       <main className="mx-auto max-w-6xl p-4">
         {message && <p className="mb-4 rounded-lg border border-faso/30 bg-faso-50 p-3 text-sm">{message}</p>}
-        {onglet === "tableau" && <Tableau d={d} />}
+        {onglet === "tableau" && <Tableau d={d} action={action} />}
         {onglet === "enseignants" && <Enseignants d={d} action={action} />}
         {onglet === "paiements" && <Paiements d={d} action={action} />}
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
@@ -167,7 +170,7 @@ function Carte({ label, valeur, detail }: { label: string; valeur: string; detai
   );
 }
 
-function Tableau({ d }: { d: Donnees }) {
+function Tableau({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
   const s = d.stats;
   const recents = d.paiements.filter((p) => p.statut === "reussi").slice(0, 5);
   return (
@@ -197,6 +200,24 @@ function Tableau({ d }: { d: Donnees }) {
           detail="recettes − coût IA − commissions dues"
         />
         <Carte label="Préparations sauvegardées" valeur={String(s.preparations)} />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-white p-4 text-sm">
+        <div>
+          <h2 className="font-bold text-faso-dark">E-mails automatiques</h2>
+          {s.emailsActifs ? (
+            <p className="text-muted">
+              Actifs (Brevo, expéditeur {s.expediteur}) · {s.emailsMois} envoyé{s.emailsMois > 1 ? "s" : ""} ce mois : bienvenue, paiement, commission, fin d&apos;essai, rappel
+              de fin d&apos;abonnement.
+            </p>
+          ) : (
+            <p className="text-rouge">Non configurés : ajoutez la variable BREVO_API_KEY dans Vercel (voir docs/EMAILS.md).</p>
+          )}
+        </div>
+        {s.emailsActifs && (
+          <button type="button" onClick={() => void action({ action: "email_test" }, "E-mail de test envoyé à votre adresse")} className="rounded-lg border border-faso px-3 py-1.5 font-semibold text-faso">
+            Envoyer un e-mail de test
+          </button>
+        )}
       </div>
       <div className="rounded-xl border border-line bg-white p-4">
         <h2 className="font-bold text-faso-dark">Derniers paiements réussis</h2>

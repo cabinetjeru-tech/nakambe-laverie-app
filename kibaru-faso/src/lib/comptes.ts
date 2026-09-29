@@ -1,6 +1,7 @@
 import "server-only";
 import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, refusPromo, tauxCommission, type CodePromo, type Formule } from "./abonnement";
 import { coutUsd, debutJour, type Consommation } from "./couts";
+import { notifierCommission, notifierPaiement } from "./email/notifications";
 import { verifierPaiement } from "./paiement/cinetpay";
 import { adminClient, sessionClient } from "./supabase/server";
 
@@ -148,6 +149,7 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
     const { data: f } = await db.from("formules").select("duree_jours").eq("id", paiement.formule_id).single<{ duree_jours: number }>();
     await activerAbonnement({ utilisateurId: paiement.utilisateur_id, jours: f?.duree_jours ?? 30, formuleId: paiement.formule_id, paiementId: paiement.id, origine: "paiement" });
     await enregistrerCommission(paiement).catch((e: Error) => console.error("[parrainage]", e.message));
+    await notifierPaiement(paiement);
   }
   return { statut, paiement };
 }
@@ -168,14 +170,16 @@ async function enregistrerCommission(paiement: PaiementRow) {
   const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", parrain.id).order("fin", { ascending: false }).limit(1);
   if (!aAcces(parrain, finAbonnement(abos ?? []))) return;
   const taux = tauxCommission();
+  const montant = montantCommission(paiement.montant_fcfa, taux);
   const { error } = await db.from("commissions").insert({
     parrain_id: parrain.id,
     filleul_id: paiement.utilisateur_id,
     paiement_id: paiement.id,
-    montant_fcfa: montantCommission(paiement.montant_fcfa, taux),
+    montant_fcfa: montant,
     taux,
   });
   if (error && error.code !== "23505") throw new Error(error.message);
+  if (!error) await notifierCommission({ parrainId: parrain.id, filleulId: paiement.utilisateur_id, paiementId: paiement.id, montant });
 }
 
 export type Parrainage = {
