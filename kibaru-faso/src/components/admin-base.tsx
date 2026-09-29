@@ -100,6 +100,8 @@ export function BaseDocumentaire() {
   const [fichierNom, setFichierNom] = useState<string | null>(null);
   const [infoExtraction, setInfoExtraction] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [imports, setImports] = useState<Record<string, string>>({});
+  const [importEnCours, setImportEnCours] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
@@ -228,7 +230,28 @@ export function BaseDocumentaire() {
       `Statut de ${doc.id} : ${STATUT_LABELS[statut]}.`,
     );
 
+  /** Import automatique par le serveur depuis le lien officiel (un document par requête). */
+  async function importer(id: string): Promise<boolean> {
+    setImportEnCours(id);
+    setImports((x) => ({ ...x, [id]: "⏳ téléchargement et lecture…" }));
+    const r = await fetch("/api/admin/base", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "importer", id }) }).catch(() => null);
+    const j = (await r?.json().catch(() => ({}))) as { error?: string; message?: string };
+    const ok = !!r?.ok;
+    setImports((x) => ({ ...x, [id]: ok ? `✅ ${j.message ?? "importé"}` : `❌ ${j.error ?? "réseau indisponible"}` }));
+    setImportEnCours(null);
+    return ok;
+  }
+
+  async function importerTout(ids: string[]) {
+    setMessage(null);
+    let reussis = 0;
+    for (const id of ids) if (await importer(id)) reussis++;
+    await charger();
+    setMessage(`Import terminé : ${reussis} document(s) importé(s) sur ${ids.length}. Les échecs sont détaillés dans la liste ; pour ceux-là, téléchargez puis déposez à la main.`);
+  }
+
   if (!d) return <p className="text-sm text-muted">{message ?? "Chargement de la base documentaire…"}</p>;
+  const importables = d.enAttente.filter((p) => p.url && p.documentId).map((p) => p.documentId!);
   const actifs = d.documents.filter((x) => x.statut === "ACTIF").length;
 
   return (
@@ -396,16 +419,42 @@ export function BaseDocumentaire() {
 
       {d.enAttente.length > 0 && (
         <section className="rounded-xl border border-line bg-white p-4 text-sm">
-          <h2 className="font-bold text-faso-dark">Ressources du registre à déposer ({d.enAttente.length})</h2>
-          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. « Télécharger » ouvre le document sur le site officiel quand son lien est connu ; enregistrez-le, puis cliquez sur « Déposer ». Les curricula de la réforme (API) priment sur les anciens guides pour les classes où la réforme est appliquée.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-bold text-faso-dark">Ressources du registre à déposer ({d.enAttente.length})</h2>
+            {importables.length > 0 && (
+              <button
+                type="button"
+                disabled={!!importEnCours}
+                onClick={() => void importerTout(importables)}
+                className="rounded-lg bg-faso px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+              >
+                {importEnCours ? `Import de ${importEnCours}…` : `Importer automatiquement les ${importables.length} documents disponibles`}
+              </button>
+            )}
+          </div>
+          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. « Importer » : le serveur télécharge le document sur le site officiel, en lit le texte et l'ajoute à la base (statut À VÉRIFIER). Sinon, « Télécharger » puis « Déposer » à la main. Les curricula de la réforme (API) priment sur les anciens guides pour les classes où la réforme est appliquée.</p>
           <ul className="mt-2 divide-y divide-line">
             {d.enAttente.map((p) => (
               <li key={p.documentId ?? p.titre} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span>
                   <span className="font-mono text-xs text-muted">{p.documentId}</span> <strong>{p.titre}</strong>
                   <span className="text-muted"> · {[p.classes.join(", "), p.disciplines.join(", "), p.priorite && `priorité ${p.priorite.toLowerCase()}`].filter(Boolean).join(" · ")}</span>
+                  {p.documentId && imports[p.documentId] && <span className="block text-xs">{imports[p.documentId]}</span>}
                 </span>
                 <span className="flex items-center gap-2">
+                  {p.url && p.documentId && (
+                    <button
+                      type="button"
+                      disabled={!!importEnCours}
+                      onClick={async () => {
+                        await importer(p.documentId!);
+                        await charger();
+                      }}
+                      className="rounded-lg bg-faso px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+                    >
+                      Importer
+                    </button>
+                  )}
                   {p.url && (
                     <a href={p.url} target="_blank" rel="noopener" className="text-xs font-semibold text-faso underline underline-offset-2">
                       Télécharger
