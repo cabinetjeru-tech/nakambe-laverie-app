@@ -3,6 +3,7 @@ import { normaliserCode, nouvelleTransaction, prixRemise } from "@/lib/abonnemen
 import { CONTACT } from "@/lib/contact";
 import { compteCourant, formules, verifierPromo } from "@/lib/comptes";
 import { causeReseau, initialiserPaiement, PaiementError, paiementDisponible } from "@/lib/paiement/cinetpay";
+import { journaliserErreur } from "@/lib/journal";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
@@ -64,6 +65,7 @@ export async function POST(req: Request) {
   } catch (e) {
     await db.from("paiements").update({ statut: "echoue", detail: { erreur: causeReseau(e) } }).eq("transaction_id", transactionId);
     console.error("[paiement]", causeReseau(e));
+    await journaliserErreur("paiement", causeReseau(e), compte.profil.id);
     const message = e instanceof PaiementError ? "Le service de paiement a refusé la demande. Réessayez plus tard." : "Service de paiement injoignable. Réessayez plus tard.";
     return Response.json({ error: message }, { status: 502 });
   }

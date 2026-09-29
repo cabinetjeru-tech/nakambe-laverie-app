@@ -22,6 +22,9 @@ export function aiErrorMessage(e: unknown): string {
   if (e instanceof Anthropic.PermissionDeniedError) return "La clé API n'a pas l'autorisation d'utiliser ce service ou ce modèle. Prévenez l'administrateur.";
   if (e instanceof Anthropic.NotFoundError) return `Le modèle configuré (${aiConfig().model}) n'est pas accessible avec cette clé API. Prévenez l'administrateur (variables KIBARU_MODEL / KIBARU_MODEL_EXPERT).`;
   if (e instanceof Anthropic.RateLimitError) return "Le service est très sollicité ou la limite de dépenses du compte est atteinte. Réessayez dans une minute.";
+  if (e instanceof Anthropic.APIConnectionTimeoutError) return "Le service d'IA a mis trop de temps à répondre. Réessayez ; si cela se répète, prévenez l'administrateur.";
+  if (e instanceof Anthropic.APIConnectionError) return "Connexion au service d'IA impossible depuis le serveur. Prévenez l'administrateur.";
+  if (e instanceof Anthropic.InternalServerError && e.status === 529) return "Le service d'IA est momentanément surchargé. Réessayez dans une minute.";
   if (e instanceof Anthropic.BadRequestError) {
     const detail = (e.error as { error?: { message?: string } } | undefined)?.error?.message ?? e.message;
     if (/credit balance|billing|purchase credits/i.test(detail))
@@ -29,6 +32,14 @@ export function aiErrorMessage(e: unknown): string {
     return `Le service d'IA a refusé la requête (${detail.slice(0, 300)}). Prévenez l'administrateur.`;
   }
   return retry;
+}
+
+/** Détail technique d'une erreur (classe, statut HTTP, type, message, cause réseau, identifiant de requête), pour le journal. */
+export function detailErreur(e: unknown): string {
+  const err = e as Error & { status?: number; requestID?: string | null; error?: { error?: { type?: string; message?: string } }; cause?: { code?: string; message?: string } };
+  const type = err?.error?.error?.type;
+  const cause = err?.cause ? ` [cause : ${[err.cause.code, err.cause.message].filter(Boolean).join(" — ")}]` : "";
+  return `${err?.constructor?.name ?? "Erreur"}${err?.status ? ` ${err.status}` : ""}${type ? ` ${type}` : ""} : ${err?.message ?? String(e)}${cause}${err?.requestID ? ` (requête ${err.requestID})` : ""}`;
 }
 
 const EFFORTS = ["low", "medium", "high"] as const;
@@ -84,4 +95,29 @@ export async function* streamAnswer(messages: Anthropic.Beta.BetaMessageParam[],
   };
   const fin = final.stop_reason === "refusal" ? "refusal" : final.stop_reason === "max_tokens" ? "max_tokens" : "ok";
   return { fin, modele: final.model || model, consommation };
+}
+
+/**
+ * Diagnostic (espace admin) : petite requête avec la même configuration que les préparations (modèle, réflexion,
+ * repli automatique). Renvoie le modèle qui a répondu et la durée, ou la cause exacte de l'échec.
+ */
+export async function testerIA(mode?: string): Promise<{ ok: boolean; message: string }> {
+  const { model, configured } = aiConfig(mode);
+  if (!configured) return { ok: false, message: "ANTHROPIC_API_KEY absente dans Vercel." };
+  const debut = Date.now();
+  try {
+    const client = new Anthropic({ maxRetries: 0 });
+    const r = await client.beta.messages.create({
+      model,
+      max_tokens: 1024,
+      thinking: { type: "adaptive" },
+      output_config: { effort: "low" },
+      messages: [{ role: "user", content: "Réponds seulement : OK" }],
+      ...(FALLBACK_MODELS.test(model) ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),
+    });
+    const texte = r.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
+    return { ok: true, message: `${r.model} a répondu « ${texte.slice(0, 40)} » en ${((Date.now() - debut) / 1000).toFixed(1)} s (arrêt : ${r.stop_reason}).` };
+  } catch (e) {
+    return { ok: false, message: `${model} : ${detailErreur(e)}` };
+  }
 }

@@ -7,7 +7,8 @@ import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normaliz
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
 import { finalCheck } from "@/lib/base/final-check";
 import { getBase } from "@/lib/library";
-import { aiErrorMessage, streamAnswer } from "@/lib/llm";
+import { aiErrorMessage, detailErreur, streamAnswer } from "@/lib/llm";
+import { journaliserErreur } from "@/lib/journal";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { formatReferenceBlock, isApplicable, resolveBase, searchDocuments, type ArchivedDoc, type RefDocument } from "@/lib/search";
 
@@ -23,6 +24,7 @@ export async function POST(req: Request) {
   // Comptes enseignants : connexion et abonnement en cours obligatoires. Sinon, code d'accès partagé.
   let who = clientIp(req);
   let utilisateurId: string | null = null;
+  let estAdmin = false;
   if (accountsEnabled()) {
     const compte = await compteCourant().catch(() => null);
     if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
@@ -30,6 +32,7 @@ export async function POST(req: Request) {
     if (!compte.acces) return jsonError(402, "Votre abonnement n'est pas actif : abonnez-vous dans « Mon compte » pour continuer.");
     who = compte.profil.id;
     utilisateurId = compte.profil.id;
+    estAdmin = compte.profil.role === "admin";
     // Quota du jour : protège la rentabilité (chaque génération a un coût d'IA).
     const q = await etatQuota(compte);
     if (q.limite !== null && q.utilisees >= q.limite)
@@ -147,8 +150,11 @@ export async function POST(req: Request) {
         });
         send({ type: "done", check });
       } catch (e) {
-        console.error("[chat]", (e as Error).message);
-        send({ type: "error", message: aiErrorMessage(e) });
+        const detail = detailErreur(e);
+        console.error("[chat]", detail);
+        await journaliserErreur("ia", detail, utilisateurId);
+        // L'administrateur voit la cause technique exacte, pour pouvoir la corriger.
+        send({ type: "error", message: estAdmin ? `${aiErrorMessage(e)} — Détail technique : ${detail}` : aiErrorMessage(e) });
       } finally {
         controller.close();
       }
