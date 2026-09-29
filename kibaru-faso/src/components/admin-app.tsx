@@ -347,6 +347,11 @@ function Paiements({ d, action }: { d: Donnees; action: (b: Record<string, unkno
               <td className="px-3 py-2">
                 <span className={p.statut === "reussi" ? "font-semibold text-faso" : p.statut === "en_attente" ? "text-muted" : "text-rouge"}>{STATUTS[p.statut] ?? p.statut}</span>
                 {p.moyen && <span className="text-xs text-muted"> · {p.moyen}</span>}
+                {p.statut === "reussi" && (
+                  <a href={`/recu/${encodeURIComponent(p.transaction_id)}`} target="_blank" className="ml-2 text-xs text-faso underline">
+                    Reçu
+                  </a>
+                )}
                 {p.statut === "en_attente" && (
                   <button type="button" onClick={() => void action({ action: "verifier_paiement", transaction: p.transaction_id }, "Paiement revérifié")} className="ml-2 text-xs text-faso underline">
                     Vérifier
