@@ -1,53 +1,30 @@
 "use client";
 
+import { buildDocumentHtml, type OptionsDocument } from "./document-imprime";
+
 /** Impression, téléchargement PDF et export Word (HTML ouvert par Word) d'une production. */
 
-const PRINT_CSS = `
-  @page { size: A4; margin: 18mm 16mm; }
-  body { font-family: "Times New Roman", Georgia, serif; font-size: 12pt; line-height: 1.45; color: #111; }
-  h1 { font-size: 17pt; margin: 0 0 8pt; }
-  h2 { font-size: 14.5pt; margin: 16pt 0 6pt; }
-  h3 { font-size: 13pt; margin: 12pt 0 4pt; }
-  h4 { font-size: 12pt; margin: 10pt 0 4pt; }
-  p { margin: 5pt 0; }
-  ul, ol { margin: 4pt 0 4pt 18pt; padding: 0; }
-  table { border-collapse: collapse; width: 100%; margin: 8pt 0; page-break-inside: auto; }
-  tr { page-break-inside: avoid; }
-  th, td { border: 1px solid #555; padding: 4pt 6pt; vertical-align: top; text-align: left; }
-  th { background: #eee; }
-  blockquote { border-left: 3px solid #999; margin: 6pt 0; padding: 2pt 8pt; color: #333; }
-  code { font-family: inherit; }
-  .badge { font-weight: bold; font-size: 9.5pt; border: 1px solid #777; border-radius: 3px; padding: 0 3pt; }
-  .cite { font-size: 8.5pt; vertical-align: super; }
-  .pied { margin-top: 20pt; border-top: 1px solid #aaa; padding-top: 5pt; font-size: 9pt; color: #555; }
-`;
+export type { Entete, OptionsDocument } from "./document-imprime";
 
-function escapeHtml(s: string) {
-  return s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] as string);
-}
-
-export function buildDocumentHtml(title: string, bodyHtml: string, withFooter: boolean): string {
-  const footer = withFooter
-    ? `<div class="pied">Préparé avec l'assistance de PÉDAGOGUE.IA — L'intelligence au service de la pédagogie. Contenu à vérifier et adapter par l'enseignant avant utilisation en classe.</div>`
-    : "";
-  return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>${PRINT_CSS}</style></head><body>${bodyHtml}${footer}</body></html>`;
-}
-
-export function printHtml(title: string, bodyHtml: string, withFooter = true) {
+export function printHtml(title: string, bodyHtml: string, o: OptionsDocument) {
   const w = window.open("", "_blank");
   if (!w) {
     alert("Autorisez l'ouverture des fenêtres pour imprimer.");
     return;
   }
   w.document.open();
-  w.document.write(buildDocumentHtml(title, bodyHtml, withFooter));
+  w.document.write(buildDocumentHtml(title, bodyHtml, o));
   w.document.close();
   w.focus();
   setTimeout(() => w.print(), 300);
 }
 
-export function downloadWord(title: string, bodyHtml: string, withFooter = true) {
-  const html = buildDocumentHtml(title, bodyHtml, withFooter);
+export function downloadWord(title: string, bodyHtml: string, o: OptionsDocument) {
+  // Word ne lit pas les marges CSS classiques : format A4 et marges via une section Word.
+  const html = buildDocumentHtml(title, bodyHtml, o)
+    .replace("<style>", "<style>@page WordSection1 { size: 21cm 29.7cm; margin: 1.5cm; } div.WordSection1 { page: WordSection1; } ")
+    .replace("<body>", '<body><div class="WordSection1">')
+    .replace("</body>", "</div></body>");
   telecharger(new Blob(["﻿", html], { type: "application/msword" }), fileName(title, "doc"));
 }
 
@@ -80,7 +57,7 @@ export function fileName(title: string, ext: string) {
  * Le document est rendu dans une page isolée (iframe) qui ne contient que la mise en forme d'impression,
  * puis découpé en pages A4 en évitant de couper une ligne de texte.
  */
-export async function downloadPdf(title: string, bodyHtml: string, withFooter = true) {
+export async function downloadPdf(title: string, bodyHtml: string, o: OptionsDocument) {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
@@ -91,7 +68,7 @@ export async function downloadPdf(title: string, bodyHtml: string, withFooter = 
   try {
     const doc = iframe.contentDocument!;
     doc.open();
-    doc.write(buildDocumentHtml(title, bodyHtml, withFooter).replace("</style>", " body{margin:0;padding:0 0 16px;background:#fff;} </style>"));
+    doc.write(buildDocumentHtml(title, bodyHtml, o).replace("</style>", " body{margin:0;padding:0 0 16px;background:#fff;} </style>"));
     doc.close();
     await new Promise((r) => setTimeout(r, 50));
     const body = doc.body;
@@ -118,6 +95,17 @@ export async function downloadPdf(title: string, bodyHtml: string, withFooter = 
       pdf.addImage(tranche.toDataURL("image/jpeg", 0.92), "JPEG", marge, marge, largeurMm, (fin - y) / pxParMm);
       y = fin;
       page++;
+    }
+    // Rappel discipline / classe en haut de chaque page (sauf la première) et numéro de page en bas.
+    const rappel = [o.entete?.discipline, o.entete?.classe].filter(Boolean).join(" — ");
+    const total = pdf.getNumberOfPages();
+    for (let n = 1; n <= total; n++) {
+      pdf.setPage(n);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+      pdf.setTextColor(110);
+      if (n > 1 && rappel) pdf.text(rappel, marge, 9);
+      if (total > 1) pdf.text(`Page ${n} / ${total}`, 105, 290, { align: "center" });
     }
     telecharger(pdf.output("blob"), fileName(title, "pdf"));
   } finally {
