@@ -2,6 +2,9 @@ import { z } from "zod";
 import { finAbonnement, prixValide } from "@/lib/abonnement";
 import { activerAbonnement, compteCourant, formules, traiterPaiement, type Profil } from "@/lib/comptes";
 import { debutJour, tauxUsdFcfa, usdEnFcfa } from "@/lib/couts";
+import { emailConfigure, envoyerEmail, expediteur } from "@/lib/email/envoi";
+import { emailTest } from "@/lib/email/modeles";
+import { site } from "@/lib/email/notifications";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -21,7 +24,8 @@ export async function GET() {
   if (a.error) return a.error;
   const db = adminClient();
   const il30j = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso] = await Promise.all([
+  const debutMoisUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
@@ -31,11 +35,12 @@ export async function GET() {
     db.from("codes_promo").select("*").order("cree_le", { ascending: false }),
     db.from("paiements").select("code_promo").eq("statut", "reussi").not("code_promo", "is", null).limit(50000),
     db.from("usages").select("utilisateur_id, cree_le, cout_usd, decompte").gte("cree_le", il30j).limit(200000),
+    db.from("emails_envoyes").select("cle", { count: "exact", head: true }).gte("cree_le", debutMoisUtc),
   ]);
   // Coût de l'IA : aujourd'hui, depuis le début du mois, et par enseignant sur 30 jours.
   const taux = tauxUsdFcfa();
   const jour = debutJour().toISOString();
-  const debutMoisIso = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
+  const debutMoisIso = debutMoisUtc;
   let coutJour = 0;
   let coutMois = 0;
   let generationsJour = 0;
@@ -105,6 +110,9 @@ export async function GET() {
       coutJourFcfa: usdEnFcfa(coutJour, taux),
       coutMoisFcfa: usdEnFcfa(coutMois, taux),
       tauxUsdFcfa: taux,
+      emailsActifs: emailConfigure(),
+      emailsMois: mails.count ?? 0,
+      expediteur: expediteur().email,
       preparations: preps.data?.length ?? 0,
       recettesMois: reussis.filter((p) => new Date(p.cree_le) >= debutMois).reduce((s, p) => s + p.montant_fcfa, 0),
       recettesTotal: reussis.reduce((s, p) => s + p.montant_fcfa, 0),
@@ -142,6 +150,7 @@ const actionSchema = z.discriminatedUnion("action", [
     expire_le: z.string().max(40).nullable().optional(),
     max_utilisations: z.number().int().min(1).max(1_000_000).nullable().optional(),
   }),
+  z.object({ action: z.literal("email_test") }),
   z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
 ]);
 
@@ -192,6 +201,15 @@ export async function POST(req: Request) {
       const { error } = await db.from("commissions").update(patch).eq("id", x.id);
       if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
       return Response.json({ ok: true });
+    }
+    case "email_test": {
+      if (!emailConfigure()) return Response.json({ error: "E-mails non configurés : ajoutez BREVO_API_KEY dans Vercel." }, { status: 400 });
+      try {
+        await envoyerEmail(a.compte.profil.email, emailTest(site()));
+        return Response.json({ ok: true });
+      } catch (e) {
+        return Response.json({ error: `Envoi refusé : ${(e as Error).message}` }, { status: 502 });
+      }
     }
     case "verifier_paiement": {
       const r = await traiterPaiement(x.transaction).catch((e: Error) => ({ statut: `erreur : ${e.message}` }));

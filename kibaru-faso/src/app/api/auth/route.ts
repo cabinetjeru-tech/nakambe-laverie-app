@@ -2,6 +2,7 @@ import { z } from "zod";
 import { codeParrainageValide } from "@/lib/abonnement";
 import { traduire } from "@/lib/auth-messages";
 import { chargerCompte } from "@/lib/comptes";
+import { notifierBienvenue } from "@/lib/email/notifications";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
 import { accountsEnabled, sessionClient } from "@/lib/supabase/server";
 
@@ -59,11 +60,14 @@ export async function POST(req: Request) {
           console.error("[auth] profil illisible :", (e as Error).message);
           return Response.json({ error: CONFIG_ERROR }, { status: 503 });
         }
+        await notifierBienvenue(data.user.id);
         return Response.json({ ok: true });
       }
       case "inscription": {
         const { data, error } = await sb.auth.signUp({ email: x.email.trim(), password: x.password, options: { data: { nom: x.nom ?? "", parrain: codeParrainageValide(x.parrain) ?? "" }, emailRedirectTo: callback } });
         if (error) throw error;
+        // Sans confirmation d'adresse, la session est ouverte tout de suite : on souhaite la bienvenue maintenant.
+        if (data.session && data.user) await notifierBienvenue(data.user.id);
         return Response.json({ ok: true, session: !!data.session });
       }
       case "oubli": {
