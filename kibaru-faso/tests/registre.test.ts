@@ -10,15 +10,17 @@ import { ID_FORMAT, parseDocType, subjectCodes } from "@/lib/base/structure";
 const BASE = path.resolve(import.meta.dirname, "..", "base-documentaire");
 
 describe("registre maître (fichier du projet)", () => {
-  it("contient les 21 ressources initiales, au bon format, toutes À VÉRIFIER", async () => {
+  it("contient les 21 guides initiaux et les 7 curricula repérés, au bon format, tous À VÉRIFIER", async () => {
     const content = await readFile(path.join(BASE, "REGISTRE_MAITRE.csv"), "utf8");
     const { entries, problems } = readRegistry(content);
     expect(problems).toEqual([]);
-    expect(entries).toHaveLength(21);
+    expect(entries).toHaveLength(28);
+    expect(entries.filter((e) => e.meta.type === "GUIDE_PEDAGOGIQUE")).toHaveLength(21);
+    expect(entries.filter((e) => e.meta.type === "CURRICULUM")).toHaveLength(7);
     for (const e of entries) {
       expect(e.meta.documentId).toMatch(ID_FORMAT);
       expect(e.meta.statut).toBe("A_VERIFIER");
-      expect(e.meta.type).toBe("GUIDE_PEDAGOGIQUE");
+      expect(["GUIDE_PEDAGOGIQUE", "CURRICULUM"]).toContain(e.meta.type);
       expect(e.meta.annee).toBeUndefined(); // « À vérifier » : jamais inventé
       expect(e.meta.version).toBeUndefined();
     }
@@ -29,7 +31,7 @@ describe("registre maître (fichier du projet)", () => {
   it("n'a aucune erreur bloquante", async () => {
     const base = await loadBase(BASE);
     expect(base.issues.filter((i) => i.level === "erreur")).toEqual([]);
-    expect(base.pending).toHaveLength(21);
+    expect(base.pending).toHaveLength(28);
   });
 });
 
