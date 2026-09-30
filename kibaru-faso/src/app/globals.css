@@ -19,7 +19,7 @@
   --color-muted: #5b6573;
   --color-line: #e2e6ea;
   --color-surface: #f6f7f5;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html { -webkit-text-size-adjust: 100%; }

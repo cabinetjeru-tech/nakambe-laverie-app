@@ -29,6 +29,7 @@ export const teacherContextSchema = z.object({
   objectifPersonnel: txt(500),
   // Profil de l'enseignant (personnalisation uniquement)
   enseignant: txt(120),
+  administration: txt(200),
   etablissement: txt(160),
   ville: txt(120),
   anneeScolaire: txt(20),
@@ -72,6 +73,7 @@ const LABELS: Record<keyof TeacherContext, string> = {
   contexteParticulier: "Contexte particulier",
   objectifPersonnel: "Objectif personnel de la séance",
   enseignant: "Enseignant",
+  administration: "En-tête administratif",
   etablissement: "Établissement",
   ville: "Ville",
   anneeScolaire: "Année scolaire",

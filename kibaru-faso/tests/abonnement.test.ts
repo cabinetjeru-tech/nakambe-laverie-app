@@ -1,0 +1,130 @@
+import { describe, expect, it } from "vitest";
+import { finAbonnement, formatFcfa, joursRestants, nouvellePeriode, nouvelleTransaction, prixValide, statutCinetpay } from "@/lib/abonnement";
+
+const J = 86_400_000;
+const now = new Date("2026-10-01T10:00:00Z");
+
+describe("Abonnements", () => {
+  it("démarre maintenant quand il n'y a pas d'abonnement en cours", () => {
+    const p = nouvellePeriode(now, null, 30);
+    expect(p.debut).toEqual(now);
+    expect(p.fin.getTime() - now.getTime()).toBe(30 * J);
+    expect(nouvellePeriode(now, new Date(now.getTime() - 5 * J), 30).debut).toEqual(now);
+  });
+  it("prolonge un abonnement en cours sans perdre de jours", () => {
+    const fin = new Date(now.getTime() + 10 * J);
+    const p = nouvellePeriode(now, fin, 365);
+    expect(p.debut).toEqual(fin);
+    expect(joursRestants(p.fin, now)).toBe(375);
+  });
+  it("retient la fin la plus lointaine", () => {
+    expect(finAbonnement([])).toBeNull();
+    expect(finAbonnement([{ fin: "2026-10-05T00:00:00Z" }, { fin: "2026-12-01T00:00:00Z" }, { fin: "bad" }])?.toISOString()).toBe("2026-12-01T00:00:00.000Z");
+  });
+  it("compte les jours restants", () => {
+    expect(joursRestants(null, now)).toBe(0);
+    expect(joursRestants(new Date(now.getTime() - 1), now)).toBe(0);
+    expect(joursRestants(new Date(now.getTime() + 1.2 * J), now)).toBe(2);
+  });
+});
+
+describe("Paiement", () => {
+  it("valide les montants mobile money (FCFA, multiples de 5)", () => {
+    expect(prixValide(2000)).toBe(true);
+    expect(prixValide(15000)).toBe(true);
+    expect(prixValide(2002)).toBe(false);
+    expect(prixValide(50)).toBe(false);
+    expect(prixValide(1999.5)).toBe(false);
+  });
+  it("traduit les statuts CinetPay", () => {
+    expect(statutCinetpay("ACCEPTED")).toBe("reussi");
+    expect(statutCinetpay("REFUSED")).toBe("echoue");
+    expect(statutCinetpay("CANCELED")).toBe("annule");
+    expect(statutCinetpay("WAITING_FOR_CUSTOMER")).toBe("en_attente");
+    expect(statutCinetpay(undefined)).toBe("en_attente");
+  });
+  it("produit des identifiants de transaction uniques et acceptés par les routes", () => {
+    const ids = new Set(Array.from({ length: 200 }, () => nouvelleTransaction()));
+    expect(ids.size).toBe(200);
+    for (const id of ids) expect(id).toMatch(/^[A-Za-z0-9_-]{6,64}$/);
+  });
+  it("formate les montants", () => {
+    expect(formatFcfa(15000)).toBe("15 000 FCFA");
+  });
+});
+
+describe("Essai gratuit et parrainage", async () => {
+  const { codeParrainageValide, heuresRestantes, montantCommission, nouveauCodeParrainage, tauxCommission } = await import("@/lib/abonnement");
+  it("calcule la commission de 20 % sur chaque paiement du filleul", () => {
+    expect(tauxCommission()).toBe(20);
+    expect(montantCommission(2000, 20)).toBe(400);
+    expect(montantCommission(15000, 20)).toBe(3000);
+    expect(montantCommission(2005, 20)).toBe(401);
+  });
+  it("valide les codes de parrainage (6 caractères sans ambiguïté)", () => {
+    expect(codeParrainageValide(" g5te58 ")).toBe("G5TE58");
+    expect(codeParrainageValide("G5TE5O")).toBeNull(); // O interdit
+    expect(codeParrainageValide("ABC")).toBeNull();
+    expect(codeParrainageValide(undefined)).toBeNull();
+    for (let i = 0; i < 50; i++) expect(codeParrainageValide(nouveauCodeParrainage())).not.toBeNull();
+  });
+  it("compte les heures restantes de l'essai", () => {
+    expect(heuresRestantes(new Date(now.getTime() + 23.2 * 3_600_000), now)).toBe(24);
+    expect(heuresRestantes(new Date(now.getTime() - 1), now)).toBe(0);
+  });
+});
+
+describe("Nom des fichiers téléchargés", async () => {
+  const { fileName } = await import("@/lib/export");
+  it("retire accents et caractères refusés par les navigateurs", () => {
+    expect(fileName("Devoir — Mathématiques 6e : fractions", "pdf")).toBe("Devoir - Mathematiques 6e fractions.pdf");
+    expect(fileName("«»", "doc")).toBe("pedagogue-ia.doc");
+  });
+});
+
+describe("Codes promo", async () => {
+  const { normaliserCode, prixRemise, refusPromo } = await import("@/lib/abonnement");
+  const base = { code: "LANCEMENT", description: null, remise_pct: 25, actif: true, expire_le: null, max_utilisations: null };
+  it("calcule le prix remisé au multiple de 5 inférieur", () => {
+    expect(prixRemise(2000, 25)).toBe(1500);
+    expect(prixRemise(15000, 25)).toBe(11250);
+    expect(prixRemise(2000, 33)).toBe(1340);
+    expect(prixRemise(120, 90)).toBe(100);
+  });
+  it("normalise et vérifie les codes", () => {
+    expect(normaliserCode(" lancement ")).toBe("LANCEMENT");
+    expect(normaliserCode("a!")).toBeNull();
+    expect(refusPromo(base, 0, false)).toBeNull();
+    expect(refusPromo(null, 0, false)).toMatch(/inconnu/);
+    expect(refusPromo({ ...base, actif: false }, 0, false)).toMatch(/désactivé/);
+    expect(refusPromo({ ...base, expire_le: "2020-01-01T00:00:00Z" }, 0, false)).toMatch(/expiré/);
+    expect(refusPromo({ ...base, max_utilisations: 10 }, 10, false)).toMatch(/maximal/);
+    expect(refusPromo(base, 3, true)).toMatch(/déjà utilisé/);
+  });
+});
+
+describe("Messages de campagne", async () => {
+  const { lienDecouvrir, messagesCampagne } = await import("@/lib/campagne");
+  it("incluent le lien parrain et le code promo", () => {
+    const lien = lienDecouvrir("G5TE58");
+    expect(lien).toBe("https://pedagogue-ia.vercel.app/decouvrir?parrain=G5TE58");
+    const m = messagesCampagne(lien, { code: "LANCEMENT", remise_pct: 25 });
+    expect(m.length).toBe(5);
+    expect(m.every((x) => x.texte.includes("pedagogue-ia.vercel.app/decouvrir?parrain=G5TE58"))).toBe(true);
+    expect(m[0]!.texte).toContain("LANCEMENT");
+    expect(m.at(-1)!.texte.length).toBeLessThanOrEqual(160);
+  });
+});
+
+describe("Durée des formules", async () => {
+  const { dureeFormule, montantCommission, prixRemise } = await import("@/lib/abonnement");
+  it("affiche le pass journalier en heures", () => {
+    expect(dureeFormule(1)).toBe("24 h");
+    expect(dureeFormule(30)).toBe("30 jours");
+    expect(dureeFormule(365)).toBe("1 an");
+  });
+  it("applique commission et remise au pass journalier de 200 FCFA", () => {
+    expect(montantCommission(200, 20)).toBe(40);
+    expect(prixRemise(200, 25)).toBe(150);
+  });
+});

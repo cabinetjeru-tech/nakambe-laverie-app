@@ -2,7 +2,8 @@
 
 /**
  * Données de l'enseignant conservées uniquement dans son navigateur (localStorage) :
- * conversations, contexte de la classe, documents personnels. Rien n'est stocké sur le serveur.
+ * conversations, contexte de la classe, documents personnels. Avec les comptes enseignants, les conversations
+ * sont aussi sauvegardées en ligne (voir /api/preparations) ; ce stockage local sert alors de copie sur l'appareil.
  */
 
 import type { TeacherContext } from "./conversation";
@@ -14,7 +15,8 @@ export type StoredMessage = { role: "user" | "assistant"; content: string; sourc
 export type Conversation = { id: string; title: string; category?: Category; updatedAt: number; messages: StoredMessage[] };
 export type TeacherDoc = { id: string; title: string; type: string; text: string; enabled: boolean; addedAt: number };
 
-const KEYS = { conversations: "kibaru:conversations", context: "kibaru:contexte", docs: "kibaru:documents" };
+const BASE_KEYS = { conversations: "kibaru:conversations", context: "kibaru:contexte", docs: "kibaru:documents" };
+let KEYS = { ...BASE_KEYS };
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -35,6 +37,30 @@ function write(key: string, value: unknown): boolean {
 }
 
 export const store = {
+  /**
+   * Comptes enseignants : chaque compte a ses propres données sur l'appareil (ordinateur partagé).
+   * Les données enregistrées avant la création des comptes sont reprises une fois par le premier compte connecté.
+   */
+  setScope(userId: string | null) {
+    if (!userId) {
+      KEYS = { ...BASE_KEYS };
+      return;
+    }
+    KEYS = {
+      conversations: `${BASE_KEYS.conversations}:${userId}`,
+      context: `${BASE_KEYS.context}:${userId}`,
+      docs: `${BASE_KEYS.docs}:${userId}`,
+    };
+    try {
+      for (const k of Object.keys(BASE_KEYS) as (keyof typeof BASE_KEYS)[]) {
+        const legacy = localStorage.getItem(BASE_KEYS[k]);
+        if (legacy !== null && localStorage.getItem(KEYS[k]) === null) localStorage.setItem(KEYS[k], legacy);
+        localStorage.removeItem(BASE_KEYS[k]);
+      }
+    } catch {
+      // stockage indisponible : rien à reprendre
+    }
+  },
   conversations: () => read<Conversation[]>(KEYS.conversations, []),
   saveConversations(list: Conversation[]) {
     const sorted = [...list].sort((a, b) => b.updatedAt - a.updatedAt);

@@ -1,5 +1,11 @@
 # Base documentaire PÉDAGOGUE.IA — structure officielle
 
+> **Le plus simple : /admin → onglet « Base documentaire ».** L'administrateur y dépose un PDF (avec texte), un Word
+> ou un fichier texte, renseigne la classe, la matière, le type, l'année et le statut : le document est consulté par
+> PÉDAGOGUE.IA dans la minute, sans redéploiement (table `base_documents`). Un document déposé avec l'ID d'une ligne
+> du registre maître la fait passer de « NON ENCORE INTÉGRÉ » à intégrée. Le dépôt dans ce dossier (ci-dessous) reste
+> possible pour les développeurs.
+
 Ce dossier est la base documentaire de PÉDAGOGUE.IA. Sa structure est la **structure documentaire officielle du
 projet**. Elle évolue par ajout de ressources et de versions, sans jamais modifier les instructions fondamentales
 de PÉDAGOGUE.IA (le prompt) : il suffit de déposer des fichiers et leur fiche, puis de redéployer.
