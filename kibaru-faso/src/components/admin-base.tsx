@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { prochainId } from "@/lib/base/en-ligne";
 import { CLASS_INFO, DOC_TYPES, STATUT_LABELS, SUBJECTS, type Statut } from "@/lib/base/structure";
+import { hoteOfficiel } from "@/lib/base/sources-officielles";
 import { extraireDansNavigateur, nettoyerTexte } from "@/lib/extraction-navigateur";
 
 /** Onglet « Base documentaire » de l'espace admin : dépôt des programmes, guides et référentiels officiels. */
@@ -391,8 +392,8 @@ export function BaseDocumentaire() {
             <input value={f.source} onChange={(e) => setF({ ...f, source: e.target.value })} placeholder="Site du ministère, DRENA du Centre…" className={`${input} mt-1`} />
           </label>
           <label className="text-xs font-medium text-muted">
-            Lien (facultatif)
-            <input value={f.url} onChange={(e) => setF({ ...f, url: e.target.value })} placeholder="https://…" className={`${input} mt-1`} />
+            Lien (collez le lien du PDF officiel pour l&apos;importer sans le télécharger)
+            <input value={f.url} onChange={(e) => setF({ ...f, url: e.target.value.trim() })} placeholder="https://fasoeducation.bf/… ou https://www.education.gov.bf/…" className={`${input} mt-1`} />
           </label>
           <label className="text-xs font-medium text-muted sm:col-span-2">
             Consigne d&apos;usage pour l&apos;IA (facultatif)
@@ -413,7 +414,51 @@ export function BaseDocumentaire() {
             />
           </label>
         </div>
-        {texte.length < 200 && f.url && f.id && idsRegistre.has(f.id.toUpperCase()) ? (
+        {texte.length < 200 && hoteOfficiel(f.url) && !(f.id && idsRegistre.has(f.id.toUpperCase())) ? (
+          <div className="rounded-lg bg-faso-50 p-3">
+            <p className="text-xs text-faso-dark">Lien officiel reconnu : le serveur peut télécharger et lire ce document lui-même (inutile de choisir un fichier).</p>
+            <button
+              type="button"
+              disabled={busy || !f.titre.trim()}
+              onClick={async () => {
+                const id = (f.id || proposerId(f.classes, f.matiere)).toUpperCase();
+                setBusy(true);
+                setMessage(null);
+                const r = await fetch("/api/admin/base", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    action: "importer_lien",
+                    id,
+                    titre: f.titre,
+                    type: f.type,
+                    classes: f.classes,
+                    disciplines: f.matiere ? [f.matiere] : [],
+                    organisme: f.organisme,
+                    annee: f.annee,
+                    version: f.version,
+                    statut: f.statut,
+                    source: f.source,
+                    url: f.url,
+                    niveau_source: f.niveau_source,
+                    avertissement: f.avertissement,
+                  }),
+                }).catch(() => null);
+                const j = (await r?.json().catch(() => ({}))) as { error?: string; message?: string };
+                setBusy(false);
+                if (r?.ok) {
+                  setMessage(`${j.message ?? `${id} importé`} PÉDAGOGUE.IA le consulte dès maintenant.`);
+                  setF(VIDE);
+                  await charger();
+                } else setMessage(`Erreur : ${j?.error ?? "réseau indisponible"}`);
+              }}
+              className="mt-2 rounded-lg bg-faso px-4 py-2 font-semibold text-white disabled:opacity-50"
+            >
+              {busy ? "Téléchargement et lecture en cours…" : "Importer depuis ce lien"}
+            </button>
+            {!f.titre.trim() && <p className="mt-1 text-xs text-muted">Indiquez d&apos;abord le titre du document.</p>}
+          </div>
+        ) : texte.length < 200 && f.url && f.id && idsRegistre.has(f.id.toUpperCase()) ? (
           <div className="rounded-lg bg-faso-50 p-3">
             <p className="text-xs text-faso-dark">Pas besoin de fichier : ce document a un lien officiel connu. Le serveur peut le télécharger et le lire lui-même.</p>
             <button

@@ -78,6 +78,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("modifier"), id: idSchema, ...champs }),
   z.object({ action: z.literal("supprimer"), id: idSchema }),
   z.object({ action: z.literal("importer"), id: idSchema }),
+  z.object({ action: z.literal("importer_lien"), id: idSchema, ...champs, url: z.string().trim().url("Lien invalide.").max(500) }),
 ]);
 
 export async function POST(req: Request) {
@@ -104,6 +105,21 @@ export async function POST(req: Request) {
     } catch (e) {
       const msg = e instanceof ImportError ? e.message : `Import impossible : ${(e as Error).message}`;
       await journaliserErreur("import", `${x.id} — ${entree.meta.url} — ${msg}`, a.compte.profil.id);
+      return Response.json({ error: `${x.id} : ${msg}` }, { status: 502 });
+    }
+  } else if (x.action === "importer_lien") {
+    // Import d'un document officiel quelconque depuis un lien collé par l'administrateur (sites officiels uniquement).
+    try {
+      const { texte, fichierNom } = await telechargerEtExtraire(x.url);
+      const { action: _a, ...doc } = x;
+      r = await db.from("base_documents").upsert({ ...doc, fichier_nom: fichierNom, texte, ajoute_par: a.compte.profil.id, maj_le: maintenant });
+      if (!r.error) {
+        invaliderBaseEnLigne();
+        return Response.json({ ok: true, message: `${x.id} importé (${texte.length.toLocaleString("fr-FR")} caractères).` });
+      }
+    } catch (e) {
+      const msg = e instanceof ImportError ? e.message : `Import impossible : ${(e as Error).message}`;
+      await journaliserErreur("import", `${x.id} — ${x.url} — ${msg}`, a.compte.profil.id);
       return Response.json({ error: `${x.id} : ${msg}` }, { status: 502 });
     }
   } else if (x.action === "supprimer") r = await db.from("base_documents").delete().eq("id", x.id);
