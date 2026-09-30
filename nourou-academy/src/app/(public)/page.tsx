@@ -77,27 +77,38 @@ export default async function HomePage() {
             </div>
           </div>
 
-          <div className="fade-in relative hidden lg:block" aria-hidden>
-            <div className="rounded-3xl bg-white p-5 text-ink shadow-2xl ring-1 ring-black/5">
-              <div className="flex items-center gap-2 border-b border-line pb-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-navy"><Sparkles className="h-4 w-4 text-accent" /></div>
-                <div>
-                  <div className="text-sm font-semibold text-navy">{brand.tutorName}</div>
-                  <div className="text-[11px] text-muted">Illustration d'un échange</div>
-                </div>
+          <div className="fade-in decorative relative -mb-16 flex items-end justify-center self-end lg:-mb-24">
+            {/* Halo aux couleurs de la marque derrière la photo */}
+            <div className="absolute left-1/2 top-[12%] aspect-square w-[78%] -translate-x-1/2 rounded-full bg-gradient-to-br from-accent/40 via-sky/30 to-transparent blur-3xl" aria-hidden />
+            <div className="absolute left-1/2 top-[16%] aspect-square w-[62%] -translate-x-1/2 rounded-full border border-white/10" aria-hidden />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/akambi-hero.webp"
+              alt="Un apprenant suit une formation Akambi Academy sur son ordinateur"
+              width={1100}
+              height={767}
+              fetchPriority="high"
+              className="relative z-10 w-full max-w-[640px] select-none [mask-image:linear-gradient(to_right,transparent,black_14%)] lg:w-[122%] lg:max-w-none lg:translate-x-[6%]"
+              draggable={false}
+            />
+            <div className="absolute inset-x-0 bottom-0 z-20 h-24 bg-gradient-to-t from-navy via-navy/80 to-transparent" aria-hidden />
+
+            {/* Cartes flottantes */}
+            <div className="absolute bottom-28 left-0 z-30 hidden w-64 rounded-2xl bg-white p-3 text-ink shadow-2xl ring-1 ring-black/5 sm:block lg:-left-10" aria-hidden>
+              <div className="flex items-center gap-2">
+                <div className="grid h-8 w-8 place-items-center rounded-full bg-navy"><Sparkles className="h-4 w-4 text-accent" /></div>
+                <div className="text-sm font-semibold text-navy">{brand.tutorName}</div>
+                <span className="ml-auto h-2 w-2 rounded-full bg-emerald-500" />
               </div>
-              <div className="space-y-3 py-4 text-sm">
-                <div className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-navy px-3 py-2 text-white">Je ne comprends pas le seuil de rentabilité 😕</div>
-                <div className="w-fit max-w-[92%] rounded-2xl rounded-bl-md border border-line px-3 py-2">
-                  Pas de souci ! Imagine ta boutique de savons au karité : chaque savon te rapporte <b>375 FCFA</b> de marge. Si tes charges font{" "}
-                  <b>45 000 FCFA</b> par mois, combien de savons dois-tu vendre pour les couvrir ?
-                  <div className="mt-1 text-[11px] text-muted">D'après ton cours : « Calculer son coût de revient » <sup className="rounded bg-sky-100 px-1 font-bold text-navy">S1</sup></div>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {["Plus simple", "Exemple concret", "Interroge-moi", "Mes lacunes"].map((c) => (
-                  <span key={c} className="rounded-full border border-line px-2.5 py-1 text-[11px] text-navy">{c}</span>
-                ))}
+              <p className="mt-2 rounded-xl rounded-tl-sm bg-surface px-3 py-2 text-xs leading-relaxed">
+                Imagine ta boutique de savons au karité : chaque savon te rapporte <b>375 FCFA</b>. Combien en vendre pour couvrir <b>45 000 FCFA</b> de charges ?
+              </p>
+            </div>
+            <div className="absolute right-0 top-16 z-30 hidden items-center gap-2 rounded-2xl bg-white px-3 py-2 text-ink shadow-2xl ring-1 ring-black/5 sm:flex lg:top-10" aria-hidden>
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent/15"><GraduationCap className="h-5 w-5 text-accent" /></div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold text-navy">Certificat vérifiable</div>
+                <div className="text-[11px] text-muted">QR code et identifiant unique</div>
               </div>
             </div>
           </div>
