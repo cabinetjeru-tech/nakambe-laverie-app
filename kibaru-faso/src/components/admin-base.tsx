@@ -456,7 +456,7 @@ export function BaseDocumentaire() {
               </button>
             )}
           </div>
-          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. « Importer » : le serveur télécharge le document sur le site officiel, en lit le texte et l'ajoute à la base (statut À VÉRIFIER). Sinon, « Télécharger » puis « Déposer » à la main. Les curricula de la réforme (API) priment sur les anciens guides pour les classes où la réforme est appliquée.</p>
+          <p className="mt-1 text-muted">Documents officiels déjà repérés, dont le texte manque encore. « Importer » : le serveur télécharge le document sur le site officiel, en lit le texte et l'ajoute à la base (statut À VÉRIFIER). Sinon, « Télécharger » puis « Déposer » à la main. Curricula (programme) et guides de l'enseignant appartiennent à la même réforme curriculaire (API) : déposez les deux.</p>
           <ul className="mt-2 divide-y divide-line">
             {d.enAttente.map((p) => (
               <li key={p.documentId ?? p.titre} className="flex flex-wrap items-center justify-between gap-2 py-2">
