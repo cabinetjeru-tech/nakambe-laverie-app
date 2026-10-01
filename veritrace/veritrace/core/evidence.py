@@ -53,7 +53,7 @@ def hash_evidence(path: Path, manifest_out: Path | None = None) -> tuple[str, in
         text = manifest_text(manifest)
         if manifest_out is not None:
             manifest_out.parent.mkdir(parents=True, exist_ok=True)
-            manifest_out.write_text(text, encoding="utf-8")
+            manifest_out.write_text(text, encoding="utf-8", newline="\n")  # LF : sha256sum -c, empreinte identique sur tout OS
         return sha256_bytes(text.encode("utf-8")), sum(size for _, _, size in manifest)
     return sha256_file(path), path.stat().st_size
 

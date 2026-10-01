@@ -148,7 +148,8 @@ def run_wrapper(case: Case, wrapper: ToolWrapper, extraction: Path, options: dic
     fragment = out_dir / "veritrace_normalized.json"
     fragment.write_text(json.dumps({"run_id": run_id, "tool": result.tool, "mode": result.mode, "item_id": item_id,
                                     "artifacts": result.artifacts, "findings": result.findings,
-                                    "notes": result.notes}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                                    "notes": result.notes}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8",
+                        newline="\n")
 
     # 5. Fusion, corrélation, validation, sauvegarde
     added, already, f_added = _merge(doc, result)

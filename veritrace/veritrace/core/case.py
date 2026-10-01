@@ -137,7 +137,7 @@ class Case:
         self.data_path.parent.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.data_path.parent, suffix=".tmp")
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
                 json.dump(doc, fh, ensure_ascii=False, indent=2)
                 fh.write("\n")
                 fh.flush()

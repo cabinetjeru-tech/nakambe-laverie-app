@@ -115,7 +115,7 @@ class AuditLog:
             os.chmod(self.path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
         lock_path = self.path.with_name(self.path.name + ".lock")
         try:
-            with open(lock_path, "a+") as lk, open(self.path, "a", encoding="utf-8") as fh:
+            with open(lock_path, "a+") as lk, open(self.path, "a", encoding="utf-8", newline="\n") as fh:
                 _lock(lk)
                 try:
                     seq, prev = self._tail()

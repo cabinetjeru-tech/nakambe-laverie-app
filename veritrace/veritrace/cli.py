@@ -192,7 +192,7 @@ def schema_example(c: Ctx, output: Path | None) -> None:
 
     text = example_json()
     if output:
-        output.write_text(text, encoding="utf-8")
+        output.write_text(text, encoding="utf-8", newline="\n")
         click.echo(f"Exemple écrit dans {output}")
     else:
         click.echo(text, nl=False)

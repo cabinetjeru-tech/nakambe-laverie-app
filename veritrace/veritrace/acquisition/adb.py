@@ -89,7 +89,7 @@ class Adb:
     def _log(self, text: str) -> None:
         if self.log_path:
             self.log_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.log_path, "a", encoding="utf-8", errors="replace") as fh:
+            with open(self.log_path, "a", encoding="utf-8", errors="replace", newline="\n") as fh:
                 fh.write(text if text.endswith("\n") else text + "\n")
 
     def run(self, *args: str, timeout: int = 120, stdout_file: Path | None = None,

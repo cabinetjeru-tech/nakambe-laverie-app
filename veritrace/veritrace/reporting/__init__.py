@@ -60,7 +60,7 @@ def generate(json_path: str | Path, *, template: str, out_dir: str | Path, forma
     outputs: dict[str, Path] = {}
     if "md" in formats:
         p = base.with_suffix(".md")
-        p.write_text(render_markdown(model), encoding="utf-8")
+        p.write_text(render_markdown(model), encoding="utf-8", newline="\n")
         outputs["md"] = p
     if "pdf" in formats:
         from veritrace.reporting.pdf import render_pdf  # import tardif : ReportLab optionnel pour le MD
@@ -73,7 +73,7 @@ def generate(json_path: str | Path, *, template: str, out_dir: str | Path, forma
         "source": {"path": str(json_path), "sha256": source_sha},
         "outputs": {fmt: {"file": p.name, "sha256": hashes[fmt]} for fmt, p in outputs.items()},
         "generator": model.footer,
-    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     for fmt, p in outputs.items():
         log.info("Rapport %s (%s) : %s", template, fmt.upper(), p)

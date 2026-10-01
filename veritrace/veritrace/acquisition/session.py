@@ -155,7 +155,7 @@ class AcquisitionSession:
             if not props:
                 raise AdbError("getprop n'a renvoyé aucune propriété")
             self.props = props
-            (out / "getprop.txt").write_text(raw, encoding="utf-8")
+            (out / "getprop.txt").write_text(raw, encoding="utf-8", newline="\n")
             register_device(doc, device_profile(props, dev, meta))
             self.identified = True
             register(out / "getprop.txt", "Propriétés système (getprop)", device_path="getprop")

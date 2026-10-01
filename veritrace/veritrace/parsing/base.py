@@ -152,7 +152,7 @@ def run_tool(cmd: list[str], log_path: Path, *, timeout: int, cwd: Path | None =
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log.info("Exécution : %s", " ".join(cmd))
     start = time.monotonic()
-    with open(log_path, "w", encoding="utf-8", errors="replace") as fh:
+    with open(log_path, "w", encoding="utf-8", errors="replace", newline="\n") as fh:
         fh.write(f"# {utc_now_iso()} — {' '.join(cmd)}\n")
         fh.flush()
         try:
