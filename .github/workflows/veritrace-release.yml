@@ -1,0 +1,91 @@
+name: Veritrace — publication
+
+# Publier une version :  git tag veritrace-v0.2.0 && git push origin veritrace-v0.2.0
+# (ou lancement manuel : les archives sont alors disponibles comme artefacts du workflow).
+on:
+  push:
+    tags: ["veritrace-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: veritrace
+    shell: bash
+
+jobs:
+  wheel:
+    name: Paquet Python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-package
+          path: veritrace/dist/*
+
+  binaries:
+    name: Exécutable ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, platform: windows-x64, exe: veritrace.exe }
+          - { os: ubuntu-22.04,   platform: linux-x64,   exe: veritrace }      # glibc 2.35 : large compatibilité
+          - { os: macos-latest,   platform: macos-arm64, exe: veritrace }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Dépendances
+        run: python -m pip install --upgrade pip && pip install ".[all]" "pyinstaller>=6"
+      - name: Exécutable autonome
+        run: |
+          cd packaging
+          python make_version_info.py
+          pyinstaller veritrace.spec --noconfirm
+      - name: Autotest de l'exécutable
+        run: |
+          printf 'CI\nconsentement\nCI-${{ github.run_id }}\nAUTORISATION VERIFIEE\n' \
+            | VERITRACE_HOME="$RUNNER_TEMP/vthome" packaging/dist/${{ matrix.exe }} selftest
+        env:
+          PYTHONIOENCODING: utf-8
+      - name: Archive
+        run: python packaging/bundle.py ${{ matrix.platform }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: veritrace-${{ matrix.platform }}
+          path: veritrace/dist/*.zip
+
+  release:
+    name: Publication GitHub
+    needs: [wheel, binaries]
+    if: startsWith(github.ref, 'refs/tags/veritrace-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Empreintes SHA-256
+        working-directory: release
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Création de la version
+        working-directory: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          awk -v v="${tag#veritrace-v}" '$0 ~ "^## "v {f=1; next} /^## / {f=0} f' ../veritrace/CHANGELOG.md > notes.md
+          printf '\n---\nVérifier une archive : comparer son SHA-256 avec SHA256SUMS.txt.\nGuide : GUIDE_UTILISATEUR.md (inclus dans chaque archive).\n' >> notes.md
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --title "Veritrace ${tag#veritrace-v}" \
+            --notes-file notes.md ./*.zip ./*.whl ./*.tar.gz SHA256SUMS.txt

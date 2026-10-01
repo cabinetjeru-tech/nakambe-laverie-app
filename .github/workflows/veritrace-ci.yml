@@ -1,0 +1,55 @@
+name: Veritrace — tests
+
+on:
+  push:
+    paths: ["veritrace/**", ".github/workflows/veritrace-*.yml"]
+  pull_request:
+    paths: ["veritrace/**", ".github/workflows/veritrace-*.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: veritrace
+    shell: bash
+
+jobs:
+  tests:
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ["3.10", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: veritrace/pyproject.toml
+      - name: Installation
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+      - name: Tests
+        run: python -m pytest -q
+        env:
+          PYTHONIOENCODING: utf-8
+
+  wheel:
+    name: Paquet Python + autotest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Construction
+        run: pip install build && python -m build
+      - name: Installation propre et autotest
+        run: |
+          python -m venv /tmp/vt && /tmp/vt/bin/pip install "$(ls dist/*.whl)[exif]"
+          printf 'CI\nconsentement\nCI-${{ github.run_id }}\nAUTORISATION VERIFIEE\n' \
+            | VERITRACE_HOME=/tmp/vthome /tmp/vt/bin/veritrace selftest

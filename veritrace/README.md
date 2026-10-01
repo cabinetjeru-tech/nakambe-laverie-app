@@ -32,13 +32,46 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Règles de détection d'anomalies R1–R6 (`veritrace rules …`) | ✅ |
 | Parseurs natifs Veritrace : SMS/MMS, appels, contacts, navigation, EXIF/GPS, dumpsys package/accessibility (`veritrace parse sqlite`) | ✅ |
 | Messageries tierces : WhatsApp, Viber, Facebook Messenger (natif + ALEAPP), Telegram (ALEAPP), Signal (détection) | ✅ |
+| Distribution : exécutables autonomes Windows / Linux / macOS, paquet Python, `veritrace selftest`, CI 3 OS, publication automatisée | ✅ *(exécutable Linux vérifié ici ; Windows et macOS construits et testés par la CI)* |
 | Récupération des enregistrements supprimés SQLite : WAL, journal, pages et blocs libres (`veritrace parse recover`) | ✅ *(testée sur des bases synthétiques ; à valider sur appareil réel)* |
 
 ---
 
 ## Installation
 
-### 1. Veritrace
+> **Utilisateurs** : suivez le guide **[GUIDE_UTILISATEUR.md](GUIDE_UTILISATEUR.md)**. Il
+> couvre le téléchargement de l'exécutable autonome, l'installation en un clic sous
+> Windows, `veritrace selftest` et le dépannage.
+
+| Mode | Pour qui | Python requis |
+|---|---|---|
+| Exécutable autonome `veritrace-<version>-<plateforme>.zip` (Windows x64, Linux x64, macOS arm64) | postes d'examen | non |
+| Paquet `veritrace-<version>-py3-none-any.whl` (`pip` / `pipx`, options `[exif]`, `[all]`) | postes avec Python | ≥ 3.10 |
+| Sources (`pip install -e ".[dev]"`) | développement | ≥ 3.10 |
+
+Après l'installation : `veritrace selftest`, qui rejoue la chaîne complète sur des données
+fictives, puis `veritrace doctor`, qui indique les outils externes présents et où obtenir
+les autres.
+
+### Publier une version (mainteneur)
+
+1. Mettre à jour `veritrace/__init__.py` (`__version__`) et `CHANGELOG.md`.
+2. Poser l'étiquette : `git tag veritrace-v0.2.0 && git push origin veritrace-v0.2.0`.
+3. Le workflow `.github/workflows/veritrace-release.yml` effectue alors :
+   - la construction de l'exécutable pour chaque plateforme (PyInstaller) ;
+   - son **autotest** ;
+   - l'assemblage des archives : exécutable, scripts d'installation, guide, licence ;
+   - la construction du paquet Python ;
+   - la création de la version GitHub, avec `SHA256SUMS.txt`.
+
+Construction locale d'un exécutable :
+`pip install ".[dev]" && cd packaging && pyinstaller veritrace.spec --noconfirm && cd .. && python packaging/bundle.py linux-x64`.
+
+Les exécutables ne sont **pas signés** : SmartScreen (Windows) ou Gatekeeper (macOS)
+affiche un avertissement. Pour le supprimer, il faut un certificat de signature de code
+au nom du cabinet ; il s'ajoute ensuite à l'étape de construction.
+
+### 1. Veritrace depuis les sources
 
 Python ≥ 3.10.
 
@@ -626,6 +659,7 @@ veritrace/
 ├── schema/                schéma, validateur, exemple
 ├── reporting/             modèle → Markdown / PDF
 ├── acquisition/           adb.py (client sûr), session.py (collecte + custody), backup.py (.ab → .tar)
+├── demo/                données FICTIVES (démonstration, autotest `veritrace selftest`)
 ├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, sqlite_native.py, recover.py, runner.py
 ├── recovery/              sqlite_format.py (lecture brute : pages, WAL, journal), carver.py (récupération)
 └── correlation/           engine.py (corroboration, dédoublonnage, timeline), rules.py (R1–R6)

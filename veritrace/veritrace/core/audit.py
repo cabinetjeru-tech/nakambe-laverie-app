@@ -33,7 +33,7 @@ from veritrace.core.timeutil import utc_now_iso
 
 GENESIS_HASH = "0" * 64
 
-try:  # Verrou inter-processus (POSIX). Sous Windows, on se contente du mode append.
+try:  # Verrou inter-processus : fcntl (POSIX) ou msvcrt (Windows).
     import fcntl
 
     def _lock(fh) -> None:
@@ -42,13 +42,25 @@ try:  # Verrou inter-processus (POSIX). Sous Windows, on se contente du mode app
     def _unlock(fh) -> None:
         fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
-except ImportError:  # pragma: no cover - dépend de la plateforme
+except ImportError:  # pragma: no cover - Windows : verrou msvcrt sur le premier octet du fichier
+    import msvcrt
+    import time
 
     def _lock(fh) -> None:
-        pass
+        fh.seek(0)
+        for _ in range(600):           # attend au plus ~60 s qu'un autre processus libère le journal
+            try:
+                msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
+                break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            raise AuditError("journal d'audit verrouillé par un autre processus")
+        fh.seek(0, os.SEEK_END)
 
     def _unlock(fh) -> None:
-        pass
+        fh.seek(0)
+        msvcrt.locking(fh.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 class AuditError(RuntimeError):

@@ -63,7 +63,7 @@
       "method": "import",
       "tool": {
         "name": "veritrace",
-        "version": "0.1.0"
+        "version": "0.2.0"
       },
       "operator": "Examinateur Exemple",
       "started_at": "2026-09-10T08:20:00+00:00",
@@ -187,7 +187,7 @@
       "timestamp": "2026-09-02T19:44:05+00:00",
       "source": {
         "tool": "veritrace-sqlite",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "item_id": "EV-001",
         "file_path": "/data/data/com.android.providers.telephony/databases/mmssms.db",
         "record_ref": "sms:rowid=4471"
@@ -540,7 +540,7 @@
       "timestamp": null,
       "source": {
         "tool": "veritrace-sqlite",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "item_id": "EV-001",
         "file_path": "/data/data/com.android.providers.contacts/databases/contacts2.db",
         "record_ref": "raw_contacts:_id=55"
@@ -642,7 +642,7 @@
       "timestamp": "2026-09-02T19:46:12+00:00",
       "source": {
         "tool": "veritrace-recover",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "item_id": "EV-001",
         "file_path": "/data/data/com.android.providers.telephony/databases/mmssms.db",
         "record_ref": "sms:rowid inconnu — bloc libre de la page 37, décalage 0x0B2C"
@@ -1219,7 +1219,7 @@
       {
         "run_id": "RUN-VT-01",
         "tool": "veritrace-sqlite",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "mode": "execute",
         "command": [
           "veritrace",
@@ -1239,7 +1239,7 @@
       {
         "run_id": "RUN-REC-01",
         "tool": "veritrace-recover",
-        "tool_version": "0.1.0",
+        "tool_version": "0.2.0",
         "mode": "execute",
         "command": [
           "veritrace",
@@ -1301,7 +1301,7 @@
       "generated_at": "2026-09-11T14:05:00+00:00",
       "generator": {
         "name": "Veritrace",
-        "version": "0.1.0",
+        "version": "0.2.0",
         "author": "Nourou Chafikou"
       },
       "audit": {

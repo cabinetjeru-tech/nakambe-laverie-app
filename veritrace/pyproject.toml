@@ -1,15 +1,31 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "veritrace"
-version = "0.1.0"
-description = "Veritrace — assistant de forensique Android pour examens autorisés (acquisition, parsing, corrélation, rapport)."
+dynamic = ["version"]
+description = "Veritrace — assistant de forensique Android pour examens autorisés (acquisition, parsing, corrélation, récupération, rapport)."
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "Nourou Chafikou" }]
-license = { text = "Proprietary" }
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE", "veritrace/reporting/fonts/LICENSE-DejaVu.txt"]
+keywords = ["forensique", "forensics", "android", "dfir", "aleapp", "mvt", "autopsy", "sqlite", "rapport"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Legal Industry",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: French",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Security",
+    "Topic :: System :: Recovery Tools",
+]
 dependencies = [
     "click>=8.1",
     "jsonschema>=4.18",
@@ -17,16 +33,23 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7"]
+# Métadonnées EXIF / GPS des photos (sans Pillow, l'analyse EXIF est signalée comme non effectuée).
+exif = ["Pillow>=10"]
+all = ["Pillow>=10"]
+dev = ["pytest>=7", "Pillow>=10", "build>=1", "pyinstaller>=6"]
 
 [project.scripts]
 veritrace = "veritrace.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "veritrace.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["veritrace*"]
 
 [tool.setuptools.package-data]
 "veritrace.schema" = ["*.json", "examples/*.json"]
+"veritrace.reporting" = ["fonts/*.ttf", "fonts/*.txt"]
 
 
 [tool.pytest.ini_options]

@@ -1,0 +1,9 @@
+Veritrace
+Copyright (c) 2026 Nourou Chafikou. Tous droits réservés.
+
+Logiciel propriétaire. Toute reproduction, diffusion ou modification sans l'accord écrit
+de l'auteur est interdite. (Texte à compléter ou remplacer par la licence choisie.)
+
+Composants tiers livrés avec Veritrace :
+- Polices DejaVu (veritrace/reporting/fonts/) — licence Bitstream Vera / domaine public,
+  voir veritrace/reporting/fonts/LICENSE-DejaVu.txt.

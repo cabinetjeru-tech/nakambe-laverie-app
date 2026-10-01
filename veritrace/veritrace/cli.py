@@ -20,7 +20,7 @@ from veritrace.core.audit import AuditLog
 from veritrace.core.authorization import AuthorizationRecord, require_authorization
 from veritrace.core.case import Case, CaseError
 from veritrace.core.logging_setup import get_logger, setup_logging
-from veritrace.core.tools import detect_all
+from veritrace.core.tools import TOOLS, detect_all
 from veritrace.reporting import FORMATS, generate
 from veritrace.reporting.model import TEMPLATES, ReportPrecheckError
 from veritrace.schema.validator import SCHEMA_PATH, CaseValidationError, validate_file
@@ -84,7 +84,18 @@ def cli(verbose: bool) -> None:
     print_banner()
 
 
+def _utf8_console() -> None:
+    """Console Windows (cp1252/cp850) : sortie en UTF-8, sans plantage sur les caractères ✔ ✖ é…"""
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            if (stream.encoding or "").lower().replace("-", "") != "utf8":
+                stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
+
+
 def main() -> None:
+    _utf8_console()
     cli(prog_name="veritrace")
 
 
@@ -100,11 +111,50 @@ def doctor(c: Ctx) -> None:
             click.echo(f"      {s.path}")
         else:
             click.secho(f"  ✖ {s.label:<28} ABSENT — {s.purpose}", fg="yellow")
+            spec = TOOLS[s.key]
+            if spec.hint:
+                click.echo(f"      Obtenir : {spec.hint}")
+            click.echo(f"      Ou indiquer son chemin : variable d'environnement {spec.env_var}")
     missing = [s.label for s in statuses if not s.available]
     if missing:
         click.secho(f"\n{len(missing)} outil(s) absent(s) : les étapes correspondantes seront ignorées "
                     "(avertissement, pas d'arrêt). Voir README § Installation.", fg="yellow")
     c.audit.append("doctor", {s.key: {"available": s.available, "version": s.version} for s in statuses})
+
+
+# --------------------------------------------------------------------------- selftest
+@cli.command()
+@click.option("--keep", "keep_dir", type=click.Path(file_okay=False, path_type=Path),
+              help="Conserver l'affaire d'autotest dans ce dossier (sinon : dossier temporaire supprimé).")
+@pass_ctx
+def selftest(c: Ctx, keep_dir: Path | None) -> None:
+    """Vérifie l'installation : chaîne complète sur des données FICTIVES (aucun outil externe requis)."""
+    import tempfile
+
+    from veritrace.core.fsutil import force_rmtree
+    from veritrace.demo.selftest import run_selftest
+
+    if keep_dir and keep_dir.exists() and any(keep_dir.iterdir()):
+        raise click.UsageError(f"{keep_dir} existe et n'est pas vide.")
+    work = keep_dir or Path(tempfile.mkdtemp(prefix="veritrace-autotest-"))
+    work.mkdir(parents=True, exist_ok=True)
+    click.echo(f"Autotest dans {work} (données fictives uniquement)\n")
+
+    def show(s) -> None:
+        mark, color = ("✔", "green") if s.ok else ("✖", "red")
+        click.secho(f"  {mark} {s.name:<36} {s.seconds:6.1f} s  {s.detail}", fg=color)
+
+    res = run_selftest(work, c.auth, show)
+    c.audit.append("selftest", {"ok": res.ok, "steps": [{"name": s.name, "ok": s.ok} for s in res.steps]})
+    if keep_dir:
+        click.echo(f"\nAffaire d'autotest conservée : {work / 'VT-AUTOTEST'}")
+    else:
+        force_rmtree(work)
+    if res.ok:
+        click.secho("\n✔ Installation opérationnelle.", fg="green")
+    else:
+        click.secho("\n✖ Autotest en échec : voir l'étape ci-dessus (et veritrace doctor).", fg="red")
+        sys.exit(1)
 
 
 # --------------------------------------------------------------------------- schema

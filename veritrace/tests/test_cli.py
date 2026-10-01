@@ -76,3 +76,34 @@ def test_schema_validate_command(tmp_path, example_doc):
     p.write_text(json.dumps(example_doc), encoding="utf-8")
     r = CliRunner().invoke(cli, ["schema", "validate", str(p)], input=AUTH_INPUT)
     assert r.exit_code == 1 and "NOPE" in r.output
+
+
+def test_selftest_command(tmp_path):
+    keep = tmp_path / "autotest"
+    r = CliRunner().invoke(cli, ["selftest", "--keep", str(keep)], input=AUTH_INPUT)
+    assert r.exit_code == 0, r.output
+    assert "Installation opérationnelle" in r.output and "✖" not in r.output
+    reports = list((keep / "VT-AUTOTEST" / "reports").glob("*.pdf"))
+    assert len(reports) == 2
+
+
+def test_tool_found_outside_path(tmp_path, monkeypatch):
+    """ADB installé dans le dossier usuel du SDK (hors PATH) : trouvé automatiquement."""
+    import os
+    import sys
+
+    from veritrace.core.tools import detect
+
+    tools = tmp_path / "appdata" / "Android" / "Sdk" / "platform-tools"
+    tools.mkdir(parents=True)
+    if os.name == "nt":
+        (tools / "adb.cmd").write_text("@echo Android Debug Bridge version 1.0.41\r\n@echo Version 35.0.2-12147458\r\n")
+    else:
+        adb = tools / "adb"
+        adb.write_text("#!/bin/sh\necho 'Android Debug Bridge version 1.0.41'\necho 'Version 35.0.2-12147458'\n")
+        adb.chmod(0o755)
+    monkeypatch.delenv("VERITRACE_ADB", raising=False)
+    monkeypatch.setenv("PATH", str(tmp_path / "vide"))
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "appdata"))
+    s = detect("adb")
+    assert s.available and s.version == "35.0.2-12147458" and "platform-tools" in s.path

@@ -29,7 +29,7 @@ from typing import Any, Callable, Iterator
 
 from veritrace.core.logging_setup import get_logger
 from veritrace.core.timeutil import utc_now_iso
-from veritrace.core.tools import detect
+from veritrace.core.tools import detect, script_python
 from veritrace.parsing.base import (ArtifactBuilder, RunContext, ToolFailed, ToolUnavailable, ToolWrapper,
                                     WrapperResult, run_tool)
 from veritrace.parsing.util import clean, to_float, to_int, to_iso
@@ -39,7 +39,7 @@ log = get_logger("parsing.aleapp")
 Row = dict[str, Any]
 Emit = Callable[..., str]
 
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(2**31 - 1)  # sys.maxsize déborde sous Windows (long C sur 32 bits)
 
 
 # --------------------------------------------------------------------------- correspondances
@@ -457,8 +457,7 @@ def input_type(path: Path) -> str:
 def aleapp_command(exe: str) -> tuple[list[str], Path | None]:
     """Commande de base + répertoire de travail (aleapp.py doit être lancé depuis son dossier)."""
     if exe.endswith(".py"):
-        python = os.environ.get("VERITRACE_ALEAPP_PYTHON") or sys.executable
-        return [python, exe], Path(exe).parent
+        return [script_python(), exe], Path(exe).parent
     return [exe], None
 
 

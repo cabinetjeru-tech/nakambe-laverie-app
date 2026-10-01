@@ -3,7 +3,7 @@
 - Page de garde : emplacement logo (ou cadre « Emplacement logo ») + coordonnées du cabinet.
 - Pied de page sur chaque page : « Veritrace — développé par Nourou Chafikou », référence
   de l'affaire, numéro de page.
-- Polices : DejaVu Sans si présente (meilleure couverture Unicode : accents, arabe latinisé…),
+- Polices : DejaVu Sans, livrée avec Veritrace (rendu identique sous Windows, macOS et Linux), ou système (meilleure couverture Unicode : accents, arabe latinisé…),
   sinon Bitstream Vera livrée avec ReportLab. Forçable via VERITRACE_PDF_FONT=/chemin/police.ttf.
 """
 from __future__ import annotations
@@ -36,12 +36,13 @@ LIGHT = colors.HexColor("#EEF2F7")
 GRID = colors.HexColor("#B8C2CF")
 WARN = colors.HexColor("#9A3412")
 
+_BUNDLED = Path(__file__).parent / "fonts"   # DejaVu livrée avec Veritrace (licence : fonts/LICENSE-DejaVu.txt)
 _FONT_CANDIDATES = {
-    "regular": ["/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans.ttf",
+    "regular": [str(_BUNDLED / "DejaVuSans.ttf"),"/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans.ttf",
                 "/Library/Fonts/DejaVuSans.ttf", "C:/Windows/Fonts/DejaVuSans.ttf"],
-    "bold": ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
+    "bold": [str(_BUNDLED / "DejaVuSans-Bold.ttf"),"/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf",
              "/Library/Fonts/DejaVuSans-Bold.ttf", "C:/Windows/Fonts/DejaVuSans-Bold.ttf"],
-    "mono": ["/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+    "mono": [str(_BUNDLED / "DejaVuSansMono.ttf"),"/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
              "/Library/Fonts/DejaVuSansMono.ttf", "C:/Windows/Fonts/DejaVuSansMono.ttf"],
 }
 _fonts: dict[str, str] | None = None

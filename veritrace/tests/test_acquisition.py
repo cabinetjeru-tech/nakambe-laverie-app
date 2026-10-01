@@ -25,10 +25,14 @@ CONFIRM = AUTH_INPUT + "o\n"
 
 @pytest.fixture
 def fake_adb(tmp_path, monkeypatch):
-    launcher = tmp_path / "bin" / "adb"
-    launcher.parent.mkdir()
-    launcher.write_text(f"#!/bin/sh\nexec {sys.executable} {FAKE} \"$@\"\n")
-    launcher.chmod(0o755)
+    (tmp_path / "bin").mkdir()
+    if os.name == "nt":  # Windows : lanceur .cmd
+        launcher = tmp_path / "bin" / "adb.cmd"
+        launcher.write_text(f'@"{sys.executable}" "{FAKE}" %*\r\n')
+    else:
+        launcher = tmp_path / "bin" / "adb"
+        launcher.write_text(f"#!/bin/sh\nexec {sys.executable} {FAKE} \"$@\"\n")
+        launcher.chmod(0o755)
     log = tmp_path / "adb_calls.log"
     monkeypatch.setenv("VERITRACE_ADB", str(launcher))
     monkeypatch.setenv("FAKE_ADB_LOG", str(log))
