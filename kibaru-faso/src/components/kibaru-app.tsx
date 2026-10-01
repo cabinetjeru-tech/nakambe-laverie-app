@@ -926,11 +926,23 @@ function Welcome({
   const salut = heure >= 18 || heure < 4 ? "Bonsoir" : "Bonjour";
   return (
     <div className="fade-in">
-      <h1 className="text-2xl font-bold text-faso-dark">
-        {salut}
-        {prenom ? ` ${prenom}` : ""}
-      </h1>
-      <p className="mt-1 text-[15px] text-muted">Que préparez-vous aujourd&apos;hui ?</p>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-faso-dark">
+            {salut}
+            {prenom ? ` ${prenom}` : ""}
+          </h1>
+          <p className="mt-1 text-[15px] text-muted">Que préparez-vous aujourd&apos;hui ?</p>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/illustration-enseignante.svg"
+          alt="Enseignante burkinabè préparant ses fiches"
+          width={480}
+          height={360}
+          className="w-28 shrink-0 rounded-2xl border border-line sm:w-44"
+        />
+      </div>
       <BoutonInstaller className="mt-3" />
 
       {derniere && (

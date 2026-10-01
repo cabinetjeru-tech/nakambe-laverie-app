@@ -85,22 +85,34 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
               Se connecter
             </a>
           </div>
-          <h1 className="mt-10 max-w-3xl text-3xl font-extrabold leading-tight sm:text-5xl">Préparez vos cours, devoirs et corrigés en quelques minutes.</h1>
-          <p className="mt-4 max-w-2xl text-lg text-white/90">
-            L&apos;assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale. Gagnez des heures chaque semaine et consacrez-les à vos élèves.
-          </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
-            <Cta />
-            <span className="text-sm text-white/85">Sans paiement pour l&apos;essai · Orange Money, Moov Money</span>
+          <div className="mt-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+            <div className="min-w-0">
+              <h1 className="max-w-3xl text-3xl font-extrabold leading-tight sm:text-5xl">Préparez vos cours, devoirs et corrigés en quelques minutes.</h1>
+              <p className="mt-4 max-w-2xl text-lg text-white/90">
+                L&apos;assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale. Gagnez des heures chaque semaine et consacrez-les à vos élèves.
+              </p>
+              <div className="mt-7 flex flex-wrap items-center gap-3">
+                <Cta />
+                <span className="text-sm text-white/85">Sans paiement pour l&apos;essai · Orange Money, Moov Money</span>
+              </div>
+              {(compteurs.enseignants || compteurs.preparations) && (
+                <p className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-white/95">
+                  {compteurs.enseignants && <span>👩🏾‍🏫 Déjà {compteurs.enseignants.toLocaleString("fr-FR")} enseignants inscrits</span>}
+                  {compteurs.preparations && <span>📚 {compteurs.preparations.toLocaleString("fr-FR")} préparations réalisées</span>}
+                </p>
+              )}
+              <BoutonInstaller className="mt-4" clair />
+              {parrain && <p className="mt-4 text-sm text-white/85">Vous êtes invité(e) par un collègue (code {parrain}).</p>}
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/illustration-enseignante.svg"
+              alt="Une enseignante burkinabè en Faso Dan Fani prépare ses fiches pédagogiques à son bureau."
+              width={480}
+              height={360}
+              className="mx-auto h-auto w-full min-w-0 max-w-md rounded-3xl shadow-2xl ring-4 ring-white/20"
+            />
           </div>
-          {(compteurs.enseignants || compteurs.preparations) && (
-            <p className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-sm font-semibold text-white/95">
-              {compteurs.enseignants && <span>👩🏾‍🏫 Déjà {compteurs.enseignants.toLocaleString("fr-FR")} enseignants inscrits</span>}
-              {compteurs.preparations && <span>📚 {compteurs.preparations.toLocaleString("fr-FR")} préparations réalisées</span>}
-            </p>
-          )}
-          <BoutonInstaller className="mt-4" clair />
-          {parrain && <p className="mt-4 text-sm text-white/85">Vous êtes invité(e) par un collègue (code {parrain}).</p>}
         </div>
       </section>
 
