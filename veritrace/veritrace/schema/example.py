@@ -149,37 +149,84 @@ def build_example() -> dict[str, Any]:
 
     findings = [
         {"finding_id": "F-001", "type": "ioc_match", "severity": "critical",
-         "title": f"Application de surveillance connue détectée : {spy_pkg}",
-         "description": (f"Le paquet {spy_pkg} correspond à un indicateur de compromission (famille FictiveSpy). "
-                         "Sa présence est confirmée indépendamment par ALEAPP (packages.xml) et MVT (dumpsys)."),
+         "title": f"Présence du paquet {spy_pkg}, référencé dans un jeu d'indicateurs de stalkerware",
+         "description": (f"Le paquet {spy_pkg} (« System Service », version 4.2.1) est installé sur l'appareil. "
+                         "Il figure dans packages.xml (extraction ALEAPP) et dans la sortie dumpsys package "
+                         "(analyse MVT). MVT signale une correspondance avec l'indicateur de type « package » "
+                         "du jeu stalkerware-indicators, famille FictiveSpy."),
+         "interpretation": ("La présence du paquet est établie par deux outils indépendants. Sa correspondance "
+                            "avec un indicateur connu rend très probable qu'il s'agisse d'un logiciel de "
+                            "surveillance ; son fonctionnement effectif n'a pas été analysé (pas de rétro-ingénierie)."),
+         "plain_summary": ("Un logiciel espion connu est installé sur le téléphone. Il peut permettre à un tiers "
+                           "de lire les messages et de suivre la position de l'utilisatrice."),
+         "business_impact": "Exposition des communications et de la localisation de la personne concernée.",
          "artifact_ids": ["ART-0004", "ART-0005", "ART-0006"], "evidence_ids": [E1, E2],
          "corroborated": True, "confidence": "high",
-         "recommendation": "Conserver l'appareil en l'état ; ne pas désinstaller avant la fin des constatations."},
+         "recommendation": "Conserver l'appareil en l'état ; ne pas désinstaller avant la fin des constatations.",
+         "remediation": [
+             {"action": "Isoler l'appareil (mode avion) et le conserver sous scellé jusqu'à la clôture des constatations.",
+              "priority": "immediate", "owner": "Responsable sécurité"},
+             {"action": "Après constatations : réinitialisation d'usine et changement de tous les mots de passe "
+                        "des comptes synchronisés depuis un autre appareil sain.",
+              "priority": "short_term", "owner": "Support informatique"}],
+         "exhibits": [
+             {"exhibit_id": "PC-001", "type": "screenshot",
+              "path": "parsed/exhibits/PC-001_parametres_applications.png", "sha256": _fake_hash("PC-001"),
+              "description": "Capture de l'écran Paramètres › Applications montrant « System Service ».",
+              "artifact_id": "ART-0004", "captured_at": "2026-09-10T09:00:30+00:00"},
+             {"exhibit_id": "PC-002", "type": "export", "path": "parsed/mvt/detected.json",
+              "sha256": _fake_hash("PC-002"), "description": "Export MVT des détections IOC.",
+              "artifact_id": "ART-0006", "captured_at": "2026-09-10T10:38:00+00:00"}]},
         {"finding_id": "F-002", "type": "suspicious_app", "severity": "high",
-         "title": "Permissions sensibles et installation hors magasin officiel",
-         "description": ("L'application a été installée sans installateur déclaré (sideload) cinq minutes après "
-                         "la visite d'une page de téléchargement d'APK, et dispose des permissions SMS, "
-                         "localisation précise, micro et service d'accessibilité."),
+         "title": "Installation hors magasin officiel avec permissions étendues",
+         "description": ("Le 14/08/2026 à 20:58:42 UTC, le navigateur Chrome a visité "
+                         "https://download.example-monitor.invalid/apk/latest. Le 14/08/2026 à 21:03:11 UTC, le "
+                         f"paquet {spy_pkg} a été installé sans installateur déclaré. Il détient les permissions "
+                         "READ_SMS, ACCESS_FINE_LOCATION, RECORD_AUDIO et BIND_ACCESSIBILITY_SERVICE."),
+         "interpretation": ("L'enchaînement (téléchargement puis installation 4 min 29 s plus tard, sans magasin "
+                            "d'applications) est compatible avec une installation manuelle d'un APK. Ces "
+                            "éléments ne permettent pas d'identifier la personne ayant réalisé l'installation."),
+         "plain_summary": ("Le logiciel a été installé manuellement depuis un site web, en contournant le magasin "
+                           "d'applications, et dispose d'accès étendus (SMS, position, micro)."),
+         "business_impact": "Indique un accès physique à l'appareil déverrouillé le 14/08/2026 au soir.",
          "artifact_ids": ["ART-0004", "ART-0009"], "evidence_ids": [E1],
-         "corroborated": True, "confidence": "medium"},
+         "corroborated": True, "confidence": "medium",
+         "remediation": [
+             {"action": "Interdire l'installation d'applications de sources inconnues (politique MDM).",
+              "priority": "short_term", "owner": "Administrateur MDM"},
+             {"action": "Sensibiliser la personne concernée au verrouillage de l'appareil et au partage du code.",
+              "priority": "medium_term", "owner": "RH / Sécurité"}]},
         {"finding_id": "F-003", "type": "observation", "severity": "medium",
-         "title": "Message évoquant la connaissance des déplacements",
-         "description": ("Un SMS reçu le 02/09/2026 évoque la localisation de la titulaire la veille ; une position "
-                         "est effectivement enregistrée le 01/09/2026 à 22:15 UTC. La corrélation est temporelle, "
-                         "elle n'établit pas à elle seule la source de l'information."),
+         "title": "Message évoquant la localisation de la titulaire",
+         "description": ("Le 02/09/2026 à 19:44:05 UTC, un SMS provenant de +22670000001 (« Contact A ») a été "
+                         "reçu : « Je sais où tu étais hier soir. ». Une position (11.7802, -0.3703, ±12 m) est "
+                         "enregistrée sur l'appareil le 01/09/2026 à 22:15:30 UTC."),
+         "interpretation": ("La proximité temporelle entre la position enregistrée et le message est compatible "
+                            "avec une exploitation des données de localisation, sans l'établir : l'expéditeur "
+                            "a pu obtenir l'information par un autre moyen."),
+         "plain_summary": "Un message reçu laisse penser que l'expéditeur connaît les déplacements de l'utilisatrice.",
          "artifact_ids": ["ART-0001", "ART-0002", "ART-0008"], "evidence_ids": [E1],
-         "corroborated": True, "confidence": "low"},
+         "corroborated": True, "confidence": "low",
+         "remediation": [
+             {"action": "Transmettre les éléments à l'autorité compétente / au conseil juridique.",
+              "priority": "immediate", "owner": "Direction juridique"}]},
     ]
 
     h1, h2, h3 = _fake_hash("backup.ab"), _fake_hash("dumpsys_package.txt"), _fake_hash("consentement.pdf")
     return {
-        "schema_version": "0.1.0",
+        "schema_version": "0.2.0",
         "case": {
             "case_id": "VT-2026-0042",
             "title": "Suspicion de logiciel espion — téléphone de la plaignante",
             "created_at": "2026-09-10T08:30:00+00:00",
             "report_type": "judiciaire",
             "display_timezone": "Africa/Ouagadougou",
+            "executive_summary": (
+                "Un logiciel de surveillance connu est installé sur le téléphone examiné. Il a été installé "
+                "manuellement le 14 août 2026, hors magasin d'applications, et dispose d'accès aux SMS, à la "
+                "position et au micro. Un message reçu le 2 septembre suggère que son expéditeur connaît les "
+                "déplacements de l'utilisatrice. L'appareil doit être isolé et conservé en l'état ; les comptes "
+                "associés doivent être sécurisés depuis un appareil sain."),
             "mission": ("Rechercher la présence d'un logiciel espion ou de harcèlement (stalkerware) sur le "
                         "téléphone remis, et établir la chronologie de son installation et de son activité."),
             "requesting_party": {"name": "Parquet du Tribunal (fictif)", "role": "Autorité requérante",

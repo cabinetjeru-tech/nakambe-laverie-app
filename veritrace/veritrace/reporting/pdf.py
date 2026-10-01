@@ -82,6 +82,13 @@ def _styles(f: dict[str, str]) -> dict[str, ParagraphStyle]:
         "small": ParagraphStyle("small", parent=base, fontSize=8, leading=10.5, textColor=colors.HexColor("#4B5563")),
         "note": ParagraphStyle("note", parent=base, backColor=LIGHT, borderPadding=5, leftIndent=4, rightIndent=4,
                                spaceBefore=4, spaceAfter=6),
+        "interpretation": ParagraphStyle("interp", parent=base, fontName=f["regular"], backColor=colors.HexColor("#FFF7E6"),
+                                         borderColor=colors.HexColor("#E0B060"), borderWidth=0.5, borderPadding=5,
+                                         leftIndent=4, rightIndent=4, spaceBefore=2, spaceAfter=6),
+        "label": ParagraphStyle("label", parent=base, fontName=f["bold"], fontSize=8.5, leading=11,
+                                textColor=colors.HexColor("#374151"), spaceBefore=6, spaceAfter=2),
+        "caption": ParagraphStyle("caption", parent=base, fontSize=7, leading=9, alignment=TA_CENTER,
+                                  textColor=colors.HexColor("#4B5563"), spaceAfter=6),
         "warning": ParagraphStyle("warning", parent=base, fontName=f["bold"], textColor=WARN, spaceBefore=4),
         "h1": ParagraphStyle("h1", parent=base, fontName=f["bold"], fontSize=14, leading=18, textColor=ACCENT,
                              spaceBefore=10, spaceAfter=6),
@@ -164,8 +171,22 @@ def _cover_flow(cover: m.Cover, st: dict[str, ParagraphStyle]) -> list:
                               ("LINEBELOW", (0, 0), (-1, 0), 1.2, ACCENT),
                               ("BOTTOMPADDING", (0, 0), (-1, -1), 8)]))
     return [head, Spacer(1, 45 * mm), _p(cover.report_title, st["cover_title"]), Spacer(1, 6 * mm),
-            _p(cover.case_title, st["cover_sub"]), Spacer(1, 18 * mm), _kv(cover.meta, st),
-            Spacer(1, 12 * mm), _p(cover.confidentiality, st["note"]), PageBreak()]
+            _p(cover.case_title, st["cover_sub"]), Spacer(1, 14 * mm), _kv(cover.meta, st)] + (
+        [Spacer(1, 6 * mm), _p("Appareil(s) examiné(s)", st["h2"]),
+         _table(cover.devices.headers, cover.devices.rows, cover.devices.widths, (), st)] if cover.devices else []
+    ) + [Spacer(1, 10 * mm), _p(cover.confidentiality, st["note"]), PageBreak()]
+
+
+def _figure(fig: m.Figure, st: dict[str, ParagraphStyle]) -> list:
+    """Capture d'écran réduite (hauteur max 90 mm) + légende avec empreinte."""
+    try:
+        img = Image(str(fig.path))
+        ratio = min((CONTENT_W * 0.6) / img.imageWidth, (90 * mm) / img.imageHeight, 1.0)
+        img.drawWidth, img.drawHeight = img.imageWidth * ratio, img.imageHeight * ratio
+        return [KeepTogether([img, _p(fig.caption, st["caption"])])]
+    except Exception as exc:
+        log.warning("Capture illisible (%s) : %s — référence textuelle seulement", fig.path, exc)
+        return [_p(f"[Capture non affichable] {fig.caption}", st["caption"])]
 
 
 def render_pdf(model: m.ReportModel, out_path: str | Path) -> Path:
@@ -187,10 +208,18 @@ def render_pdf(model: m.ReportModel, out_path: str | Path) -> Path:
 
     flow: list = _cover_flow(model.cover, st)
     for s in model.sections:
+        if s.new_page:
+            flow.append(PageBreak())
         section_flow: list = [_p(s.title, st["h1"])]
         for b in s.blocks:
             if isinstance(b, m.Subheading):
                 section_flow.append(_p(b.text, st["h2"]))
+            elif isinstance(b, m.Label):
+                section_flow.append(_p(b.text, st["label"]))
+            elif isinstance(b, m.PageBreak):
+                section_flow.append(PageBreak())
+            elif isinstance(b, m.Figure):
+                section_flow += _figure(b, st)
             elif isinstance(b, m.Paragraph):
                 section_flow.append(_p(b.text, st.get(b.style, st["body"])))
                 section_flow.append(Spacer(1, 2))

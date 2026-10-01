@@ -1,8 +1,8 @@
 """Rendu Markdown (GFM) d'un ReportModel."""
 from __future__ import annotations
 
-from veritrace.reporting.model import (Bullets, KeyValue, Paragraph, ReportModel, Signature, Subheading,
-                                       Table)
+from veritrace.reporting.model import (Bullets, Figure, KeyValue, Label, PageBreak, Paragraph, ReportModel,
+                                       Signature, Subheading, Table)
 
 
 def _esc(text: str) -> str:
@@ -30,19 +30,31 @@ def render_markdown(model: ReportModel) -> str:
     lines += [f"**{c.org_name}**  "] + [f"{l}  " for l in c.org_lines] + [""]
     lines += [f"# {c.report_title}", "", f"## {c.case_title}", ""]
     lines += _table(["", ""], [[k, v] for k, v in c.meta], mono=())
+    if c.devices:
+        lines += ["", "**Appareil(s) examiné(s)**", ""] + _table(c.devices.headers, c.devices.rows)
     lines += ["", f"> {c.confidentiality}", "", "---", ""]
 
     # --- sections
     for s in model.sections:
+        if s.new_page:
+            lines += ['<div style="page-break-before: always"></div>', ""]
         lines += [f"## {s.title}", ""]
         for b in s.blocks:
             if isinstance(b, Subheading):
                 lines += [f"### {b.text}", ""]
+            elif isinstance(b, Label):
+                lines += [f"**{b.text}**", ""]
+            elif isinstance(b, Figure):
+                lines += [f"![{_esc(b.caption)}]({b.path.as_posix()})", "", f"*{b.caption}*", ""]
+            elif isinstance(b, PageBreak):
+                lines += ['<div style="page-break-after: always"></div>', ""]
             elif isinstance(b, Paragraph):
                 if b.style == "warning":
                     lines += [f"> **⚠ {b.text}**", ""]
                 elif b.style == "note":
                     lines += [f"> {b.text}", ""]
+                elif b.style == "interpretation":
+                    lines += ["> *" + b.text + "*", ""]
                 elif b.style == "small":
                     lines += [f"*{b.text}*", ""]
                 else:

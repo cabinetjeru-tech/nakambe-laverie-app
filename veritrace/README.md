@@ -23,7 +23,7 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Garde-fou d'autorisation légale (bloquant) | ✅ |
 | Journal d'audit horodaté, chaîné, en lecture seule | ✅ |
 | Dossier d'affaire normalisé (`case init`) | ✅ |
-| Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.1, voir plus bas)* |
+| Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.2, voir plus bas)* |
 | Reporting judiciaire / entreprise, PDF + Markdown | ✅ |
 | Détection des outils externes (`doctor`) | ✅ |
 | Acquisition ADB (backup, pull ciblé, custody automatique) | ⏳ prochaine itération |
@@ -144,7 +144,7 @@ printf 'Nom Prénom\nmandat\nCR-2026-118\nAUTORISATION VERIFIEE\n' | veritrace r
   Deux outils qui extraient le même fait produisent la même empreinte, et l'artefact passe
   alors en `corroborated`.
 
-> **Schéma provisoire.** Le schéma de référence n'a pas encore été fourni. La v0.1 a été
+> **Schéma provisoire.** Le schéma de référence n'a pas encore été fourni. La v0.2 a été
 > conçue pour couvrir le cahier des charges. Pour la remplacer, déposez le schéma de
 > référence à la place du fichier ou pointez `VERITRACE_SCHEMA` dessus, puis adaptez le
 > modèle de rapport (`reporting/model.py`) aux noms de champs.
@@ -158,15 +158,55 @@ veritrace schema example -o exemple.json
 
 ## Rapports
 
-| Gabarit | Contenu |
+Le gabarit se choisit avec `--report judiciaire` ou `--report entreprise`. Les deux sont
+exportés en PDF et en Markdown à partir du même JSON.
+
+### Modèle judiciaire (recevable en justice)
+
+| Partie | Contenu |
 |---|---|
-| `--report judiciaire` | Page de garde (logo + coordonnées du cabinet, autorité requérante, base légale), cadre légal et mission, matériel examiné, méthodologie et outils, preuves et SHA-256, chaîne de custody, constatations, chronologie, artefacts cités, limites et réserves, intégrité, attestation et signature. |
-| `--report entreprise` | Page de garde, synthèse exécutive (niveau de risque global), constats et recommandations, périmètre, chronologie des événements clés, annexes d'intégrité et d'inventaire. |
+| Page de garde | Logo et coordonnées du cabinet, n° d'affaire, autorité requérante, examinateur(s), dates (ouverture, période des opérations, rapport), appareil (marque, modèle, IMEI, système), empreinte des données sources |
+| 1. Déclaration d'autorisation | Base légale, référence du consentement ou du mandat, émetteur, date, périmètre, empreinte du document, vérification préalable |
+| 2. Matériel examiné | Appareils, n° de série, scellés, état à réception |
+| 3. Méthodologie | 3.1 outils et versions · 3.2 procédure d'acquisition · 3.3 principe de non-altération · 3.4 analyse et corroboration |
+| 4. Éléments de preuve | Fichiers collectés avec leur SHA-256 |
+| 5. Chaîne de custody | Date/heure, preuve, action (et lieu), responsable, SHA-256 |
+| 6. Constatations | Numérotées. Pour chacune : **faits constatés**, puis tableau des sources (artefact, horodatage, outil · fichier · enregistrement, preuve et son SHA-256), captures et références hachées, puis **interprétation de l'examinateur** dans un bloc distinct |
+| 7. Chronologie consolidée | Chaque événement renvoie à ses artefacts et à ses preuves |
+| 8. Limites et réserves | Outils non exécutés, portée de l'acquisition logique, fiabilité des horloges |
+| 9. Attestation | Texte d'attestation et emplacement de signature |
+| Annexes | A : exécutions d'outils (commandes) · B : artefacts cités et empreintes de contenu · C : intégrité du rapport et journal d'audit · D : glossaire |
+
+Ce modèle reste neutre : il ne contient ni niveau de criticité ni recommandation. Si un
+constat n'est rattaché à aucun artefact, **le rapport judiciaire est refusé**, car chaque
+affirmation doit pouvoir être reliée à une preuve hachée.
+
+### Modèle entreprise / audit interne
+
+| Partie | Contenu |
+|---|---|
+| 1. Résumé exécutif (1 page, non technique) | Niveau de risque global, synthèse rédigée (`case.executive_summary`), ce qu'il faut retenir (`finding.plain_summary`), décisions immédiates |
+| 2. Criticité des constats | Critique / Élevé / Moyen / Faible, fiabilité, impact métier, échelle de criticité |
+| 3. Recommandations et plan de remédiation | Actions triées par priorité (immédiat < 48 h, court terme < 30 j, moyen terme < 90 j), avec responsable, échéance et constat d'origine |
+| 4. Détails techniques | Faits, analyse, sources de chaque constat ; chronologie des événements clés ; périmètre et méthodologie |
+| 5. Limites | |
+| Annexe — Preuves | Éléments de preuve, chaîne de custody, pièces (captures et exports), inventaire, intégrité |
+
+### Champs du JSON utilisés par les rapports (schéma v0.2)
+
+| Champ | Utilisé par |
+|---|---|
+| `finding.description` | Les deux modèles : **faits uniquement** |
+| `finding.interpretation` | Les deux modèles : interprétation, toujours affichée à part |
+| `finding.exhibits[]` | Les deux modèles : captures et exports, avec chemin et SHA-256. Une capture PNG ou JPG présente dans le dossier d'affaire est insérée dans le rapport |
+| `finding.plain_summary`, `finding.business_impact`, `finding.remediation[]`, `case.executive_summary` | Modèle entreprise |
+
+### Fonctionnement commun
 
 - **Pas de divergence entre formats** : le JSON est converti une seule fois en modèle de
-  rapport (`reporting/model.py`), puis ce modèle est mis en forme en Markdown et en PDF. Aucun
-  moteur de rendu ne relit le JSON.
-- Le JSON est **revalidé** avant chaque rapport. S'il n'est pas conforme, aucun rapport n'est produit.
+  rapport (`reporting/model.py`), puis ce modèle est mis en forme en Markdown et en PDF.
+  Aucun moteur de rendu ne relit le JSON.
+- Le JSON est revalidé avant chaque rapport. S'il n'est pas conforme, aucun rapport n'est produit.
 - Chaque génération écrit un `*.manifest.json` qui contient l'empreinte du JSON source et
   celles des fichiers produits. Ces empreintes sont aussi consignées dans l'audit.
 - Toutes les pages portent en pied de page « Veritrace — développé par Nourou Chafikou ».

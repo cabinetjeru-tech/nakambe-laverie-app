@@ -99,3 +99,16 @@ def test_schema_is_valid_json_schema():
 
 def test_example_roundtrip_json(example_doc):
     assert validate(json.loads(json.dumps(example_doc))).ok
+
+
+def test_exhibit_reference_and_duplicates(example_doc):
+    ex = example_doc["findings"][0]["exhibits"]
+    ex[1]["exhibit_id"] = ex[0]["exhibit_id"]
+    ex[0]["artifact_id"] = "ART-NOPE"
+    msgs = _messages(validate(example_doc))
+    assert any("pièce dupliqué" in m for m in msgs) and any("ART-NOPE" in m for m in msgs)
+
+
+def test_remediation_priority_enum(example_doc):
+    example_doc["findings"][0]["remediation"][0]["priority"] = "urgent"
+    assert not validate(example_doc).ok

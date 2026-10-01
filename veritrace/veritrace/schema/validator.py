@@ -270,11 +270,25 @@ def _semantic_checks(doc: dict, report: ValidationReport, case_root: Path | None
             report.warn(f"{p}.corroborated", "marqué corroboré sans artefact corroboré")
 
     # Constats
+    seen_exhibits: set[str] = set()
     for i, f in enumerate(doc["findings"]):
         p = f"findings[{i}]"
         for j, aid in enumerate(f.get("artifact_ids") or []):
             _check_ref(aid, artifacts, f"{p}.artifact_ids[{j}]", "artifacts", report)
         for j, eid in enumerate(f.get("evidence_ids") or []):
             _check_ref(eid, evidence, f"{p}.evidence_ids[{j}]", "evidence_items", report)
-        if f.get("severity") in ("high", "critical") and not f.get("artifact_ids"):
-            report.warn(p, "constat de sévérité élevée sans artefact à l'appui")
+        if not f.get("artifact_ids"):
+            report.warn(p, "constat sans artefact à l'appui (refusé par le gabarit judiciaire)")
+        for j, ex in enumerate(f.get("exhibits") or []):
+            ep = f"{p}.exhibits[{j}]"
+            if ex.get("exhibit_id") in seen_exhibits:
+                report.error(f"{ep}.exhibit_id", f"identifiant de pièce dupliqué « {ex.get('exhibit_id')} »")
+            seen_exhibits.add(ex.get("exhibit_id"))
+            _check_ref(ex.get("artifact_id"), artifacts, f"{ep}.artifact_id", "artifacts", report)
+            _check_ts(ex.get("captured_at"), f"{ep}.captured_at", report)
+            if case_root is not None and ex.get("path"):
+                fp = (case_root / ex["path"]).resolve()
+                if not fp.is_file():
+                    report.error(f"{ep}.path", f"pièce introuvable : {fp}")
+                elif sha256_file(fp) != ex.get("sha256"):
+                    report.error(f"{ep}.sha256", f"la pièce sur disque ne correspond plus à l'empreinte : {fp}")

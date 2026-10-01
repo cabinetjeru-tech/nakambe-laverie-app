@@ -22,7 +22,7 @@ from veritrace.core.case import Case, CaseError
 from veritrace.core.logging_setup import get_logger, setup_logging
 from veritrace.core.tools import detect_all
 from veritrace.reporting import FORMATS, generate
-from veritrace.reporting.model import TEMPLATES
+from veritrace.reporting.model import TEMPLATES, ReportPrecheckError
 from veritrace.schema.validator import SCHEMA_PATH, CaseValidationError, validate_file
 
 log = get_logger("cli")
@@ -302,6 +302,9 @@ def report(c: Ctx, case_dir: Path | None, input_json: Path | None, template: str
                           verify_files=verify_files)
     except CaseValidationError as exc:
         audit_log.append("report_refused", {"source": str(source), "errors": len(exc.report.errors)})
+        raise click.ClickException(f"Rapport refusé — {exc}") from exc
+    except ReportPrecheckError as exc:
+        audit_log.append("report_refused", {"source": str(source), "template": tpl, "reason": str(exc)})
         raise click.ClickException(f"Rapport refusé — {exc}") from exc
 
     details = {"template": tpl, "source": str(source), "source_sha256": result.source_sha256,
