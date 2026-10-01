@@ -33,7 +33,7 @@ from veritrace.core.timeutil import utc_now_iso
 
 GENESIS_HASH = "0" * 64
 
-try:  # Verrou inter-processus : fcntl (POSIX) ou msvcrt (Windows).
+try:  # Verrou inter-processus : fcntl (POSIX) ou msvcrt (Windows), posé sur un fichier « .lock » distinct.
     import fcntl
 
     def _lock(fh) -> None:
@@ -42,21 +42,19 @@ try:  # Verrou inter-processus : fcntl (POSIX) ou msvcrt (Windows).
     def _unlock(fh) -> None:
         fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
-except ImportError:  # pragma: no cover - Windows : verrou msvcrt sur le premier octet du fichier
-    import msvcrt
+except ImportError:  # pragma: no cover - Windows : les verrous msvcrt sont IMPÉRATIFS (ils bloqueraient
+    import msvcrt    # aussi la relecture du journal) : on verrouille donc un fichier « .lock » séparé.
     import time
 
     def _lock(fh) -> None:
-        fh.seek(0)
         for _ in range(600):           # attend au plus ~60 s qu'un autre processus libère le journal
             try:
+                fh.seek(0)
                 msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
-                break
+                return
             except OSError:
                 time.sleep(0.1)
-        else:
-            raise AuditError("journal d'audit verrouillé par un autre processus")
-        fh.seek(0, os.SEEK_END)
+        raise AuditError("journal d'audit verrouillé par un autre processus")
 
     def _unlock(fh) -> None:
         fh.seek(0)
@@ -115,9 +113,10 @@ class AuditLog:
             # Le fichier est en 0444 entre deux écritures ; on rouvre le droit d'écriture
             # pour le seul propriétaire le temps de l'ajout.
             os.chmod(self.path, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+        lock_path = self.path.with_name(self.path.name + ".lock")
         try:
-            with open(self.path, "a+", encoding="utf-8") as fh:
-                _lock(fh)
+            with open(lock_path, "a+") as lk, open(self.path, "a", encoding="utf-8") as fh:
+                _lock(lk)
                 try:
                     seq, prev = self._tail()
                     entry: dict[str, Any] = {
@@ -133,7 +132,7 @@ class AuditLog:
                     fh.flush()
                     os.fsync(fh.fileno())
                 finally:
-                    _unlock(fh)
+                    _unlock(lk)
         finally:
             os.chmod(self.path, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
         return entry
