@@ -48,7 +48,8 @@ PRIORITY_FR = {"immediat": "Immédiat (< 48 h)", "court_terme": "Court terme (< 
 CONFIDENCE_FR = {"elevee": "élevée", "moyenne": "moyenne", "faible": "faible"}
 BASIS_FR = dict(LEGAL_BASES)
 CATEGORY_FR = {
-    "sms": "SMS / MMS", "appel": "Journal d'appels", "contact": "Contacts", "navigation": "Historique de navigation",
+    "sms": "SMS / MMS", "appel": "Appels (téléphonie et messageries)", "message": "Messageries tierces",
+    "contact": "Contacts", "navigation": "Historique de navigation",
     "localisation": "Géolocalisation", "exif": "Métadonnées EXIF", "usage_app": "Usage des applications",
     "application": "Applications installées", "wifi": "Réseaux Wi-Fi", "bluetooth": "Appareils Bluetooth",
     "compte": "Comptes", "ioc": "Correspondances IOC", "autre": "Autres",

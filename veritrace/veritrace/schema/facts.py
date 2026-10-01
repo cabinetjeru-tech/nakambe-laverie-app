@@ -10,6 +10,9 @@ Deux empreintes coexistent sur chaque artefact :
   C'est elle qui sert au dédoublonnage (un même SMS lu par ALEAPP et Autopsy n'est compté
   qu'une fois) et à la corroboration (≥ 2 moteurs indépendants → « corroboré »).
 
+Messages de messageries tierces : horodatage + application + texte (+ nom de la pièce
+jointe), sans l'identifiant de conversation, que chaque outil exprime différemment.
+
 La direction (entrant/sortant/manqué) n'entre PAS dans la clé des SMS et appels : les
 outils la codent différemment (Autopsy classe un appel manqué « entrant », ALEAPP
 « manqué ») ; l'horodatage à la seconde + le numéro (+ le texte) suffisent à identifier.
@@ -62,10 +65,13 @@ def fact_key(category: str, data: dict[str, Any], timestamp: str | None) -> dict
     if category == "sms":
         return {"ts": ts, "addr": norm_phone(d.get("address")), "body": _s(d.get("body"))}
     if category == "appel":
-        return {"ts": ts, "num": norm_phone(d.get("number"))}
+        return {"ts": ts, "num": norm_phone(d.get("number")), "app": d.get("app")}
+    if category == "message":
+        att = _s(d.get("attachment")).replace("\\", "/").rsplit("/", 1)[-1] if d.get("attachment") else None
+        return {"ts": ts, "app": d.get("app"), "body": _s(d.get("body")), "att": att}
     if category == "contact":
         nums = sorted({norm_phone(n) for n in d.get("phone_numbers") or [] if n})
-        return {"name": _s(d.get("display_name")), "nums": nums}
+        return {"name": _s(d.get("display_name")), "nums": nums, "app": d.get("app")}
     if category == "navigation":
         return {"ts": ts, "url": _s(d.get("url"))}
     if category == "localisation":

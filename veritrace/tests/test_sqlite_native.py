@@ -47,7 +47,7 @@ def test_classify():
 def test_filesystem_extraction(fs, tmp_path):
     r = _run(fs, tmp_path)
     cats = Counter(a["category"] for a in r.artifacts)
-    assert cats == {"sms": 2, "appel": 3, "contact": 1, "navigation": 1, "exif": 1, "localisation": 1}
+    assert cats == {"sms": 2, "appel": 5, "contact": 4, "navigation": 1, "exif": 1, "localisation": 1, "message": 7}
     assert fragment_errors({"artifacts": r.artifacts}) == []       # format pivot
     assert all(a["source"]["tool"] == "veritrace-sqlite" for a in r.artifacts)
     sms = next(a for a in r.artifacts if a["category"] == "sms" and a["data"]["direction"] == "entrant")
@@ -60,8 +60,11 @@ def test_same_facts_as_aleapp(fs, tmp_path):
     native = _run(fs, tmp_path).artifacts
     b = ArtifactBuilder("R", "E")
     aleapp_normalize(ALEAPP_OUT, b, {"name": "ALEAPP", "version": "2026.4.2"})
-    common = {"sms", "appel", "contact", "navigation", "localisation"}
-    assert _facts(native, common) == _facts(b.items, common)
+    common = {"sms", "appel", "contact", "navigation", "localisation", "message"}
+    telegram = {(a["category"], a["x_veritrace"]["fact_sha256"]) for a in b.items
+                if a["category"] == "message" and a["data"]["app"] == "Telegram"}
+    # Telegram n'est lu que par ALEAPP (décodage TL) : seul écart attendu entre les deux moteurs.
+    assert _facts(native, common) == _facts(b.items, common) - telegram
 
 
 def test_originals_untouched_and_wal_replayed(fs, tmp_path):

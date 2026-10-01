@@ -151,6 +151,9 @@ def run_wrapper(case: Case, wrapper: ToolWrapper, extraction: Path, options: dic
 
     # 5. Fusion, corrélation, validation, sauvegarde
     added, already, f_added = _merge(doc, result)
+    if result.limitations:  # éléments présents mais non analysables : consignés dans les limites du rapport
+        lims = doc["case"].setdefault("x_veritrace", {}).setdefault("limitations", [])
+        lims += [x for x in result.limitations if x not in lims]
     message = " ".join(result.notes + ([f"{already} artefact(s) déjà présent(s) (ré-exécution) non dupliqué(s)."]
                                        if already else []))
     _record("succes", message, result.tool, command=result.command, artifacts=added, mode=result.mode,

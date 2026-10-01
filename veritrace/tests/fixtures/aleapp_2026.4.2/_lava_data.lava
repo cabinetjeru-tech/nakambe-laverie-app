@@ -6,8 +6,8 @@
   "leapp_mode": "CLI",
   "package": "Source code",
   "OS": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
-  "start_timestamp": 1790827868,
-  "end_timestamp": 1790827869
+  "start_timestamp": 1790837807,
+  "end_timestamp": 1790837808
  },
  "param_input": "<extraction>",
  "param_output": "<sortie>",
@@ -439,21 +439,21 @@
   },
   {
    "module_name": "FacebookMessenger",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_fb_threads_chats",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "FacebookMessenger",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_fb_threads_calls",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "FacebookMessenger",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_fb_threads_contacts",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "FairEmail",
@@ -1195,75 +1195,75 @@
   },
   {
    "module_name": "Viber",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_Viber",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "Viber",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_Viber_contacts",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "Viber",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_Viber_messages",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "Viber",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_Viber_additional",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_contacts",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_call_logs",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_messages",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_one_to_one_messages",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_group_messages",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_group_details",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_channels",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "WhatsApp",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_channel_messages",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "WhatsApp",
@@ -1273,9 +1273,9 @@
   },
   {
    "module_name": "WhatsAppLogFiles",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_WhatsAppLogFiles",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "WithingsHealthMate",
@@ -6229,33 +6229,33 @@
   },
   {
    "module_name": "signalAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_signalMessages",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "signalAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_signalCalls",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "signalAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_signalContacts",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "signalAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_signalGroups",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "signalAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_signalAttachments",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "silentPhone",
@@ -6853,27 +6853,27 @@
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramMessages",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramContacts",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramUsers",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramChats",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
@@ -6883,15 +6883,15 @@
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramPeerDetails",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramChatDetails",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
@@ -6901,15 +6901,15 @@
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramChannelMembers",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_telegramChatHints",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "telegramAndroid",
@@ -7585,39 +7585,39 @@
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_reactions",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_message_edits",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_revoked_messages",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_polls",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_message_receipts",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "whatsAppExtended",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_whatsapp_system_events",
-   "file_count": 0
+   "file_count": 2
   },
   {
    "module_name": "wifiConfigstore2",
@@ -7909,6 +7909,43 @@
     "source_path": "data/data/com.android.providers.contacts/databases/contacts2.db"
    }
   ],
+  "Facebook Messenger": [
+   {
+    "artifact_key": "get_fb_threads_chats",
+    "name": "Facebook Messenger - Chats (threads_db2)",
+    "tablename": "get_fb_threads_chats",
+    "module": "FacebookMessenger",
+    "column_map": {
+     "timestamp": "Timestamp",
+     "sender_name": "Sender Name",
+     "sender_id": "Sender ID",
+     "thread_key": "Thread Key",
+     "message": "Message",
+     "snippet": "Snippet",
+     "attachment_name": "Attachment Name",
+     "share_name": "Share Name",
+     "share_description": "Share Description",
+     "share_link": "Share Link",
+     "message_reaction": "Message Reaction",
+     "message_reaction_timestamp": "Message Reaction Timestamp",
+     "message_id": "Message ID",
+     "source_file": "Source File"
+    },
+    "artifact_icon": "message",
+    "record_count": 1,
+    "source_path": "data/data/com.facebook.orca/databases/threads_db2",
+    "object_columns": [
+     {
+      "name": "timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "message_reaction_timestamp",
+      "type": "datetime"
+     }
+    ]
+   }
+  ],
   "GEO Location": [
    {
     "artifact_key": "get_browserlocation",
@@ -8089,6 +8126,62 @@
     }
    }
   ],
+  "Telegram": [
+   {
+    "artifact_key": "get_telegramMessages",
+    "name": "Telegram - Messages",
+    "tablename": "get_telegrammessages",
+    "module": "telegramAndroid",
+    "column_map": {
+     "timestamp": "Timestamp",
+     "dialog_id": "Dialog ID",
+     "chat": "Chat",
+     "direction": "Direction",
+     "sender_id": "Sender ID",
+     "sender": "Sender",
+     "message": "Message",
+     "recorded_media_path": "Recorded Media Path",
+     "media_file": "Media File",
+     "read_state": "Read State",
+     "message_id": "Message ID"
+    },
+    "artifact_icon": "message-circle",
+    "record_count": 1,
+    "source_path": "data/data/org.telegram.messenger/files/cache4.db",
+    "object_columns": [
+     {
+      "name": "timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "media_file",
+      "type": "media"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_telegramUsers",
+    "name": "Telegram - Users",
+    "tablename": "get_telegramusers",
+    "module": "telegramAndroid",
+    "column_map": {
+     "last_seen": "Last Seen",
+     "user_id": "User ID",
+     "display_name": "Display Name",
+     "username": "Username",
+     "status_value": "Status Value"
+    },
+    "artifact_icon": "users",
+    "record_count": 1,
+    "source_path": "data/data/org.telegram.messenger/files/cache4.db",
+    "object_columns": [
+     {
+      "name": "last_seen",
+      "type": "datetime"
+     }
+    ]
+   }
+  ],
   "Usage Stats": [
    {
     "artifact_key": "get_usagestats",
@@ -8144,6 +8237,297 @@
       "type": "datetime"
      }
     ]
+   }
+  ],
+  "Viber": [
+   {
+    "artifact_key": "get_Viber",
+    "name": "Viber - Call Logs",
+    "tablename": "get_viber",
+    "module": "Viber",
+    "column_map": {
+     "call_start_time": "Call Start Time",
+     "phone_number": "Phone Number",
+     "call_direction": "Call Direction",
+     "call_end_time_computed_start_duration": "Call End Time (computed: start + duration)",
+     "call_type": "Call Type"
+    },
+    "artifact_icon": "phone-call",
+    "record_count": 1,
+    "source_path": "data/data/com.viber.voip/databases/viber_data",
+    "object_columns": [
+     {
+      "name": "call_start_time",
+      "type": "datetime"
+     },
+     {
+      "name": "phone_number",
+      "type": "phonenumber"
+     },
+     {
+      "name": "call_end_time_computed_start_duration",
+      "type": "datetime"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_Viber_contacts",
+    "name": "Viber - Contacts",
+    "tablename": "get_viber_contacts",
+    "module": "Viber",
+    "column_map": {
+     "display_name": "Display Name",
+     "phone_number": "Phone Number"
+    },
+    "artifact_icon": "users",
+    "record_count": 1,
+    "source_path": "data/data/com.viber.voip/databases/viber_data",
+    "object_columns": [
+     {
+      "name": "phone_number",
+      "type": "phonenumber"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_Viber_messages",
+    "name": "Viber - Messages",
+    "tablename": "get_viber_messages",
+    "module": "Viber",
+    "column_map": {
+     "message_date": "Message Date",
+     "direction": "Direction",
+     "from_phone_number": "From Phone Number",
+     "message": "Message",
+     "recipients": "Recipients",
+     "thread_id": "Thread ID",
+     "unread": "Unread",
+     "file_attachment": "File Attachment"
+    },
+    "artifact_icon": "message",
+    "record_count": 2,
+    "source_path": "data/data/com.viber.voip/databases/viber_messages",
+    "object_columns": [
+     {
+      "name": "message_date",
+      "type": "datetime"
+     },
+     {
+      "name": "from_phone_number",
+      "type": "phonenumber"
+     }
+    ],
+    "data_views": {
+     "conversation": {
+      "conversationDiscriminatorColumn": "thread_id",
+      "textColumn": "message",
+      "directionColumn": "direction",
+      "directionSentValue": "Outgoing",
+      "timeColumn": "message_date",
+      "senderColumn": "from_phone_number"
+     }
+    }
+   }
+  ],
+  "WhatsApp": [
+   {
+    "artifact_key": "get_whatsapp_call_logs",
+    "name": "WhatsApp - Call Logs",
+    "tablename": "get_whatsapp_call_logs",
+    "module": "WhatsApp",
+    "column_map": {
+     "call_start_timestamp": "Call Start Timestamp",
+     "call_end_timestamp": "Call End Timestamp",
+     "call_duration": "Call Duration",
+     "group_name": "Group Name",
+     "call_direction": "Call Direction",
+     "caller": "Caller",
+     "caller_jid": "Caller JID",
+     "call_type": "Call Type"
+    },
+    "artifact_icon": "phone",
+    "record_count": 1,
+    "source_path": "data/data/com.whatsapp/databases/msgstore.db",
+    "object_columns": [
+     {
+      "name": "call_start_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "call_end_timestamp",
+      "type": "datetime"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_whatsapp_contacts",
+    "name": "WhatsApp - Contacts",
+    "tablename": "get_whatsapp_contacts",
+    "module": "WhatsApp",
+    "column_map": {
+     "name": "Name",
+     "whatsapp_name": "WhatsApp Name",
+     "jid": "JID",
+     "number": "Number",
+     "status_text": "Status Text",
+     "status_timestamp": "Status Timestamp"
+    },
+    "artifact_icon": "users",
+    "record_count": 2,
+    "source_path": "data/data/com.whatsapp/databases/wa.db",
+    "object_columns": [
+     {
+      "name": "status_timestamp",
+      "type": "datetime"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_whatsapp_group_details",
+    "name": "WhatsApp - Group Details",
+    "tablename": "get_whatsapp_group_details",
+    "module": "WhatsApp",
+    "column_map": {
+     "group_creation_timestamp": "Group Creation Timestamp",
+     "group_name": "Group Name",
+     "group_picture": "Group Picture",
+     "creator_jid": "Creator JID",
+     "creator_jid_via_jid_map": "Creator JID (via jid_map)",
+     "creator_wa_user_name": "Creator WA User Name",
+     "creator_wa_number": "Creator WA Number",
+     "creator_wa_profile_picture": "Creator WA Profile Picture"
+    },
+    "artifact_icon": "users",
+    "record_count": 1,
+    "source_path": "data/data/com.whatsapp/databases/msgstore.db",
+    "object_columns": [
+     {
+      "name": "group_creation_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "group_picture",
+      "type": "media"
+     },
+     {
+      "name": "creator_wa_profile_picture",
+      "type": "media"
+     }
+    ]
+   },
+   {
+    "artifact_key": "get_whatsapp_group_messages",
+    "name": "WhatsApp - Group Messages",
+    "tablename": "get_whatsapp_group_messages",
+    "module": "WhatsApp",
+    "column_map": {
+     "message_timestamp": "Message Timestamp",
+     "received_timestamp": "Received Timestamp",
+     "final_location_timestamp": "Final Location Timestamp",
+     "message_direction": "Message Direction",
+     "sending_party": "Sending Party",
+     "message": "Message",
+     "media": "Media",
+     "conversation_name": "Conversation Name",
+     "sending_party_jid": "Sending Party JID",
+     "message_type": "Message Type",
+     "local_path_to_media": "Local Path To Media",
+     "media_file_size": "Media File Size",
+     "shared_latitudestarting_latitude_live_location": "Shared Latitude/Starting Latitude (Live Location)",
+     "shared_longitudestarting_longitude_live_location": "Shared Longitude/Starting Longitude (Live Location)",
+     "duration_live_location_shared_seconds": "Duration Live Location Shared (Seconds)",
+     "final_live_latitude": "Final Live Latitude",
+     "final_live_longitude": "Final Live Longitude"
+    },
+    "artifact_icon": "message",
+    "record_count": 1,
+    "source_path": "data/data/com.whatsapp/databases/msgstore.db",
+    "object_columns": [
+     {
+      "name": "message_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "received_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "final_location_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "media",
+      "type": "media"
+     }
+    ],
+    "data_views": {
+     "conversation": {
+      "conversationDiscriminatorColumn": "conversation_name",
+      "textColumn": "message",
+      "directionColumn": "message_direction",
+      "directionSentValue": "Outgoing",
+      "timeColumn": "message_timestamp",
+      "senderColumn": "sending_party",
+      "mediaColumn": "media"
+     }
+    }
+   },
+   {
+    "artifact_key": "get_whatsapp_one_to_one_messages",
+    "name": "WhatsApp - One To One Messages",
+    "tablename": "get_whatsapp_one_to_one_messages",
+    "module": "WhatsApp",
+    "column_map": {
+     "message_timestamp": "Message Timestamp",
+     "received_timestamp": "Received Timestamp",
+     "final_location_timestamp": "Final Location Timestamp",
+     "message_direction": "Message Direction",
+     "other_participant_wa_user_name": "Other Participant WA User Name",
+     "message": "Message",
+     "media": "Media",
+     "sending_party_jid": "Sending Party JID",
+     "message_type": "Message Type",
+     "local_path_to_media": "Local Path To Media",
+     "media_file_size": "Media File Size",
+     "shared_latitudestarting_latitude_live_location": "Shared Latitude/Starting Latitude (Live Location)",
+     "shared_longitudestarting_longitude_live_location": "Shared Longitude/Starting Longitude (Live Location)",
+     "duration_live_location_shared_seconds": "Duration Live Location Shared (Seconds)",
+     "final_live_latitude": "Final Live Latitude",
+     "final_live_longitude": "Final Live Longitude"
+    },
+    "artifact_icon": "message",
+    "record_count": 3,
+    "source_path": "data/data/com.whatsapp/databases/msgstore.db",
+    "object_columns": [
+     {
+      "name": "message_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "received_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "final_location_timestamp",
+      "type": "datetime"
+     },
+     {
+      "name": "media",
+      "type": "media"
+     }
+    ],
+    "data_views": {
+     "conversation": {
+      "conversationDiscriminatorColumn": "other_participant_wa_user_name",
+      "textColumn": "message",
+      "directionColumn": "message_direction",
+      "directionSentValue": "Outgoing",
+      "timeColumn": "message_timestamp",
+      "senderColumn": "other_participant_wa_user_name",
+      "sentMessageStaticLabel": "Local User",
+      "mediaColumn": "media"
+     }
+    }
    }
   ],
   "WiFi Profiles": [
@@ -8238,6 +8622,23 @@
     ]
    },
    {
+    "module_name": "FacebookMessenger",
+    "module_filename": "FacebookMessenger.py",
+    "artifacts": [
+     {
+      "artifact_key": "get_fb_threads_chats",
+      "tablename": "get_fb_threads_chats",
+      "name": "Facebook Messenger - Chats (threads_db2)",
+      "description": "Facebook/Messenger chat messages (threads_db2)",
+      "author": "Kevin Pagano (@stark4n6)",
+      "created_date": "2021-03-03",
+      "last_updated_date": "2026-08-10",
+      "notes": "",
+      "category": "Facebook Messenger"
+     }
+    ]
+   },
+   {
     "module_name": "bluetoothConnections",
     "module_filename": "bluetoothConnections.py",
     "artifacts": [
@@ -8283,6 +8684,73 @@
     ]
    },
    {
+    "module_name": "Viber",
+    "module_filename": "Viber.py",
+    "artifacts": [
+     {
+      "artifact_key": "get_viber",
+      "tablename": "get_viber",
+      "name": "Viber - Call Logs",
+      "description": "Parses Viber call logs (timestamp, phone number, direction, duration and call type) from the Viber databases.",
+      "author": "@markmckinnon",
+      "created_date": "2020-12-24",
+      "last_updated_date": "2026-08-01",
+      "notes": "Call Direction is decoded from the calls table 'type' column. Direction/status value mappings are not vendor-documented and the evidence for them is not recorded here; unrecognized values are reported as stored, so a value the mapping does not cover (a missed, rejected or unanswered call, for example) appears as the stored number rather than as a direction.\nCall End Time is not a stored column: it is computed as start time plus the duration column, which is treated as whole seconds; the unit of duration is not documented.",
+      "category": "Viber"
+     },
+     {
+      "artifact_key": "get_viber_contacts",
+      "tablename": "get_viber_contacts",
+      "name": "Viber - Contacts",
+      "description": "Parses Viber contacts (display name and phone number) from the Viber databases.",
+      "author": "@markmckinnon",
+      "created_date": "2020-12-24",
+      "last_updated_date": "2020-12-24",
+      "notes": "",
+      "category": "Viber"
+     },
+     {
+      "artifact_key": "get_viber_messages",
+      "tablename": "get_viber_messages",
+      "name": "Viber - Messages",
+      "description": "Parses Viber messages (date, sender and recipients, thread, content, direction, unread flag and attachments) from the Viber databases.",
+      "author": "@markmckinnon",
+      "created_date": "2020-12-24",
+      "last_updated_date": "2026-08-29",
+      "notes": "Direction is decoded from the messages table 'send_type' column. Direction/status value mappings are not vendor-documented and the evidence for them is not recorded here; unrecognized values are reported as stored.\nIn the conversation view only rows labelled Outgoing are attributed to the device owner; a row whose direction value is blank or unrecognized is not attributed to the owner.\nUnread carries the messages table 'unread' column as stored; it is not a read flag.",
+      "category": "Viber"
+     }
+    ]
+   },
+   {
+    "module_name": "telegramAndroid",
+    "module_filename": "telegramAndroid.py",
+    "artifacts": [
+     {
+      "artifact_key": "get_telegrammessages",
+      "tablename": "get_telegrammessages",
+      "name": "Telegram - Messages",
+      "description": "Parses Telegram messages from the cache4.db messages_v2 table. Message text is decoded from the TL-serialised message blob stored in the data column; the timestamp, direction and read state are read from the table's own columns. System events such as calls, screenshot notifications and auto-delete timer changes are named, with the detail they carry. Messages whose blob uses a constructor this parser does not cover are still reported, with that constructor named in the message column.",
+      "author": "Alexis Brignoni",
+      "created_date": "2026-08-03",
+      "last_updated_date": "2026-08-15",
+      "notes": "The data column holds a TL-serialised TLRPC message object. The message constructors and their field order are taken from the open-source Telegram Android client; constructors from layer 179 onward read a second flags integer before the message id, which this parser accounts for. Forward and reply headers are stepped over field by field using the same source, so forwarded messages and replies are decoded structurally. A reply that carries inline reply media, quoted entities or a poll option holds a further object tree this parser does not implement; for those, and for any header constructor not covered, the text is instead located by searching the blob for the row's own date value, which sits immediately before the text, and is accepted only when it is a well-formed TL string that decodes as strict UTF-8. The same fallback is used when a structural walk ends on a date that disagrees with the date column. Text that neither route recovers is reported as not recovered rather than guessed at. All eight TL_messageService constructors are recognised; their header is walked the same way and the action that follows is named from the client's own action constructors, so system events such as a phone call, a screenshot notification, a cleared history or an auto-delete timer change are identified rather than reported as an unlabelled service message. Detail fields are read for the actions that carry them, including the outcome and duration of a call and the new value of an auto-delete timer; an action with no reader implemented is reported by name alone. When the client stored the message's media at a known location it appends that path to the record as a trailing string, which is reported as the recorded media path; it is the path the app wrote, and the file is linked only when it is still present in the extraction. Reference: Telegram-Android, 'TL_legacy_message.java (TL_message layer constructors)', https://github.com/DrKLO/Telegram/blob/45ab8f4308496e1f01026a97fcdb0d58a5274474/TMessagesProj/src/main/java/org/telegram/tgnet/tl/legacy/TL_legacy_message.java. Reference: Telegram-Android, 'generated TlGen_MessageReplyHeader.kt, TlGen_MessageFwdHeader.kt, TlGen_Message.kt and TlGen_MessageAction.kt (header field order, flag bits, service constructors and action constructors)', https://github.com/DrKLO/Telegram/tree/45ab8f4308496e1f01026a97fcdb0d58a5274474/TMessagesProj_AppTests/src/androidTest/kotlin/org/telegram/tgnet/model/generated",
+      "category": "Telegram"
+     },
+     {
+      "artifact_key": "get_telegramusers",
+      "tablename": "get_telegramusers",
+      "name": "Telegram - Users",
+      "description": "Parses the Telegram users cached in the users table of cache4.db, including the display name, username and last-seen status. A user can appear here without any exchanged messages.",
+      "author": "Alexis Brignoni",
+      "created_date": "2026-08-03",
+      "last_updated_date": "2026-08-03",
+      "notes": "The name column stores the display name and username separated by ';;;'. The status column holds the last-seen time as a Unix timestamp when it is positive; negative values also occur and are not a time; what they encode is not sourced here, so only positive values are reported as a timestamp and the raw value is kept alongside.",
+      "category": "Telegram"
+     }
+    ]
+   },
+   {
     "module_name": "calllog",
     "module_filename": "calllog.py",
     "artifacts": [
@@ -8313,6 +8781,67 @@
       "last_updated_date": "2026-07-10",
       "notes": "",
       "category": "Installed Apps"
+     }
+    ]
+   },
+   {
+    "module_name": "WhatsApp",
+    "module_filename": "WhatsApp.py",
+    "artifacts": [
+     {
+      "artifact_key": "get_whatsapp_contacts",
+      "tablename": "get_whatsapp_contacts",
+      "name": "WhatsApp - Contacts",
+      "description": "Rows of WhatsApp's wa.db wa_contacts table (name columns, wa_name, jid, number and status text), excluding channel (@newsletter) and status@broadcast jids",
+      "author": "@abrignoni",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2026-09-27",
+      "notes": "Reads the first wa.db matched and reports its wa_contacts rows, except rows whose jid ends in @newsletter, the jid form of the chats msgstore.db's newsletter table describes, and the row whose jid is status@broadcast. When any rows are left out, their number is written to the run log. On the 12 tested images the rows left out numbered 791 (781 @newsletter, 10 status@broadcast); none held a given name, family name, display name or number, so each had shown its jid as Name, JID and Number. wa.db holds more @newsletter jids than msgstore.db's newsletter table holds channels: 275 against 10 channels on kevin_pocox7_a15, 191 against 5 on russell_a14, and 255 on anne_a15, whose newsletter table is empty. The @newsletter jids with no chat in msgstore.db appeared in no other TEXT column of wa.db or msgstore.db on any tested image (full-text index tables were not searched). What those rows record was not established, and an @newsletter jid in wa.db does not show that a channel was followed. Name is given_name and family_name when either is not null, otherwise display_name, otherwise the jid; 1,722 of the 1,809 reported rows across the tested images showed the jid as Name. WhatsApp Name is the wa_name column as stored, and it is never used to fill Name. It was set on 230 of the 1,809 rows, 210 of them rows whose Name was the jid; on the 20 rows where both it and one of given_name, family_name or display_name were set, it differed from Name on 15. In 20 pairs of tested images, one device's own account appeared in the other device's wa_contacts; wa_name was set in 10 of them, and in all 10 it equalled the push_name value in the first device's own WhatsApp preferences (startup_prefs.xml, or com.whatsapp_preferences_light.xml on pixel3_a11 and pixel3_a12). A published description of wa_name is 'WhatsApp name of the contact (as set in their profile)'. Reference: Igor Mikhailov, 'WhatsApp in Plain Sight: Where and How You Can Collect Forensic Artifacts', https://www.group-ib.com/blog/whatsapp-forensic-artifacts/. When wa_name was written, and whether it follows later changes to the contact's profile name, was not established. Number is the number column as stored, with no fallback to the jid; it was empty on 1,731 of the 1,809 rows. Status Text is the status column as stored, and Status Timestamp is status_timestamp read as milliseconds since 1970-01-01 UTC, shown blank where the stored value is 0. Status Text was set on 730 of the 1,809 rows and Status Timestamp on 531, all of them rows with a Status Text; the other 199 rows with a Status Text stored a timestamp of 0. Of the 20 pairs of tested images above, status was set in 15; in the 11 of those whose first device stores a my_current_status value in its own com.whatsapp_preferences_light.xml, status equalled that value in all 11. Where one contact carried the same Status Text on two different tested phones with a timestamp on both (4 contacts), Status Timestamp was identical on both. What event Status Timestamp marks was not established. A published description of status is 'Text in the status line of the contact'. Reference: Igor Mikhailov, 'WhatsApp in Plain Sight: Where and How You Can Collect Forensic Artifacts', https://www.group-ib.com/blog/whatsapp-forensic-artifacts/. Rows whose jid ends in @g.us, @lid or @bot are reported as stored.",
+      "category": "WhatsApp"
+     },
+     {
+      "artifact_key": "get_whatsapp_call_logs",
+      "tablename": "get_whatsapp_call_logs",
+      "name": "WhatsApp - Call Logs",
+      "description": "WhatsApp call logs (msgstore.db)",
+      "author": "@abrignoni",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2026-09-28",
+      "notes": "A call whose jid is a LID jid (...@lid) is matched to wa.db contacts through msgstore.db jid_map when that table exists. Calls that match no contact are still reported. For an incoming call that matches no contact, or whose contact has no WhatsApp name, Caller is shown by jid. None of the images listed in sample_data holds a LID-keyed call or a call that matches no contact, so both cases are exercised only by a constructed test (admin/test/scripts/test_whatsapp_lid_contacts.py).",
+      "category": "WhatsApp"
+     },
+     {
+      "artifact_key": "get_whatsapp_one_to_one_messages",
+      "tablename": "get_whatsapp_one_to_one_messages",
+      "name": "WhatsApp - One To One Messages",
+      "description": "WhatsApp 1:1 messages (modern msgstore.db schema)",
+      "author": "@abrignoni",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2026-09-28",
+      "notes": "A chat keyed by a LID jid (...@lid) is matched to wa.db contacts through msgstore.db jid_map when that table exists. Messages whose chat matches no contact are still reported. When no contact matches, or the contact has no WhatsApp name, the participant is shown by jid. The conversation view groups rows by Other Participant WA User Name, so a LID-keyed chat and the phone-number chat that jid_map links it to are shown as one conversation; on sharon_a14, 48 LID-keyed chats each had such a phone-number chat. Messages in channel (newsletter) chats are not reported here; WhatsApp - Channel Messages reports them.",
+      "category": "WhatsApp"
+     },
+     {
+      "artifact_key": "get_whatsapp_group_messages",
+      "tablename": "get_whatsapp_group_messages",
+      "name": "WhatsApp - Group Messages",
+      "description": "WhatsApp group messages (modern msgstore.db schema)",
+      "author": "@abrignoni",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2026-09-26",
+      "notes": "A sender keyed by a LID jid (...@lid) is matched to wa.db contacts through msgstore.db jid_map when that table exists. A sender that matches no contact, or has no WhatsApp name, is shown by jid.",
+      "category": "WhatsApp"
+     },
+     {
+      "artifact_key": "get_whatsapp_group_details",
+      "tablename": "get_whatsapp_group_details",
+      "name": "WhatsApp - Group Details",
+      "description": "WhatsApp group chats (chats with a subject in msgstore.db other than channels), with the group creator where wa.db records one and the group picture where the app stored one",
+      "author": "@abrignoni",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2026-09-27",
+      "notes": "Reads msgstore.db's chat table joined to jid, one row per chat that carries a subject and whose jid_row_id names a jid row; all 27 chats with a subject on the tested images had one. The chat table is read directly rather than through chat_view, because chat_view has no jid_row_id column on 7 of the 12 tested images (pixel3_a11, pixel3_a12, pixel7a_a14, russell_a14, russell_pixel6a_a13, sharon_a13, sharon_a14); on the other 5, reading chat gives the same rows as reading chat_view. Chats keyed by a newsletter jid (...@newsletter) also carry a subject and are not reported here; WhatsApp - Channels reports them. Of the 27 chats with a subject on the tested images, 18 are newsletter chats (10 on kevin_pocox7_a15, 5 on russell_a14, 3 on samsungs20_a13) and the 9 reported are groups (...@g.us). Group Creation Timestamp is chat.created_timestamp. Creator JID is wa.db's wa_group_admin_settings.creator_jid for the chat's jid. Creator JID held a value on 4 of the 9 group rows and was blank for all 5 groups on pixel7a_a14, russell_a14 and sharon_a14. It is also blank when wa.db lacks the creator_jid column, as on pixel3_a11, or when no wa.db is found (exercised on a constructed database only). Creator JID (via jid_map) is the jid that msgstore.db's jid_map links to a Creator JID recorded as a LID jid (...@lid). Creator JID (via jid_map) held a value on the 3 group rows whose Creator JID is a LID jid (anne_a15, hc_pixel8pro_a16, hc_pixel8pro_a17), each a ...@s.whatsapp.net jid, and was blank on the other 6. Creator JID (via jid_map) is also blank when msgstore.db has no jid_map table (exercised on a constructed database only). Creator WA User Name and Creator WA Number come from the wa.db wa_contacts row whose jid equals Creator JID (via jid_map) when that holds a value, and Creator JID otherwise. Creator WA User Name was blank on 8 of the 9 group rows, all but anne_a15, and Creator WA Number was blank on all 9: the matching wa_contacts row stores a name and no number on anne_a15, and no name or number on hc_pixel8pro_a16, hc_pixel8pro_a17 and sharon_a13. Group Picture is the file in com.whatsapp/files/Avatars, in the same app container as the msgstore.db read, whose name is the group's jid followed by .j. Group Picture was blank on 7 of the 9 group rows and held a value on 2 (sharon_a13 and sharon_a14), both JPEG images. The file name is the only link between the file and the group; when the file was written is not established. Creator WA Profile Picture is the file in the same folder named after Creator JID or Creator JID (via jid_map), followed by .j. Creator WA Profile Picture was blank on every tested image, because none of the four images with a Creator JID holds such a file; the lookup was exercised on constructed files only. Only the first msgstore.db matched is read, as in the module's other artifacts.",
+      "category": "WhatsApp"
      }
     ]
    },

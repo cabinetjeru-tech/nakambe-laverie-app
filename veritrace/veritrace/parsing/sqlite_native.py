@@ -13,6 +13,10 @@ qu'ALEAPP ne normalise pas encore dans Veritrace.
 | photos JPEG (DCIM, Pictures, Download…) | EXIF + localisation GPS (heure UTC du GPS) |
 | `dumpsys package` (fichier `dumpsys_package*.txt` ou section de `dumpsys.txt`) | applications, installateur, statut système, permissions accordées |
 | `dumpsys accessibility` | services d'accessibilité ACTIVÉS |
+| WhatsApp / WhatsApp Business `msgstore.db` + `wa.db` (schémas moderne et historique) | messages, appels, contacts |
+| Viber `viber_messages` / `viber_data` | messages, appels, contacts |
+| Facebook Messenger `threads_db2` | messages |
+| Signal `signal.db`, sauvegardes WhatsApp `.cryptNN` | détectés et consignés comme NON analysés (chiffrés) |
 
 Entrées acceptées : dossier, archive `.tar` / `.tar.gz` / `.zip` — y compris le tar issu
 d'une sauvegarde ADB (`apps/<paquet>/db/…`). Les fichiers sont reconnus par leur nom et le
@@ -26,6 +30,7 @@ libres) ne sont pas récupérés.
 """
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import sqlite3
@@ -51,6 +56,8 @@ TOOL = {"name": ENGINE, "version": __version__}
 IMAGE_DIRS = {"DCIM", "Pictures", "Download", "WhatsApp Images", "Camera", "Screenshots"}
 BROWSERS = {"app_chrome": "Chrome", "app_sbrowser": "Samsung Internet", "app_opera": "Opera", "app_webview": "WebView"}
 SIDECARS = ("-wal", "-journal", "-shm")
+WHATSAPP_PACKAGES = {"com.whatsapp": "WhatsApp", "com.whatsapp.w4b": "WhatsApp Business"}
+SQLITE_MAGIC = b"SQLite format 3\x00"
 
 
 # --------------------------------------------------------------------------- reconnaissance des fichiers
@@ -74,6 +81,19 @@ def classify(rel: str) -> str | None:
         return "dumpsys_accessibility"
     if name == "dumpsys.txt":
         return "dumpsys_all"
+    if parts & set(WHATSAPP_PACKAGES):
+        if name == "msgstore.db":
+            return "whatsapp"
+        if name == "wa.db":
+            return "whatsapp_contacts"
+    if re.fullmatch(r"msgstore.*\.db\.crypt\d+", name):
+        return "whatsapp_crypt"
+    if "com.viber.voip" in parts and name in ("viber_messages", "viber_data"):
+        return name
+    if name == "threads_db2" and "com.facebook.orca" in parts:
+        return "messenger"
+    if name == "signal.db" and "org.thoughtcrime.securesms" in parts:
+        return "signal"
     return None
 
 
@@ -270,7 +290,179 @@ def parse_browser(con: sqlite3.Connection, src: Source, emit) -> int:
     return n
 
 
-DB_PARSERS = {"sms": parse_sms, "calllog": parse_calls, "contacts": parse_contacts, "browser": parse_browser}
+# --------------------------------------------------------------------------- messageries tierces
+WA_TYPES = {0: "texte", 1: "image", 2: "audio", 3: "video", 5: "localisation", 7: "systeme", 9: "document",
+            13: "image", 16: "localisation", 20: "image"}
+
+
+def _wa_number(raw: str | None) -> str | None:
+    if not raw or "@" not in raw:
+        return None
+    user = raw.split("@", 1)[0].split(":", 1)[0]
+    return f"+{user}" if user.isdigit() and raw.endswith("@s.whatsapp.net") else user
+
+
+def _wa_contact_name(r: sqlite3.Row) -> str:
+    """Même règle que l'application (et ALEAPP) : prénom + nom, sinon nom affiché, sinon JID."""
+    given, family, display = r["given_name"], r["family_name"], r["display_name"]
+    if given and family:
+        return f"{given} {family}"
+    return given or family or display or r["jid"]
+
+
+def _wa_app(src: Source) -> str:
+    return next((label for pkg, label in WHATSAPP_PACKAGES.items() if pkg in PurePosixPath(src.rel).parts),
+                "WhatsApp")
+
+
+def parse_whatsapp_contacts(con: sqlite3.Connection, src: Source, emit) -> tuple[int, dict[str, str]]:
+    """wa.db : contacts WhatsApp ; renvoie aussi l'index JID → nom affiché (pour msgstore.db)."""
+    names: dict[str, str] = {}
+    if "wa_contacts" not in _tables(con):
+        return 0, names
+    cols = _cols(con, "wa_contacts")
+    n = 0
+    for r in con.execute("SELECT * FROM wa_contacts"):
+        jid = r["jid"] or ""
+        if jid.endswith("@newsletter") or jid == "status@broadcast":
+            continue
+        name = _wa_contact_name(r)
+        names[jid] = (r["wa_name"] if "wa_name" in cols and r["wa_name"] else None) or name
+        if name and r["number"]:
+            emit("contact", None, {"display_name": name, "phone_numbers": [r["number"]], "emails": [],
+                                   "app": _wa_app(src)}, src, f"wa_contacts:jid={jid}")
+            n += 1
+    return n, names
+
+
+def parse_whatsapp(con: sqlite3.Connection, src: Source, emit, names: dict[str, str]) -> int:
+    app = _wa_app(src)
+    tables = _tables(con)
+    n = 0
+    if {"message", "chat", "jid"} <= tables:                       # schéma moderne (2022+)
+        jids = {r["_id"]: r["raw_string"] for r in con.execute("SELECT _id, raw_string FROM jid")}
+        chats = {r["_id"]: (jids.get(r["jid_row_id"]), r["subject"])
+                 for r in con.execute("SELECT _id, jid_row_id, subject FROM chat")}
+        media = {r["message_row_id"]: r["file_path"] for r in con.execute(
+            "SELECT message_row_id, file_path FROM message_media")} if "message_media" in tables else {}
+        locs = {r["message_row_id"]: (r["latitude"], r["longitude"]) for r in con.execute(
+            "SELECT message_row_id, latitude, longitude FROM message_location")} if "message_location" in tables else {}
+        for r in con.execute("SELECT * FROM message ORDER BY _id"):
+            chat_jid, subject = chats.get(r["chat_row_id"], (None, None))
+            if not chat_jid or chat_jid.endswith("@newsletter"):
+                continue                                           # chaînes publiques : hors conversations
+            group = chat_jid.endswith("@g.us")
+            incoming = r["from_me"] == 0
+            sender = (jids.get(r["sender_jid_row_id"]) if group else chat_jid) if incoming else None
+            lat, lon = locs.get(r["_id"], (None, None))
+            emit("message", _ms(r["timestamp"]), {
+                "app": app, "direction": "entrant" if incoming else "sortant",
+                "conversation": subject if group else (names.get(chat_jid) or chat_jid), "is_group": group,
+                "sender": sender, "sender_name": names.get(sender) if sender else None,
+                "body": r["text_data"].strip() if r["text_data"] and r["text_data"].strip() else None,
+                "message_type": WA_TYPES.get(r["message_type"], "autre"), "attachment": media.get(r["_id"]),
+                "latitude": lat, "longitude": lon}, src, f"message:_id={r['_id']}")
+            n += 1
+        if "call_log" in tables:
+            for r in con.execute("SELECT * FROM call_log ORDER BY _id"):
+                raw = jids.get(r["jid_row_id"])
+                emit("appel", _ms(r["timestamp"]), {
+                    "app": app, "direction": "entrant" if r["from_me"] == 0 else "sortant",
+                    "number": _wa_number(raw) or "", "contact_name": names.get(raw),
+                    "duration_s": r["duration"], "call_type": "video" if r["video_call"] else "audio"},
+                    src, f"call_log:_id={r['_id']}")
+                n += 1
+    elif "messages" in tables:                                     # schéma historique
+        cols = _cols(con, "messages")
+        for r in con.execute("SELECT * FROM messages ORDER BY _id"):
+            remote = r["key_remote_jid"] or ""
+            if remote in ("-1", "") or remote.endswith("@newsletter"):
+                continue
+            group = remote.endswith("@g.us")
+            incoming = r["key_from_me"] == 0
+            sender = (r["remote_resource"] if group and "remote_resource" in cols else remote) if incoming else None
+            emit("message", _ms(r["timestamp"]), {
+                "app": app, "direction": "entrant" if incoming else "sortant",
+                "conversation": names.get(remote) or remote, "is_group": group, "sender": sender or None,
+                "sender_name": names.get(sender) if sender else None,
+                "body": r["data"].strip() if r["data"] and str(r["data"]).strip() else None,
+                "message_type": "texte" if r["data"] else "autre",
+                "attachment": (r["media_name"] if "media_name" in cols else None) or None,
+                "latitude": (r["latitude"] or None) if "latitude" in cols else None,
+                "longitude": (r["longitude"] or None) if "longitude" in cols else None}, src, f"messages:_id={r['_id']}")
+            n += 1
+    return n
+
+
+def parse_viber_messages(con: sqlite3.Connection, src: Source, emit) -> int:
+    tables = _tables(con)
+    if not {"messages", "participants", "participants_info"} <= tables:
+        return 0
+    numbers = {r["pid"]: r["number"] for r in con.execute(
+        "SELECT p._id AS pid, i.number AS number FROM participants p JOIN participants_info i ON i._id = p.participant_info_id")}
+    n = 0
+    for r in con.execute("SELECT * FROM messages ORDER BY _id"):
+        incoming = r["send_type"] == 0
+        emit("message", _ms(r["msg_date"]), {
+            "app": "Viber", "direction": "entrant" if incoming else "sortant" if r["send_type"] == 1 else "inconnu",
+            "conversation": str(r["conversation_id"]), "is_group": None,
+            "sender": numbers.get(r["participant_id"]) if incoming else None,
+            "body": r["body"].strip() if r["body"] and r["body"].strip() else None,
+            "message_type": "texte" if r["body"] else "autre", "attachment": r["extra_uri"] or None,
+            "read": None if r["unread"] is None else not bool(r["unread"])}, src, f"messages:_id={r['_id']}")
+        n += 1
+    return n
+
+
+def parse_viber_data(con: sqlite3.Connection, src: Source, emit) -> int:
+    tables = _tables(con)
+    n = 0
+    if "calls" in tables:
+        for r in con.execute("SELECT * FROM calls ORDER BY _id"):
+            emit("appel", _ms(r["date"]), {
+                "app": "Viber", "direction": {1: "entrant", 2: "sortant"}.get(r["type"], "inconnu"),
+                "number": r["canonized_number"] or "", "duration_s": r["duration"],
+                "call_type": {1: "audio", 4: "video"}.get(r["viber_call_type"])}, src, f"calls:_id={r['_id']}")
+            n += 1
+    if {"phonebookcontact", "phonebookdata"} <= tables:
+        for r in con.execute("""SELECT c._id AS cid, c.display_name AS name, coalesce(d.data2, d.data1, d.data3) AS num
+                                  FROM phonebookcontact c JOIN phonebookdata d ON c._id = d.contact_id"""):
+            if r["name"] and r["num"]:
+                emit("contact", None, {"display_name": r["name"], "phone_numbers": [r["num"]], "emails": [],
+                                       "app": "Viber"}, src, f"phonebookcontact:_id={r['cid']}")
+                n += 1
+    return n
+
+
+def parse_messenger(con: sqlite3.Connection, src: Source, emit) -> int:
+    if "messages" not in _tables(con):
+        return 0
+    cols = _cols(con, "messages")
+    admin = "AND generic_admin_message_extensible_data IS NULL" if "generic_admin_message_extensible_data" in cols else ""
+    n = 0
+    for r in con.execute(f"SELECT * FROM messages WHERE coalesce(msg_type, 0) != -1 {admin} ORDER BY timestamp_ms"):
+        try:
+            sender = json.loads(r["sender"] or "{}")
+        except ValueError:
+            sender = {}
+        try:
+            att = json.loads(r["attachments"] or "[]") if "attachments" in cols else []
+        except ValueError:
+            att = []
+        user_key = str(sender.get("user_key") or "")
+        emit("message", _ms(r["timestamp_ms"]), {
+            "app": "Facebook Messenger", "direction": "inconnu", "conversation": r["thread_key"], "is_group": None,
+            "sender": user_key.split(":", 1)[-1] or None, "sender_name": sender.get("name"),
+            "body": r["text"].strip() if r["text"] and r["text"].strip() else None,
+            "message_type": "texte" if r["text"] else "autre",
+            "attachment": (att[0] or {}).get("filename") if att and isinstance(att[0], dict) else None},
+            src, f"msg_id={r['msg_id']}")
+        n += 1
+    return n
+
+
+DB_PARSERS = {"sms": parse_sms, "calllog": parse_calls, "contacts": parse_contacts, "browser": parse_browser,
+              "viber_messages": parse_viber_messages, "viber_data": parse_viber_data, "messenger": parse_messenger}
 
 
 # --------------------------------------------------------------------------- EXIF
@@ -388,6 +580,20 @@ def parse_dumpsys_accessibility(text: str) -> set[str]:
     return pkgs
 
 
+def _unreadable_note(src: Source) -> str:
+    """Base présente mais non analysable : consignée dans les limites de l'affaire (aucun déchiffrement tenté)."""
+    with open(src.path, "rb") as fh:
+        plain = fh.read(16) == SQLITE_MAGIC
+    if src.kind == "signal":
+        if plain:
+            return (f"Signal : base {src.rel} présente et non chiffrée, non analysée par le moteur natif "
+                    "(voir ALEAPP).")
+        return (f"Signal : base de messages présente ({src.rel}) mais chiffrée (SQLCipher, clé protégée par le "
+                "Keystore Android) ; contenu non analysé. Veritrace ne tente aucun déchiffrement.")
+    return (f"WhatsApp : sauvegarde chiffrée présente ({src.rel}), non déchiffrée (la clé est stockée dans "
+            "l'espace privé de l'application) ; son contenu n'est pas analysé.")
+
+
 # --------------------------------------------------------------------------- wrapper
 class SqliteNativeWrapper(ToolWrapper):
     key = "veritrace-sqlite"
@@ -408,9 +614,33 @@ class SqliteNativeWrapper(ToolWrapper):
         wal_files = 0
         accessibility: set[str] | None = None
         dumpsys_apps: list[tuple[Source, dict]] = []
+        limitations: list[str] = []
+        wa_names: dict[str, dict[str, str]] = {}
+        # wa.db d'abord : ses noms servent à libeller les conversations de msgstore.db
+        sources.sort(key=lambda x: x.kind != "whatsapp_contacts")
         for i, src in enumerate(sources):
             try:
-                if src.kind in DB_PARSERS:
+                if src.kind in ("signal", "whatsapp_crypt"):
+                    limitations.append(_unreadable_note(src))
+                    continue
+                if src.kind == "whatsapp_contacts":
+                    con, wal = open_copy(src.path, work, i)
+                    try:
+                        k, names = parse_whatsapp_contacts(con, src, emit)
+                    finally:
+                        con.close()
+                    wa_names[str(PurePosixPath(src.rel).parent)] = names
+                    counts["whatsapp"] = counts.get("whatsapp", 0) + k
+                    wal_files += wal
+                elif src.kind == "whatsapp":
+                    con, wal = open_copy(src.path, work, i)
+                    try:
+                        k = parse_whatsapp(con, src, emit, wa_names.get(str(PurePosixPath(src.rel).parent), {}))
+                    finally:
+                        con.close()
+                    counts["whatsapp"] = counts.get("whatsapp", 0) + k
+                    wal_files += wal
+                elif src.kind in DB_PARSERS:
                     con, wal = open_copy(src.path, work, i)
                     try:
                         counts[src.kind] = counts.get(src.kind, 0) + DB_PARSERS[src.kind](con, src, emit)
@@ -455,5 +685,7 @@ class SqliteNativeWrapper(ToolWrapper):
         if builder.internal_duplicates:
             notes.append(f"{builder.internal_duplicates} doublon(s) interne(s) fusionné(s).")
         notes.append("Enregistrements supprimés (pages libres SQLite) non récupérés.")
+        notes += limitations
         return WrapperResult(tool=TOOL, mode="execute", command=["veritrace", "parse", "sqlite"], started_at=started,
-                             ended_at=utc_now_iso(), output_path=None, artifacts=builder.items, notes=notes)
+                             ended_at=utc_now_iso(), output_path=None, artifacts=builder.items, notes=notes,
+                             limitations=limitations)

@@ -396,6 +396,7 @@
           "enum": [
             "sms",
             "appel",
+            "message",
             "contact",
             "navigation",
             "localisation",
@@ -502,6 +503,22 @@
             "properties": {
               "data": {
                 "$ref": "#/definitions/data_appel"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "category": {
+                "const": "message"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "$ref": "#/definitions/data_message"
               }
             }
           }
@@ -753,6 +770,24 @@
             "null"
           ],
           "minimum": 0
+        },
+        "app": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Messagerie (WhatsApp…) ; null = téléphonie."
+        },
+        "call_type": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "audio",
+            "video",
+            null
+          ]
         }
       }
     },
@@ -776,6 +811,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "app": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Carnet de la messagerie ; null = carnet Android."
         }
       }
     },
@@ -1854,6 +1896,96 @@
               }
             }
           }
+        }
+      }
+    },
+    "data_message": {
+      "type": "object",
+      "required": [
+        "app",
+        "direction"
+      ],
+      "description": "Message d'une messagerie tierce (WhatsApp, Telegram, Signal, Viber, Messenger…).",
+      "properties": {
+        "app": {
+          "type": "string"
+        },
+        "direction": {
+          "$ref": "#/definitions/direction"
+        },
+        "conversation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Nom ou identifiant de la conversation."
+        },
+        "is_group": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "sender": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Identifiant de l'expéditeur (JID, numéro, id)."
+        },
+        "sender_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "body": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "message_type": {
+          "type": "string",
+          "enum": [
+            "texte",
+            "image",
+            "audio",
+            "video",
+            "document",
+            "localisation",
+            "systeme",
+            "autre"
+          ]
+        },
+        "attachment": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Chemin ou nom de la pièce jointe."
+        },
+        "read": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "latitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": -180,
+          "maximum": 180
         }
       }
     }

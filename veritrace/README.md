@@ -31,6 +31,7 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
 | Règles de détection d'anomalies R1–R5 (`veritrace rules …`) | ✅ |
 | Parseurs natifs Veritrace : SMS/MMS, appels, contacts, navigation, EXIF/GPS, dumpsys package/accessibility (`veritrace parse sqlite`) | ✅ |
+| Messageries tierces : WhatsApp, Viber, Facebook Messenger (natif + ALEAPP), Telegram (ALEAPP), Signal (détection) | ✅ |
 
 ---
 
@@ -324,6 +325,44 @@ Pour chaque outil, Veritrace enchaîne les étapes suivantes :
 | ALEAPP | Lit la sortie LAVA (`_lava_data.lava` + `_lava_artifacts.db`), ou les TSV pour les versions antérieures. Catégories : SMS/MMS, appels, contacts, historique web, localisations, applications installées, usage des applications (événements), comptes, Wi-Fi, Bluetooth. Les artefacts non couverts sont listés dans le rapport et restent dans la sortie brute. |
 | MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat de type `ioc`, de criticité `critique` (alerte MVT CRITICAL) ou `eleve` (autres niveaux)**, avec le bloc `ioc` (type, valeur, fichier d'IOC, famille). Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
 | Autopsy | Lit `autopsy.db` (cas, Portable Case ou fichier `.db`). Seuls les artefacts du **module Android** sont retenus (option `--module` pour en ajouter d'autres). |
+
+### Messageries tierces
+
+Les messages des messageries tierces forment la catégorie `message` du format pivot. Le
+contenu de `data` est le suivant :
+- l'application ;
+- la direction ;
+- la conversation, avec un indicateur de groupe ;
+- l'expéditeur (identifiant et nom) ;
+- le texte, conservé **tel quel** ;
+- le type (texte, image, audio, localisation…) ;
+- la pièce jointe et l'éventuelle position.
+
+Les appels et les contacts de ces applications réutilisent `appel` et `contact`, avec un
+champ `app` (`null` = téléphonie et carnet Android).
+
+| Application | Moteur natif | ALEAPP | Corroboration |
+|---|---|---|---|
+| **WhatsApp** / WhatsApp Business (`msgstore.db`, `wa.db` ; schémas moderne et historique) | messages, appels, contacts | messages, appels, contacts | ✅ deux moteurs |
+| **Viber** (`viber_messages`, `viber_data`) | messages, appels, contacts | messages, appels, contacts | ✅ |
+| **Facebook Messenger** (`threads_db2`) | messages | messages | ✅ |
+| **Telegram** (`cache4.db`, messages sérialisés TL) | — | messages (décodage TL d'ALEAPP) | source unique |
+| **Signal** (`signal.db`) | détection seulement | messages seulement si les clés de déchiffrement sont fournies à ALEAPP | — |
+
+Contenus présents mais **non analysables**, consignés automatiquement dans les **limites
+et réserves** du rapport (`case.x_veritrace.limitations`). Veritrace ne tente aucun
+déchiffrement :
+- la base Signal, chiffrée par SQLCipher avec une clé protégée par le Keystore Android ;
+- les sauvegardes WhatsApp chiffrées `msgstore*.db.cryptNN` (stockage partagé).
+
+Points d'attention :
+- **WhatsApp** et **Signal** excluent leurs données de `adb backup` : leurs bases ne figurent
+  que dans une extraction de système de fichiers complète.
+- **Les « canaux » WhatsApp** (`@newsletter`, contenus publics) ne sont pas comptés comme
+  des conversations.
+- **Empreinte de fait d'un message** : horodatage à la seconde, application, texte et nom
+  de la pièce jointe. L'identifiant de conversation n'en fait pas partie, car chaque outil
+  l'exprime différemment.
 
 ### Corroboration et dédoublonnage
 

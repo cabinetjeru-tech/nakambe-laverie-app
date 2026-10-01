@@ -45,8 +45,8 @@ def test_aleapp_lava_and_tsv_give_same_facts(tmp_path):
     aleapp_normalize(tmp_path, tsv, {"name": "ALEAPP", "version": "2026.4.2"})
     assert _facts(lava) == _facts(tsv)
     cats = Counter(a["category"] for a in lava.items)
-    assert cats == {"sms": 2, "appel": 3, "application": 3, "usage_app": 2, "navigation": 1,
-                    "localisation": 1, "wifi": 1, "bluetooth": 1, "compte": 1, "contact": 1}
+    assert cats == {"sms": 2, "appel": 5, "application": 3, "usage_app": 2, "navigation": 1,
+                    "localisation": 1, "wifi": 1, "bluetooth": 1, "compte": 1, "contact": 4, "message": 8}
 
 
 def test_aleapp_fields_and_internal_dedup():

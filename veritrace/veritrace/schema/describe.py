@@ -29,9 +29,17 @@ def artifact_summary(a: dict[str, Any]) -> str:
         return f"SMS {verb} {who} : « {d.get('body') or ''} »"
     if c == "appel":
         dur = f" ({d['duration_s']} s)" if d.get("duration_s") is not None else ""
-        return f"Appel {DIRECTION_FR.get(d.get('direction'), '')} — {d.get('contact_name') or d.get('number')}{dur}".replace("  ", " ")
+        kind = f"Appel {d['app']}" + (" vidéo" if d.get("call_type") == "video" else "") if d.get("app") else "Appel"
+        return f"{kind} {DIRECTION_FR.get(d.get('direction'), '')} — {d.get('contact_name') or d.get('number')}{dur}".replace("  ", " ")
+    if c == "message":
+        who = d.get("sender_name") or d.get("sender") or d.get("conversation") or "?"
+        verb = {"entrant": f"reçu de {who}", "sortant": "envoyé"}.get(d.get("direction"), f"de {who}")
+        conv = f" [{d['conversation']}]" if d.get("conversation") and d.get("is_group") else ""
+        content = f"« {d['body']} »" if d.get("body") else (f"pièce jointe {d['attachment']}" if d.get("attachment")
+                                                            else f"({d.get('message_type') or 'contenu'})")
+        return f"{d.get('app')} — message {verb}{conv} : {content}"
     if c == "contact":
-        return f"{d.get('display_name')} — {_v(d.get('phone_numbers'))}"
+        return f"{d.get('display_name')} — {_v(d.get('phone_numbers'))}" + (f" ({d['app']})" if d.get("app") else "")
     if c == "navigation":
         return f"{d.get('url')} ({d.get('browser') or 'navigateur ?'})"
     if c == "localisation":

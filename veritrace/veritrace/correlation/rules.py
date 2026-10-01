@@ -63,7 +63,7 @@ SENSITIVE = {
 CONTROL = {"BIND_ACCESSIBILITY_SERVICE", "BIND_NOTIFICATION_LISTENER_SERVICE", "BIND_DEVICE_ADMIN"}
 SURVEILLANCE = {"READ_SMS", "RECEIVE_SMS", "READ_CALL_LOG", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION",
                 "RECORD_AUDIO", "CAMERA"}
-ACTIVITY = ("sms", "appel", "navigation", "usage_app", "localisation")
+ACTIVITY = ("sms", "message", "appel", "navigation", "usage_app", "localisation")
 ANDROID_EPOCH = datetime(2008, 9, 23, tzinfo=timezone.utc)   # Android 1.0
 
 
@@ -346,7 +346,7 @@ def rule_activity_gaps(ctx: RuleContext) -> list[Hit]:
         hits.append(Hit(
             key=f"{fact_sha(a)}|{fact_sha(b)}", type="anomalie", severity="faible",
             title=f"Interruption de l'activité enregistrée ({days:.1f} jours)",
-            description=(f"Aucune activité (SMS, appels, navigation, usage des applications, localisation) n'est "
+            description=(f"Aucune activité (SMS, messageries, appels, navigation, usage des applications, localisation) n'est "
                          f"enregistrée entre le {_fmt(a['timestamp'])} ({artifact_summary(a)}) et le "
                          f"{_fmt(b['timestamp'])} ({artifact_summary(b)}), soit {days:.1f} jours ; l'intervalle "
                          f"médian entre deux activités est de {median / 3600:.1f} h."),

@@ -1,0 +1,4 @@
+﻿Message Timestamp	Received Timestamp	Final Location Timestamp	Message Direction	Other Participant WA User Name	Message	Media	Sending Party JID	Message Type	Local Path To Media	Media File Size	Shared Latitude/Starting Latitude (Live Location)	Shared Longitude/Starting Longitude (Live Location)	Duration Live Location Shared (Seconds)	Final Live Latitude	Final Live Longitude
+2026-09-02 19:30:00+00:00	2026-09-02 19:30:02+00:00		Incoming	Contact A	Tu es encore au marché ?		22670000001@s.whatsapp.net	Text							
+2026-09-02 19:31:10+00:00			Outgoing	Contact A	Laisse-moi tranquille.			Text							
+2026-09-02 19:35:00+00:00	2026-09-02 19:35:01+00:00		Incoming	Contact A			22670000001@s.whatsapp.net	Picture	Media/WhatsApp Images/IMG-20260902-WA0001.jpg	48211					

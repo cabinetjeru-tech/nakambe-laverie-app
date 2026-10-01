@@ -21,6 +21,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 import sqlite3
 import sys
 from pathlib import Path
@@ -211,6 +212,124 @@ def map_contact(rows: list[Row], emit: Emit, ref: str) -> None:
                                "emails": sorted(p["emails"])}, ref)
 
 
+# --------------------------------------------------------------------------- messageries tierces
+MSG_TYPE = {"text": "texte", "picture": "image", "image": "image", "audio": "audio", "video": "video",
+            "static location": "localisation", "live location": "localisation", "location": "localisation",
+            "system message": "systeme", "document": "document", "file": "document"}
+
+
+def _raw_text(v: Any) -> str | None:
+    """Texte de message conservé tel quel (seuls les espaces de bord sont retirés)."""
+    if v is None:
+        return None
+    s = str(v).strip()
+    return s or None
+
+
+def _msg_dir(v: Any) -> str:
+    v = (clean(v) or "").lower()
+    return "entrant" if v.startswith("incoming") else "sortant" if v.startswith("outgoing") else "inconnu"
+
+
+def _jid_number(jid: Any) -> str | None:
+    """« 22670000001@s.whatsapp.net » → « +22670000001 » (identifiant utilisateur seulement)."""
+    j = clean(jid)
+    if not j or "@" not in j:
+        return None
+    user = j.split("@", 1)[0].split(":", 1)[0]
+    return f"+{user}" if user.isdigit() and j.endswith("@s.whatsapp.net") else user
+
+
+def _hms(v: Any) -> int | None:
+    m = re.fullmatch(r"(\d+):(\d{2}):(\d{2})", str(v or "").strip())
+    return int(m[1]) * 3600 + int(m[2]) * 60 + int(m[3]) if m else to_int(v)
+
+
+def _whatsapp_message(group: bool) -> Callable[[Row, Emit], None]:
+    def _map(row: Row, emit: Emit) -> None:
+        direction = _msg_dir(row.get("Message Direction"))
+        incoming = direction == "entrant"
+        lat = to_float(row.get("Shared Latitude/Starting Latitude (Live Location)"))
+        lon = to_float(row.get("Shared Longitude/Starting Longitude (Live Location)"))
+        emit("message", to_iso(row.get("Message Timestamp")), {
+            "app": "WhatsApp", "direction": direction,
+            "conversation": clean(row.get("Conversation Name") if group else row.get("Other Participant WA User Name")),
+            "is_group": group,
+            "sender": clean(row.get("Sending Party JID")) if incoming else None,
+            "sender_name": clean(row.get("Sending Party") if group else row.get("Other Participant WA User Name"))
+            if incoming else None,
+            "body": _raw_text(row.get("Message")),
+            "message_type": MSG_TYPE.get((clean(row.get("Message Type")) or "").lower(), "autre"),
+            "attachment": clean(row.get("Local Path To Media")),
+            "latitude": lat, "longitude": lon,
+        })
+    return _map
+
+
+def map_whatsapp_calls(row: Row, emit: Emit) -> None:
+    emit("appel", to_iso(row.get("Call Start Timestamp")), {
+        "app": "WhatsApp", "direction": _msg_dir(row.get("Call Direction")),
+        "number": _jid_number(row.get("Caller JID")) or "",
+        "contact_name": clean(row.get("Caller")) if clean(row.get("Caller")) != "Self" else None,
+        "duration_s": _hms(row.get("Call Duration")),
+        "call_type": {"video": "video", "audio": "audio"}.get((clean(row.get("Call Type")) or "").lower()),
+    })
+
+
+def map_messaging_contact(app: str, name_col: str, number_col: str) -> Callable[[Row, Emit], None]:
+    def _map(row: Row, emit: Emit) -> None:
+        name, number = clean(row.get(name_col)), clean(row.get(number_col))
+        if name and number:
+            emit("contact", None, {"display_name": name, "phone_numbers": [number], "emails": [], "app": app})
+    return _map
+
+
+def map_viber_message(row: Row, emit: Emit) -> None:
+    direction = _msg_dir(row.get("Direction"))
+    emit("message", to_iso(row.get("Message Date")), {
+        "app": "Viber", "direction": direction, "conversation": clean(row.get("Thread ID")), "is_group": None,
+        "sender": clean(row.get("From Phone Number")) if direction == "entrant" else None,
+        "body": _raw_text(row.get("Message")), "message_type": "texte" if row.get("Message") else "autre",
+        "attachment": clean(row.get("File Attachment")),
+        "read": {"0": True, "1": False}.get(str(row.get("Unread") or "").strip()),
+    })
+
+
+def map_viber_call(row: Row, emit: Emit) -> None:
+    start, end = to_iso(row.get("Call Start Time")), to_iso(row.get("Call End Time (computed: start + duration)"))
+    dur = None
+    if start and end:
+        from veritrace.core.timeutil import parse_iso
+        dur = int((parse_iso(end) - parse_iso(start)).total_seconds())
+    ctype = (clean(row.get("Call Type")) or "").lower()
+    emit("appel", start, {"app": "Viber", "direction": _msg_dir(row.get("Call Direction")),
+                          "number": clean(row.get("Phone Number")) or "", "duration_s": dur,
+                          "call_type": "video" if "video" in ctype else "audio" if "audio" in ctype else None})
+
+
+def map_messenger_message(row: Row, emit: Emit) -> None:
+    emit("message", to_iso(row.get("Timestamp")), {
+        "app": "Facebook Messenger", "direction": "inconnu", "conversation": clean(row.get("Thread Key")),
+        "is_group": None, "sender": clean(row.get("Sender ID")), "sender_name": clean(row.get("Sender Name")),
+        "body": _raw_text(row.get("Message")), "message_type": "texte" if row.get("Message") else "autre",
+        "attachment": clean(row.get("Attachment Name")),
+    }, f"msg_id={clean(row.get('Message ID'))}")
+
+
+def map_telegram_message(row: Row, emit: Emit) -> None:
+    body = _raw_text(row.get("Message"))
+    system = bool(body and body.startswith("[") and body.endswith("]"))   # action de service décodée par ALEAPP
+    direction = _msg_dir(row.get("Direction"))
+    emit("message", to_iso(row.get("Timestamp")), {
+        "app": "Telegram", "direction": direction, "conversation": clean(row.get("Chat")) or clean(row.get("Dialog ID")),
+        "is_group": None, "sender": clean(row.get("Sender ID")) if direction == "entrant" else None,
+        "sender_name": clean(row.get("Sender")) if direction == "entrant" else None,
+        "body": body, "message_type": "systeme" if system else "texte",
+        "attachment": clean(row.get("Recorded Media Path")),
+        "read": {"1": True, "0": False}.get(str(row.get("Read State") or "").strip()),
+    }, f"mid={clean(row.get('Message ID'))}")
+
+
 #: nom d'artefact ALEAPP (tel qu'affiché / nom du TSV) → fonction de normalisation
 ROW_MAPPERS: dict[str, Callable[[Row, Emit], None]] = {
     "SMS Messages": map_sms,
@@ -226,6 +345,15 @@ ROW_MAPPERS: dict[str, Callable[[Row, Emit], None]] = {
     "wifiProfiles": map_wifi,
     "WiFi Config Store": map_wifi,
     "Bluetooth Connections": map_bluetooth,
+    "WhatsApp - One To One Messages": _whatsapp_message(group=False),
+    "WhatsApp - Group Messages": _whatsapp_message(group=True),
+    "WhatsApp - Call Logs": map_whatsapp_calls,
+    "WhatsApp - Contacts": map_messaging_contact("WhatsApp", "Name", "Number"),
+    "Viber - Messages": map_viber_message,
+    "Viber - Call Logs": map_viber_call,
+    "Viber - Contacts": map_messaging_contact("Viber", "Display Name", "Phone Number"),
+    "Facebook Messenger - Chats (threads_db2)": map_messenger_message,
+    "Telegram - Messages": map_telegram_message,
 }
 GROUP_MAPPERS = {"Contacts": map_contact, "runtimePerms": map_permissions,
                  "Permission Grants (Permission Store)": map_permissions}

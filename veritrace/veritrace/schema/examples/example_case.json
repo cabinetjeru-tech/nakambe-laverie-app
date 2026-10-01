@@ -247,7 +247,7 @@
         "ALEAPP"
       ],
       "x_veritrace": {
-        "fact_sha256": "f4639925eb574a9b80778d79e91bca0cf037062cbbe3bd002c6ea276b5f77268",
+        "fact_sha256": "68db396ae8b21e30d87364662c6731d8d4514556406d032d24b74cefb50edb2e",
         "sources": [
           {
             "artifact_id": "ART-0003",
@@ -558,7 +558,7 @@
         "veritrace-sqlite"
       ],
       "x_veritrace": {
-        "fact_sha256": "0c02f61ad3673a10a5bbd47a875dbeb3c006be1dd820a65ac6b36797fa47713a",
+        "fact_sha256": "fcf253a838b147f78aec4e84bbe22019defdb1c856047a5571876e34484ef29a",
         "sources": [
           {
             "artifact_id": "ART-0011",
@@ -807,7 +807,7 @@
       "type": "anomalie",
       "severity": "faible",
       "title": "Interruption de l'activité enregistrée (18.1 jours)",
-      "description": "Aucune activité (SMS, appels, navigation, usage des applications, localisation) n'est enregistrée entre le 14/08/2026 à 20:58:42 UTC (https://download.example-monitor.invalid/apk/latest (Chrome)) et le 01/09/2026 à 22:15:30 UTC (11.7802, -0.3703 ±12 m (fused)), soit 18.1 jours ; l'intervalle médian entre deux activités est de 10.9 h.",
+      "description": "Aucune activité (SMS, messageries, appels, navigation, usage des applications, localisation) n'est enregistrée entre le 14/08/2026 à 20:58:42 UTC (https://download.example-monitor.invalid/apk/latest (Chrome)) et le 01/09/2026 à 22:15:30 UTC (11.7802, -0.3703 ±12 m (fused)), soit 18.1 jours ; l'intervalle médian entre deux activités est de 10.9 h.",
       "artifact_ids": [
         "ART-0009",
         "ART-0008"
@@ -988,7 +988,7 @@
       }
     },
     {
-      "event_id": "TL-A-f4639925eb574a9b",
+      "event_id": "TL-A-68db396ae8b21e30",
       "timestamp": "2026-09-02T20:01:47+00:00",
       "category": "appel",
       "description": "Appel manqué — Contact A (0 s)",

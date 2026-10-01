@@ -167,6 +167,9 @@ def build_android_fs(root: str | Path) -> Path:
 
     _jpeg_with_exif(data / "media/0/DCIM/Camera/IMG_20260901_221530.jpg")
 
+    from tests.fixtures.messaging import build_messaging  # messageries tierces
+    build_messaging(data)
+
     _db(data / "data/com.android.chrome/app_chrome/Default/History",
         ["CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, visit_count INTEGER, typed_count INTEGER,"
          " last_visit_time INTEGER, hidden INTEGER)",
