@@ -30,7 +30,7 @@ from veritrace.schema.pivot import ext, fact_sha, tool_runs
 
 log = get_logger("parsing.runner")
 
-LABELS = {"aleapp": "ALEAPP", "mvt": "MVT", "autopsy": "Autopsy"}
+LABELS = {"aleapp": "ALEAPP", "mvt": "MVT", "autopsy": "Autopsy", "veritrace-sqlite": "veritrace-sqlite"}
 
 
 @dataclass

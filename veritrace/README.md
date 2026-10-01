@@ -30,7 +30,7 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Wrappers ALEAPP / MVT / Autopsy (`veritrace parse …`) | ✅ |
 | Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
 | Règles de détection d'anomalies R1–R5 (`veritrace rules …`) | ✅ |
-| Parseurs SQLite natifs Veritrace | ⏳ |
+| Parseurs natifs Veritrace : SMS/MMS, appels, contacts, navigation, EXIF/GPS, dumpsys package/accessibility (`veritrace parse sqlite`) | ✅ |
 
 ---
 
@@ -113,6 +113,7 @@ Rôle : intégration du résultat de l'ingest Android.
 | **ALEAPP** | **2026.4.2** (commit `82aec26`) | Exécuté par Veritrace sur une extraction Android synthétique. La sortie réelle (LAVA + TSV) est conservée dans `tests/fixtures/aleapp_2026.4.2`. |
 | **MVT** | **2026.9.28** | Exécuté par Veritrace (`check-androidqf`, IOC STIX2). La sortie réelle est conservée dans `tests/fixtures/mvt_2026.9.28`. |
 | **Autopsy** | **non testé avec une installation réelle** | Lecteur écrit d'après le schéma de base Sleuth Kit (tables *blackboard*) et testé sur une base synthétique conforme (schéma 9.4). **À valider sur un cas produit par Autopsy 4.21+ avant usage en production.** |
+| Pillow (EXIF) | 12.3.0 | Facultatif : sans Pillow, l'analyse EXIF est signalée comme non effectuée. |
 | ADB | **non testé avec un appareil réel** | Module testé avec un `adb` simulé qui reproduit les sorties réelles (`tests/fixtures/fake_adb.py`) : appareil autorisé, non autorisé, absent, multiple, sauvegarde refusée ou chiffrée. **À valider sur un appareil réel (Platform-Tools 35+) avant usage en production.** |
 
 Pour relancer les tests avec les vrais outils :
@@ -295,6 +296,8 @@ chemin de l'extraction. La **sortie** est du JSON normalisé, versé dans le dos
 
 ```bash
 veritrace parse aleapp  --case ./VT --input ./extraction            # lance ALEAPP (parsing complet)
+veritrace parse sqlite  --case ./VT --input ./extraction            # parseurs natifs (sans outil externe)
+veritrace parse sqlite  --case ./VT --input ./VT/acquisition/raw/ACQ-03   # dumpsys collectés par acquire
 veritrace parse mvt     --case ./VT --input ./androidqf --iocs stalkerware.stix2
 veritrace parse autopsy --case ./VT --input ./CasAutopsy --autopsy-version 4.21.0
 veritrace parse all     --case ./VT --input ./extraction --mvt-input ./androidqf \
@@ -317,6 +320,7 @@ Pour chaque outil, Veritrace enchaîne les étapes suivantes :
 
 | Outil | Ce qui est normalisé |
 |---|---|
+| **veritrace-sqlite** (natif, toujours disponible) | Bases Android lues directement : `mmssms.db` (SMS/MMS), `calllog.db` / `contacts2.db` (appels, contacts), `History` de Chrome / Samsung Internet / Opera / WebView. Photos JPEG (DCIM, Pictures…) : EXIF, plus une localisation GPS horodatée en UTC. `dumpsys package` : installateur, statut système, permissions accordées. `dumpsys accessibility` : services d'accessibilité **activés**. Entrées acceptées : dossier, `.tar` / `.zip`, **y compris le tar d'une sauvegarde ADB** (`apps/<paquet>/…`). Les bases sont ouvertes sur une **copie de travail**, avec le journal WAL rejoué (les originaux ne sont jamais ouverts en écriture). Les enregistrements supprimés ne sont pas récupérés. |
 | ALEAPP | Lit la sortie LAVA (`_lava_data.lava` + `_lava_artifacts.db`), ou les TSV pour les versions antérieures. Catégories : SMS/MMS, appels, contacts, historique web, localisations, applications installées, usage des applications (événements), comptes, Wi-Fi, Bluetooth. Les artefacts non couverts sont listés dans le rapport et restent dans la sortie brute. |
 | MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat de type `ioc`, de criticité `critique` (alerte MVT CRITICAL) ou `eleve` (autres niveaux)**, avec le bloc `ioc` (type, valeur, fichier d'IOC, famille). Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
 | Autopsy | Lit `autopsy.db` (cas, Portable Case ou fichier `.db`). Seuls les artefacts du **module Android** sont retenus (option `--module` pour en ajouter d'autres). |
@@ -379,12 +383,12 @@ veritrace rules config --case ./VT --disable R5 --gap-hours 48 --download-window
 veritrace rules review --case ./VT F-R1-2f5fa2e88c --interpretation "Application de contrôle parental installée par le titulaire (déclaration au PV)."
 ```
 
-Limites actuelles :
-- Les permissions proviennent d'ALEAPP (`runtime-permissions.xml`, magasin de
-  permissions). Les permissions d'installation de `dumpsys package` ne sont pas encore
-  analysées.
-- L'activation effective d'un service d'accessibilité (paramètres sécurisés) n'est pas
-  encore lue : R2 repose sur les permissions déclarées.
+Sources des informations utilisées par les règles :
+- **Permissions** : ALEAPP (`runtime-permissions.xml`, magasin de permissions) et moteur
+  natif (`dumpsys package` : permissions d'installation et d'exécution accordées).
+- **Services d'accessibilité activés** : moteur natif (`dumpsys accessibility`, collecté par
+  `veritrace acquire`). Ils comptent comme capacité de contrôle (R2) et comme accès
+  sensible (R1).
 
 ---
 
@@ -469,6 +473,7 @@ veritrace acquire run --case ./VT-2026-0042 --imei 35xxxxxxxxxxxxx --seal SC-004
 # 3. Analyse multi-outils + corrélation (automatique après chaque outil)
 veritrace parse all --case ./VT-2026-0042 --input ./extraction --mvt-input ./androidqf \
   --iocs stalkerware.stix2 --autopsy-case ./CasAutopsy
+veritrace parse sqlite --case ./VT-2026-0042 --input ./VT-2026-0042/acquisition/raw/ACQ-03   # dumpsys
 
 # 4. Relire les constats générés (MVT, règles R1–R5) ; les valider ou en corriger l'interprétation :
 veritrace rules review --case ./VT-2026-0042 F-R1-… --interpretation "…"
@@ -517,7 +522,7 @@ veritrace/
 ├── schema/                schéma, validateur, exemple
 ├── reporting/             modèle → Markdown / PDF
 ├── acquisition/           adb.py (client sûr), session.py (collecte + custody), backup.py (.ab → .tar)
-├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, runner.py
+├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, sqlite_native.py, runner.py
 └── correlation/           engine.py (corroboration, dédoublonnage, timeline), rules.py (R1–R5)
 ```
 

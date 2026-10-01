@@ -476,6 +476,17 @@ def parse_autopsy(c: Ctx, case_dir: Path, autopsy_case: Path, modules: tuple[str
     _print_outcome("Autopsy", o)
 
 
+@parse.command("sqlite")
+@_case_opt
+@_input_opt
+@pass_ctx
+def parse_sqlite(c: Ctx, case_dir: Path, extraction: Path) -> None:
+    """Parseurs natifs Veritrace (SMS, appels, contacts, navigation, EXIF, dumpsys) — sans outil externe."""
+    from veritrace.parsing.sqlite_native import SqliteNativeWrapper
+
+    _print_outcome("veritrace-sqlite", _run(c, case_dir, SqliteNativeWrapper(), extraction, {}))
+
+
 @parse.command("all")
 @_case_opt
 @_input_opt
@@ -487,12 +498,14 @@ def parse_autopsy(c: Ctx, case_dir: Path, autopsy_case: Path, modules: tuple[str
 @pass_ctx
 def parse_all(c: Ctx, case_dir: Path, extraction: Path, iocs: tuple[Path, ...], mvt_input: Path | None,
               autopsy_case: Path | None) -> None:
-    """Enchaîne ALEAPP, MVT et (si fourni) Autopsy ; un outil absent est ignoré."""
+    """Enchaîne ALEAPP, les parseurs natifs, MVT et (si fourni) Autopsy ; un outil absent est ignoré."""
     from veritrace.parsing.aleapp import AleappWrapper
     from veritrace.parsing.autopsy import AutopsyWrapper, find_case_db
     from veritrace.parsing.mvt import MvtWrapper
+    from veritrace.parsing.sqlite_native import SqliteNativeWrapper
 
     _print_outcome("ALEAPP", _run(c, case_dir, AleappWrapper(), extraction, {}))
+    _print_outcome("veritrace-sqlite", _run(c, case_dir, SqliteNativeWrapper(), extraction, {}))
     _print_outcome("MVT", _run(c, case_dir, MvtWrapper(), mvt_input or extraction, {"iocs": list(iocs)}))
     if autopsy_case:
         db = find_case_db(autopsy_case)

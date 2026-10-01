@@ -37,7 +37,8 @@ METHODS = ("getprop", "packages", "dumpsys", "backup", "pull", "bugreport")
 DEFAULT_METHODS = ("getprop", "packages", "dumpsys", "backup")
 SCHEMA_METHOD = {"getprop": "adb_getprop", "packages": "adb_package_list", "dumpsys": "adb_dumpsys",
                  "backup": "adb_backup", "pull": "adb_pull", "bugreport": "adb_bugreport"}
-DUMPSYS_SERVICES = ("package", "usagestats", "account", "wifi", "bluetooth_manager", "location", "appops")
+DUMPSYS_SERVICES = ("package", "accessibility", "usagestats", "account", "wifi", "bluetooth_manager", "location",
+                    "appops")
 DEFAULT_PULL = ("/sdcard/DCIM", "/sdcard/Pictures", "/sdcard/Download", "/sdcard/Documents")
 
 

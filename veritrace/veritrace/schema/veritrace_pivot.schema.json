@@ -899,6 +899,23 @@
           ],
           "minimum": -180,
           "maximum": 180
+        },
+        "datetime_original_local": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "DateTimeOriginal EXIF (heure locale de l'appareil photo)."
+        },
+        "offset_time_original": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "gps_timestamp": {
+          "$ref": "#/definitions/date_time_or_null",
+          "description": "Horodatage GPS (UTC)."
         }
       }
     },
@@ -975,6 +992,20 @@
           "items": {
             "type": "string"
           }
+        },
+        "accessibility_service_enabled": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "Service d'accessibilité de l'application ACTIVÉ sur l'appareil (lecture de l'écran, saisie)."
+        },
+        "first_install_local": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Date d'installation telle qu'affichée par l'appareil (heure locale, fuseau non garanti)."
         }
       }
     },

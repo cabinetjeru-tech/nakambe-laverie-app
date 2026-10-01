@@ -17,7 +17,7 @@ consignée dans `x_veritrace.rules_applied` et reprise dans les rapports.
 | Règle | Objet | Criticité |
 |---|---|---|
 | R1 | Application installée hors magasin officiel (APK manuel, navigateur, adb) | moyen ; eleve si ≥ 2 permissions sensibles |
-| R2 | Application (magasin) cumulant un service d'accessibilité / d'écoute des notifications / d'administration et des permissions de surveillance | moyen |
+| R2 | Application (magasin) cumulant un service d'accessibilité (déclaré ou activé) / d'écoute des notifications / d'administration et des permissions de surveillance | moyen |
 | R3 | Téléchargement d'APK suivi de près par l'installation d'une application hors magasin | eleve |
 | R4 | Horodatages postérieurs à l'acquisition ou antérieurs à Android (horloge modifiée, données altérées) | moyen |
 | R5 | Interruption anormalement longue de l'activité enregistrée | faible |
@@ -108,6 +108,7 @@ class AppView:
     is_system: bool | None
     permissions: set[str]
     first_install: datetime | None
+    accessibility: bool = False          # service d'accessibilité ACTIVÉ (dumpsys accessibility)
 
     @property
     def install_class(self) -> str:
@@ -149,7 +150,8 @@ class RuleContext:
                 # Une source qui la dit système suffit ; « non système » exige une source explicite.
                 is_system=True if True in system_flags else (False if False in system_flags else None),
                 permissions={_short(p) for a in arts for p in a["data"].get("permissions") or []},
-                first_install=min(installs) if installs else None)
+                first_install=min(installs) if installs else None,
+                accessibility=any(a["data"].get("accessibility_service_enabled") for a in arts))
         return apps
 
     def reference_time(self) -> datetime | None:
@@ -168,6 +170,8 @@ def rule_sideload(ctx: RuleContext) -> list[Hit]:
         if app.is_system is not False or app.install_class not in ("inconnu", "manuel"):
             continue
         sensitive = sorted(app.permissions & SENSITIVE)
+        if app.accessibility:
+            sensitive.append("service d'accessibilité ACTIVÉ")
         usage = sorted(ctx.usage.get(pkg, []), key=lambda a: parse_iso(a["timestamp"]))
         how = ("aucun installateur n'est déclaré (installation par adb ou par un moyen ne laissant pas de trace "
                "d'installateur)" if app.install_class == "inconnu"
@@ -211,7 +215,7 @@ def rule_surveillance_capabilities(ctx: RuleContext) -> list[Hit]:
     for pkg, app in sorted(ctx.apps.items()):
         if app.is_system or app.install_class in ("inconnu", "manuel"):
             continue  # applications système exclues ; les sideloads relèvent de R1
-        control = sorted(app.permissions & CONTROL)
+        control = sorted(app.permissions & CONTROL) + (["service d'accessibilité activé"] if app.accessibility else [])
         surveil = sorted(app.permissions & SURVEILLANCE)
         if not control or len(surveil) < 2:
             continue

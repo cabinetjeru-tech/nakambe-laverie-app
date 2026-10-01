@@ -1,0 +1,3 @@
+﻿Mimetype	Data 1	Display Name	Phone Number	Email Address	Source File
+vnd.android.cursor.item/phone_v2	+22670000001	Contact A	+22670000001		data/data/com.android.providers.contacts/databases/contacts2.db
+vnd.android.cursor.item/email_v2	contact.a@example.invalid	Contact A		contact.a@example.invalid	data/data/com.android.providers.contacts/databases/contacts2.db

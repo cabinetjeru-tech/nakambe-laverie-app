@@ -36,6 +36,92 @@ def _db(path: Path, ddl: list[str], rows: list[tuple[str, tuple]]) -> None:
     con.close()
 
 
+def _jpeg_with_exif(path: Path) -> None:
+    """Photo avec EXIF (appareil, date locale + décalage) et GPS (heure UTC), si Pillow est disponible."""
+    try:
+        from PIL import Image
+        from PIL.TiffImagePlugin import IFDRational as Q
+    except ImportError:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    img = Image.new("RGB", (64, 48), (90, 120, 160))
+    exif = img.getexif()
+    exif[271], exif[272] = "samsung", "SM-A546B"                       # Make, Model
+    sub = exif.get_ifd(0x8769)
+    sub[36867] = "2026:09:01 22:15:30"                                 # DateTimeOriginal (heure locale)
+    sub[36881] = "+00:00"                                              # OffsetTimeOriginal
+    gps = exif.get_ifd(0x8825)
+    gps[1], gps[2] = "N", (Q(11, 1), Q(46, 1), Q(4872, 100))          # 11.7802 N
+    gps[3], gps[4] = "W", (Q(0, 1), Q(22, 1), Q(1308, 100))           # 0.3703 W
+    gps[7], gps[29] = (Q(22, 1), Q(15, 1), Q(30, 1)), "2026:09:01"    # GPSTimeStamp / GPSDateStamp (UTC)
+    img.save(path, exif=exif)
+
+
+DUMPSYS_PACKAGE = """\
+Packages:
+  Package [com.sys.monitor.service] (a1b2c3d):
+    userId=10245
+    pkg=Package{d4e5f6 com.sys.monitor.service}
+    codePath=/data/app/~~x/com.sys.monitor.service-1
+    versionCode=421 minSdk=24 targetSdk=29
+    versionName=4.2.1
+    pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    timeStamp=2026-08-14 21:03:11
+    firstInstallTime=2026-08-14 21:03:11
+    lastUpdateTime=2026-08-14 21:03:11
+    installerPackageName=null
+    requested permissions:
+      android.permission.READ_SMS
+      android.permission.INTERNET
+    install permissions:
+      android.permission.INTERNET: granted=true
+      android.permission.RECEIVE_BOOT_COMPLETED: granted=true
+    User 0: ceDataInode=1234 installed=true hidden=false suspended=false stopped=false notLaunched=false enabled=0
+      runtime permissions:
+        android.permission.READ_SMS: granted=true, flags=[ USER_SET ]
+        android.permission.ACCESS_FINE_LOCATION: granted=true, flags=[ USER_SET ]
+        android.permission.RECORD_AUDIO: granted=true, flags=[ USER_SET ]
+        android.permission.CAMERA: granted=false, flags=[ USER_SET ]
+  Package [com.whatsapp] (e7f8a9b):
+    userId=10150
+    codePath=/data/app/~~y/com.whatsapp-1
+    versionName=2.26.18.75
+    pkgFlags=[ HAS_CODE ALLOW_CLEAR_USER_DATA ]
+    firstInstallTime=2025-01-10 10:00:00
+    installerPackageName=com.android.vending
+    User 0: ceDataInode=5678 installed=true hidden=false
+      runtime permissions:
+        android.permission.RECORD_AUDIO: granted=true, flags=[ USER_SET ]
+  Package [com.android.settings] (c0d1e2f):
+    userId=1000
+    codePath=/system/priv-app/Settings
+    versionName=14
+    pkgFlags=[ SYSTEM HAS_CODE PERSISTENT ]
+    installerPackageName=null
+"""
+
+DUMPSYS_ACCESSIBILITY = """\
+ACCESSIBILITY MANAGER (dumpsys accessibility)
+
+currentUserId=0
+User state[
+  attributes:{id=0, touchExplorationEnabled=false, serviceHandlesDoubleTap=false}
+     Bound services:{Service[label=System Service, feedbackType[FEEDBACK_GENERIC], capabilities=1, eventTypes=TYPES_ALL_MASK, notificationTimeout=0, requestA11yBtn=false]}
+     Enabled services:{{com.sys.monitor.service/com.sys.monitor.service.AccessService}}
+     Binding services:{}
+]
+"""
+
+
+def build_dumpsys(root: str | Path) -> Path:
+    """Sorties `dumpsys package` / `dumpsys accessibility` telles que collectées par `veritrace acquire`."""
+    root = Path(root)
+    root.mkdir(parents=True, exist_ok=True)
+    (root / "dumpsys_package.txt").write_text(DUMPSYS_PACKAGE, encoding="utf-8")
+    (root / "dumpsys_accessibility.txt").write_text(DUMPSYS_ACCESSIBILITY, encoding="utf-8")
+    return root
+
+
 def build_android_fs(root: str | Path) -> Path:
     root = Path(root)
     data = root / "data"
@@ -64,6 +150,22 @@ def build_android_fs(root: str | Path) -> Path:
          # horodatage dans le futur (horloge modifiée) : doit déclencher la règle R4
          ("INSERT INTO calls VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
           (904, _ms("2031-01-01T12:00:00"), None, "+22670000003", 1, 30, None, "BF", None, None, None, 0))])
+
+    _db(data / "data/com.android.providers.contacts/databases/contacts2.db",
+        ["CREATE TABLE contacts (_id INTEGER PRIMARY KEY, name_raw_contact_id INTEGER)",
+         "CREATE TABLE raw_contacts (_id INTEGER PRIMARY KEY, contact_id INTEGER, display_name TEXT, deleted INTEGER)",
+         "CREATE TABLE mimetypes (_id INTEGER PRIMARY KEY, mimetype TEXT)",
+         "CREATE TABLE data (_id INTEGER PRIMARY KEY, raw_contact_id INTEGER, mimetype_id INTEGER, data1 TEXT)"],
+        [("INSERT INTO mimetypes VALUES (?,?)", (5, "vnd.android.cursor.item/phone_v2")),
+         ("INSERT INTO mimetypes VALUES (?,?)", (1, "vnd.android.cursor.item/email_v2")),
+         ("INSERT INTO mimetypes VALUES (?,?)", (7, "vnd.android.cursor.item/name")),
+         ("INSERT INTO contacts VALUES (?,?)", (1, 55)),
+         ("INSERT INTO raw_contacts VALUES (?,?,?,?)", (55, 1, "Contact A", 0)),
+         ("INSERT INTO data VALUES (?,?,?,?)", (1, 55, 7, "Contact A")),
+         ("INSERT INTO data VALUES (?,?,?,?)", (2, 55, 5, "+22670000001")),
+         ("INSERT INTO data VALUES (?,?,?,?)", (3, 55, 1, "contact.a@example.invalid"))])
+
+    _jpeg_with_exif(data / "media/0/DCIM/Camera/IMG_20260901_221530.jpg")
 
     _db(data / "data/com.android.chrome/app_chrome/Default/History",
         ["CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, visit_count INTEGER, typed_count INTEGER,"

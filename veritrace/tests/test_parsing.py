@@ -23,7 +23,7 @@ from veritrace.parsing.mvt import IocFileError, check_stix2, detect_mode, normal
 from veritrace.schema import validate
 
 from conftest import AUTH_INPUT
-from fixtures.android_fs import SPY_PKG, build_android_fs
+from fixtures.android_fs import SPY_PKG, build_android_fs, build_dumpsys
 from fixtures.autopsy_case import build_autopsy_case
 
 FIX = Path(__file__).parent / "fixtures"
@@ -46,7 +46,7 @@ def test_aleapp_lava_and_tsv_give_same_facts(tmp_path):
     assert _facts(lava) == _facts(tsv)
     cats = Counter(a["category"] for a in lava.items)
     assert cats == {"sms": 2, "appel": 3, "application": 3, "usage_app": 2, "navigation": 1,
-                    "localisation": 1, "wifi": 1, "bluetooth": 1, "compte": 1}
+                    "localisation": 1, "wifi": 1, "bluetooth": 1, "compte": 1, "contact": 1}
 
 
 def test_aleapp_fields_and_internal_dedup():
@@ -133,13 +133,16 @@ def case_with_tools(tmp_path):
     case = tmp_path / "VT-B"
     fs = build_android_fs(tmp_path / "extraction")
     autopsy = build_autopsy_case(tmp_path / "autopsy_case")
+    dumpsys = build_dumpsys(tmp_path / "dumpsys")
     r = runner.invoke(cli, ["case", "init", str(case), "--case-id", "VT-B", "--title", "Intégration",
                             "--org-name", "Cabinet Test"], input=AUTH_INPUT)
     assert r.exit_code == 0, r.output
     for args in (["parse", "aleapp", "--case", str(case), "--input", str(fs), "--from-output", str(ALEAPP_OUT)],
                  ["parse", "mvt", "--case", str(case), "--input", str(fs), "--from-output", str(MVT_OUT),
                   "--iocs", str(IOCS)],
-                 ["parse", "autopsy", "--case", str(case), "--input", str(autopsy), "--autopsy-version", "4.21.0"]):
+                 ["parse", "autopsy", "--case", str(case), "--input", str(autopsy), "--autopsy-version", "4.21.0"],
+                 ["parse", "sqlite", "--case", str(case), "--input", str(fs)],
+                 ["parse", "sqlite", "--case", str(case), "--input", str(dumpsys)]):
         r = runner.invoke(cli, args, input=AUTH_INPUT)
         assert r.exit_code == 0, r.output
     return case, fs, runner
@@ -162,25 +165,28 @@ def test_end_to_end_corroboration_and_dedup(case_with_tools):
         return {a["corroborated"] for a in group}, {a["source"]["tool"] for a in group}, group
 
     st, tools, g = status("application", lambda a: a["data"]["package"] == SPY_PKG)
-    assert st == {True} and tools == {"ALEAPP", "MVT", "Autopsy"}
-    assert g[0]["corroborated_by"] == ["ALEAPP", "Autopsy", "MVT"]
+    assert st == {True} and tools == {"ALEAPP", "MVT", "Autopsy", "veritrace-sqlite"}
+    assert g[0]["corroborated_by"] == ["ALEAPP", "Autopsy", "MVT", "veritrace-sqlite"]
     st, tools, _ = status("sms", lambda a: a["timestamp"].startswith("2026-09-02T19:44:05"))
-    assert st == {True} and tools == {"ALEAPP", "Autopsy"}
+    assert st == {True} and tools == {"ALEAPP", "Autopsy", "veritrace-sqlite"}
     st, _, _ = status("appel", lambda a: a["timestamp"].startswith("2026-09-02T20:01:47"))
     assert st == {True}                                   # « manqué » (ALEAPP) = « entrant » (Autopsy)
-    st, tools, _ = status("localisation", lambda a: True)
-    assert st == {False} and tools == {"ALEAPP", "Autopsy"}   # Autopsy/aLEAPP ≠ indépendant
+    st, tools, _ = status("localisation", lambda a: a["data"].get("provider") != "exif" and
+                          a["source"]["tool"] != "veritrace-sqlite")
+    # ALEAPP + Autopsy/aLEAPP seuls ne seraient pas indépendants ; la position GPS de la photo (EXIF,
+    # moteur natif) décrit le même fait et le corrobore.
+    assert st == {True} and tools == {"ALEAPP", "Autopsy", "veritrace-sqlite"}
 
     # Dédoublonnage : un événement de timeline par fait, pas par artefact
     auto = [t for t in doc["timeline"] if t["x_veritrace"]["generated"]]
     sms_events = [t for t in auto if t["category"] == "sms" and t["timestamp"].startswith("2026-09-02T19:44:05")]
-    assert len(sms_events) == 1 and len(sms_events[0]["artifact_ids"]) == 2 and sms_events[0]["corroborated"]
+    assert len(sms_events) == 1 and len(sms_events[0]["artifact_ids"]) == 3 and sms_events[0]["corroborated"]
 
     # Constat IOC MVT : critique, relié aux artefacts des autres outils, corroboré
     f = next(f for f in doc["findings"] if f["type"] == "ioc")
     assert f["severity"] == "critique" and f["corroborated"] and f["ioc"]["value"] == SPY_PKG
     tools = {a["source"]["tool"] for a in doc["artifacts"] if a["artifact_id"] in f["artifact_ids"]}
-    assert tools == {"MVT", "ALEAPP", "Autopsy"}
+    assert tools == {"MVT", "ALEAPP", "Autopsy", "veritrace-sqlite"}
     item_types = {i["type"] for a in doc["acquisitions"] for i in a["items"]}
     assert {"extraction", "ioc", "sortie_outil"} <= item_types
     assert {a["method"] for a in doc["acquisitions"]} == {"import"}
@@ -212,10 +218,10 @@ def test_reports_after_ingest(case_with_tools):
 def test_fragment_and_audit(case_with_tools):
     case, _, _ = case_with_tools
     frags = list((case / "parsed").glob("*/RUN-*/veritrace_normalized.json"))
-    assert {f.parts[-3] for f in frags} == {"aleapp", "mvt", "autopsy"}
+    assert {f.parts[-3] for f in frags} == {"aleapp", "mvt", "autopsy", "veritrace-sqlite"}
     audit = AuditLog(case / "audit" / "audit.jsonl")
     assert audit.verify().ok
-    assert [e["action"] for e in audit.entries()].count("tool_ingested") == 3
+    assert [e["action"] for e in audit.entries()].count("tool_ingested") == 5
 
 
 def test_missing_tool_is_warning_not_crash(tmp_path, monkeypatch):
@@ -231,7 +237,8 @@ def test_missing_tool_is_warning_not_crash(tmp_path, monkeypatch):
     assert r.exit_code == 0, r.output
     assert "ignore" in r.output
     doc = _doc(case)
-    assert {t["status"] for t in doc["x_veritrace"]["tool_runs"]} == {"ignore"}
+    status = {t["tool"]: t["status"] for t in doc["x_veritrace"]["tool_runs"]}
+    assert status == {"ALEAPP": "ignore", "MVT": "ignore", "veritrace-sqlite": "succes"}  # moteur natif toujours présent
     assert validate(doc).ok
     r = runner.invoke(cli, ["report", "--case", str(case), "--report", "judiciaire", "--format", "md"],
                       input=AUTH_INPUT)
@@ -294,7 +301,7 @@ def test_every_wrapper_output_is_pivot_format(case_with_tools):
 
     case, _, _ = case_with_tools
     frags = sorted((case / "parsed").glob("*/RUN-*/veritrace_normalized.json"))
-    assert len(frags) == 3
+    assert len(frags) == 5
     for f in frags:
         data = json.loads(f.read_text(encoding="utf-8"))
         assert data["artifacts"], f

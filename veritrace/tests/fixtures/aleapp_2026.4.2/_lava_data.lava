@@ -6,8 +6,8 @@
   "leapp_mode": "CLI",
   "package": "Source code",
   "OS": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
-  "start_timestamp": 1790827301,
-  "end_timestamp": 1790827301
+  "start_timestamp": 1790827868,
+  "end_timestamp": 1790827869
  },
  "param_input": "<extraction>",
  "param_output": "<sortie>",
@@ -2305,9 +2305,9 @@
   },
   {
    "module_name": "c2paProvenance",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_c2paProvenance",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "cachelocation",
@@ -2383,9 +2383,9 @@
   },
   {
    "module_name": "calllogs",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_calllogs",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "camScanner",
@@ -2767,9 +2767,9 @@
   },
   {
    "module_name": "contacts",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "contacts",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "deviceHealthServices_AppUsage",
@@ -7890,6 +7890,25 @@
     ]
    }
   ],
+  "Contacts": [
+   {
+    "artifact_key": "contacts",
+    "name": "Contacts",
+    "tablename": "contacts",
+    "module": "contacts",
+    "column_map": {
+     "mimetype": "Mimetype",
+     "data_1": "Data 1",
+     "display_name": "Display Name",
+     "phone_number": "Phone Number",
+     "email_address": "Email Address",
+     "source_file": "Source File"
+    },
+    "artifact_icon": "users",
+    "record_count": 2,
+    "source_path": "data/data/com.android.providers.contacts/databases/contacts2.db"
+   }
+  ],
   "GEO Location": [
    {
     "artifact_key": "get_browserlocation",
@@ -8294,6 +8313,23 @@
       "last_updated_date": "2026-07-10",
       "notes": "",
       "category": "Installed Apps"
+     }
+    ]
+   },
+   {
+    "module_name": "contacts",
+    "module_filename": "contacts.py",
+    "artifacts": [
+     {
+      "artifact_key": "contacts",
+      "tablename": "contacts",
+      "name": "Contacts",
+      "description": "Contacts from the device",
+      "author": "Mark McKinnon",
+      "created_date": "2021-03-11",
+      "last_updated_date": "2025-09-09",
+      "notes": "",
+      "category": "Contacts"
      }
     ]
    },
