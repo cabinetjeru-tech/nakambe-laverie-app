@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "veritrace"
+version = "0.1.0"
+description = "Veritrace — assistant de forensique Android pour examens autorisés (acquisition, parsing, corrélation, rapport)."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Nourou Chafikou" }]
+license = { text = "Proprietary" }
+dependencies = [
+    "click>=8.1",
+    "jsonschema>=4.18",
+    "reportlab>=4.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.scripts]
+veritrace = "veritrace.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["veritrace*"]
+
+[tool.setuptools.package-data]
+"veritrace.schema" = ["*.json", "examples/*.json"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

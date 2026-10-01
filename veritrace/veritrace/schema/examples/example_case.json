@@ -1,0 +1,938 @@
+{
+  "schema_version": "0.1.0",
+  "case": {
+    "case_id": "VT-2026-0042",
+    "title": "Suspicion de logiciel espion — téléphone de la plaignante",
+    "created_at": "2026-09-10T08:30:00+00:00",
+    "report_type": "judiciaire",
+    "display_timezone": "Africa/Ouagadougou",
+    "mission": "Rechercher la présence d'un logiciel espion ou de harcèlement (stalkerware) sur le téléphone remis, et établir la chronologie de son installation et de son activité.",
+    "requesting_party": {
+      "name": "Parquet du Tribunal (fictif)",
+      "role": "Autorité requérante",
+      "reference": "RP-2026-1187"
+    },
+    "organization": {
+      "name": "Cabinet d'expertise (à personnaliser)",
+      "address": "Adresse du cabinet, Ville, Pays",
+      "phone": "+226 00 00 00 00",
+      "email": "contact@cabinet.example",
+      "website": "https://cabinet.example",
+      "registration": "Expert agréé n° 0000",
+      "logo_path": null
+    },
+    "examiners": [
+      {
+        "name": "Examinateur Exemple",
+        "role": "Expert en investigation numérique",
+        "qualification": "Certification forensique mobile (exemple)"
+      }
+    ],
+    "legal_authorization": {
+      "basis": "consentement",
+      "reference": "PV-CONS-2026-0042",
+      "issued_by": "Titulaire de l'appareil",
+      "issued_at": "2026-09-10T08:00:00+00:00",
+      "scope": "Acquisition logique complète ; données du 01/08/2026 au 10/09/2026.",
+      "document_sha256": "99b1a4045fbf15383692923fcfa3d4dd409a12cd82ed47e6102c266508b3ac48",
+      "verified_by": "Examinateur Exemple",
+      "verified_at": "2026-09-10T08:25:00+00:00"
+    },
+    "limitations": [
+      "Acquisition logique uniquement : les données des applications excluant la sauvegarde ADB (allowBackup=false) ne sont pas couvertes.",
+      "Aucune donnée supprimée n'a été récupérée (pas d'acquisition physique)."
+    ]
+  },
+  "devices": [
+    {
+      "device_id": "DEV-01",
+      "manufacturer": "Samsung",
+      "model": "Galaxy A54 (SM-A546B)",
+      "android_version": "14",
+      "security_patch": "2026-07-01",
+      "build_fingerprint": "samsung/a54xnseea/a54x:14/UP1A.231005.007/A546BXXS8BXF1:user/release-keys",
+      "serial": "R5CW0000000",
+      "imei": [
+        "350000000000001"
+      ],
+      "owner": "Plaignante (identité au dossier)",
+      "state_on_receipt": "Allumé, déverrouillé par la titulaire, débogage USB activé par elle",
+      "seal_number": "SC-2026-0042-A"
+    }
+  ],
+  "acquisitions": [
+    {
+      "acquisition_id": "ACQ-01",
+      "device_id": "DEV-01",
+      "method": "adb_backup",
+      "started_at": "2026-09-10T09:02:00+00:00",
+      "ended_at": "2026-09-10T09:41:00+00:00",
+      "operator": "Examinateur Exemple",
+      "tool": {
+        "name": "adb",
+        "version": "35.0.2"
+      },
+      "status": "success"
+    },
+    {
+      "acquisition_id": "ACQ-02",
+      "device_id": "DEV-01",
+      "method": "adb_dumpsys",
+      "started_at": "2026-09-10T09:45:00+00:00",
+      "ended_at": "2026-09-10T09:46:30+00:00",
+      "operator": "Examinateur Exemple",
+      "tool": {
+        "name": "adb",
+        "version": "35.0.2"
+      },
+      "status": "success"
+    }
+  ],
+  "evidence_items": [
+    {
+      "evidence_id": "EV-001",
+      "acquisition_id": "ACQ-01",
+      "label": "Sauvegarde ADB complète",
+      "type": "backup",
+      "local_path": "acquisition/raw/ACQ-01/backup.ab",
+      "device_path": null,
+      "sha256": "6002f07c4ae8f2708c67a33976c981cb2f628beb332db82b14c9a4190b4d646b",
+      "size_bytes": 3221225472,
+      "collected_at": "2026-09-10T09:41:00+00:00",
+      "collected_by": "Examinateur Exemple"
+    },
+    {
+      "evidence_id": "EV-002",
+      "acquisition_id": "ACQ-02",
+      "label": "Sortie dumpsys package",
+      "type": "file",
+      "local_path": "acquisition/raw/ACQ-02/dumpsys_package.txt",
+      "device_path": null,
+      "sha256": "17ea87532189094bc98109e1fc9c1064d0cd61268782fe159eeaf1fff202d085",
+      "size_bytes": 2457600,
+      "collected_at": "2026-09-10T09:46:30+00:00",
+      "collected_by": "Examinateur Exemple"
+    },
+    {
+      "evidence_id": "EV-003",
+      "acquisition_id": null,
+      "label": "PV de consentement signé (scan)",
+      "type": "document",
+      "local_path": "custody/documents/consentement.pdf",
+      "device_path": null,
+      "sha256": "99b1a4045fbf15383692923fcfa3d4dd409a12cd82ed47e6102c266508b3ac48",
+      "size_bytes": 184320,
+      "collected_at": "2026-09-10T08:20:00+00:00",
+      "collected_by": "Examinateur Exemple"
+    }
+  ],
+  "custody_chain": [
+    {
+      "event_id": "COC-001",
+      "timestamp": "2026-09-10T08:20:00+00:00",
+      "evidence_id": "EV-003",
+      "action": "collected",
+      "actor": "Examinateur Exemple",
+      "sha256": "99b1a4045fbf15383692923fcfa3d4dd409a12cd82ed47e6102c266508b3ac48",
+      "location": "Cabinet — bureau 2"
+    },
+    {
+      "event_id": "COC-002",
+      "timestamp": "2026-09-10T09:41:05+00:00",
+      "evidence_id": "EV-001",
+      "action": "collected",
+      "actor": "Examinateur Exemple",
+      "sha256": "6002f07c4ae8f2708c67a33976c981cb2f628beb332db82b14c9a4190b4d646b",
+      "location": "Cabinet — poste FOR-01"
+    },
+    {
+      "event_id": "COC-003",
+      "timestamp": "2026-09-10T09:46:35+00:00",
+      "evidence_id": "EV-002",
+      "action": "collected",
+      "actor": "Examinateur Exemple",
+      "sha256": "17ea87532189094bc98109e1fc9c1064d0cd61268782fe159eeaf1fff202d085",
+      "location": "Cabinet — poste FOR-01"
+    },
+    {
+      "event_id": "COC-004",
+      "timestamp": "2026-09-10T10:05:00+00:00",
+      "evidence_id": "EV-001",
+      "action": "copied",
+      "actor": "Examinateur Exemple",
+      "sha256": "6002f07c4ae8f2708c67a33976c981cb2f628beb332db82b14c9a4190b4d646b",
+      "location": "NAS scellé — volume PREUVES",
+      "notes": "Copie de travail ; empreinte vérifiée identique."
+    },
+    {
+      "event_id": "COC-005",
+      "timestamp": "2026-09-11T14:00:00+00:00",
+      "evidence_id": "EV-001",
+      "action": "verified",
+      "actor": "Examinateur Exemple",
+      "sha256": "6002f07c4ae8f2708c67a33976c981cb2f628beb332db82b14c9a4190b4d646b",
+      "location": "Cabinet — poste FOR-01",
+      "notes": "Re-hachage avant rapport."
+    }
+  ],
+  "tool_runs": [
+    {
+      "run_id": "RUN-ALEAPP-01",
+      "tool": {
+        "name": "ALEAPP",
+        "version": "3.4.0"
+      },
+      "command": [
+        "aleapp",
+        "-t",
+        "tar",
+        "-i",
+        "<backup extrait>",
+        "-o",
+        "parsed/aleapp"
+      ],
+      "started_at": "2026-09-10T10:10:00+00:00",
+      "ended_at": "2026-09-10T10:31:00+00:00",
+      "status": "success",
+      "input_evidence_ids": [
+        "EV-001"
+      ],
+      "output_path": "parsed/aleapp/",
+      "artifacts_produced": 10
+    },
+    {
+      "run_id": "RUN-MVT-01",
+      "tool": {
+        "name": "MVT",
+        "version": "2.6.1"
+      },
+      "command": [
+        "mvt-android",
+        "check-backup",
+        "--iocs",
+        "iocs/stalkerware.stix2",
+        "..."
+      ],
+      "started_at": "2026-09-10T10:35:00+00:00",
+      "ended_at": "2026-09-10T10:38:00+00:00",
+      "status": "success",
+      "input_evidence_ids": [
+        "EV-001",
+        "EV-002"
+      ],
+      "output_path": "parsed/mvt/",
+      "artifacts_produced": 2
+    },
+    {
+      "run_id": "RUN-VT-01",
+      "tool": {
+        "name": "veritrace-sqlite",
+        "version": "0.1.0"
+      },
+      "command": [
+        "veritrace",
+        "parse",
+        "sqlite"
+      ],
+      "started_at": "2026-09-10T10:40:00+00:00",
+      "ended_at": "2026-09-10T10:40:09+00:00",
+      "status": "success",
+      "input_evidence_ids": [
+        "EV-001"
+      ],
+      "output_path": "parsed/veritrace-sqlite/",
+      "artifacts_produced": 2
+    },
+    {
+      "run_id": "RUN-AUTOPSY-01",
+      "tool": {
+        "name": "Autopsy",
+        "version": null
+      },
+      "command": [],
+      "started_at": "2026-09-10T10:41:00+00:00",
+      "ended_at": "2026-09-10T10:41:00+00:00",
+      "status": "skipped",
+      "message": "Autopsy non installé sur le poste — étape ignorée.",
+      "input_evidence_ids": [],
+      "output_path": null,
+      "artifacts_produced": 0
+    }
+  ],
+  "artifacts": [
+    {
+      "artifact_id": "ART-0001",
+      "category": "sms",
+      "timestamp": "2026-09-02T19:44:05+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.android.providers.telephony/databases/mmssms.db",
+        "record_ref": "sms:rowid=4471"
+      },
+      "data": {
+        "direction": "incoming",
+        "address": "+22670000001",
+        "contact_name": "Contact A",
+        "body": "Je sais où tu étais hier soir.",
+        "service": "sms",
+        "read": true,
+        "thread_id": 12
+      },
+      "content_sha256": "3b45d7a508cf6234979d2a5f4b427f538e579b3b2030f97586ec0913108b69b3",
+      "corroboration": {
+        "status": "corroborated",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0001"
+          },
+          {
+            "tool": "veritrace-sqlite",
+            "artifact_id": "ART-0002"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0002",
+      "category": "sms",
+      "timestamp": "2026-09-02T19:44:05+00:00",
+      "source": {
+        "tool": {
+          "name": "veritrace-sqlite",
+          "version": "0.1.0"
+        },
+        "run_id": "RUN-VT-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.android.providers.telephony/databases/mmssms.db",
+        "record_ref": "sms:rowid=4471"
+      },
+      "data": {
+        "direction": "incoming",
+        "address": "+22670000001",
+        "contact_name": "Contact A",
+        "body": "Je sais où tu étais hier soir.",
+        "service": "sms",
+        "read": true,
+        "thread_id": 12
+      },
+      "content_sha256": "3b45d7a508cf6234979d2a5f4b427f538e579b3b2030f97586ec0913108b69b3",
+      "corroboration": {
+        "status": "corroborated",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0001"
+          },
+          {
+            "tool": "veritrace-sqlite",
+            "artifact_id": "ART-0002"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0003",
+      "category": "call",
+      "timestamp": "2026-09-02T20:01:47+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.android.providers.contacts/databases/calllog.db",
+        "record_ref": "calls:rowid=902"
+      },
+      "data": {
+        "direction": "missed",
+        "number": "+22670000001",
+        "contact_name": "Contact A",
+        "duration_s": 0,
+        "call_type": "voice"
+      },
+      "content_sha256": "d1fd96018989d670f364fb25ad92f793437412d8d010602cf23251276d6df4dd",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0003"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0004",
+      "category": "installed_app",
+      "timestamp": "2026-08-14T21:03:11+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/system/packages.xml",
+        "record_ref": null
+      },
+      "data": {
+        "package": "com.sys.monitor.service",
+        "app_name": "System Service",
+        "version_name": "4.2.1",
+        "installer": null,
+        "first_install": "2026-08-14T21:03:11+00:00",
+        "is_system": false,
+        "permissions": [
+          "android.permission.READ_SMS",
+          "android.permission.ACCESS_FINE_LOCATION",
+          "android.permission.RECORD_AUDIO",
+          "android.permission.BIND_ACCESSIBILITY_SERVICE"
+        ]
+      },
+      "content_sha256": "4006ec73cb0de3d155d50d7a2e4e7b6b1a9a7084b8f0336c48edec5b8e230d56",
+      "corroboration": {
+        "status": "corroborated",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0004"
+          },
+          {
+            "tool": "MVT",
+            "artifact_id": "ART-0005"
+          }
+        ]
+      },
+      "tags": [
+        "sideload"
+      ]
+    },
+    {
+      "artifact_id": "ART-0005",
+      "category": "installed_app",
+      "timestamp": "2026-08-14T21:03:11+00:00",
+      "source": {
+        "tool": {
+          "name": "MVT",
+          "version": "2.6.1"
+        },
+        "run_id": "RUN-MVT-01",
+        "evidence_id": "EV-002",
+        "file_path": "dumpsys package",
+        "record_ref": null
+      },
+      "data": {
+        "package": "com.sys.monitor.service",
+        "app_name": "System Service",
+        "version_name": "4.2.1",
+        "installer": null,
+        "first_install": "2026-08-14T21:03:11+00:00",
+        "is_system": false,
+        "permissions": [
+          "android.permission.READ_SMS",
+          "android.permission.ACCESS_FINE_LOCATION",
+          "android.permission.RECORD_AUDIO",
+          "android.permission.BIND_ACCESSIBILITY_SERVICE"
+        ]
+      },
+      "content_sha256": "4006ec73cb0de3d155d50d7a2e4e7b6b1a9a7084b8f0336c48edec5b8e230d56",
+      "corroboration": {
+        "status": "corroborated",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0004"
+          },
+          {
+            "tool": "MVT",
+            "artifact_id": "ART-0005"
+          }
+        ]
+      },
+      "tags": [
+        "sideload"
+      ]
+    },
+    {
+      "artifact_id": "ART-0006",
+      "category": "ioc_match",
+      "timestamp": "2026-08-14T21:03:11+00:00",
+      "source": {
+        "tool": {
+          "name": "MVT",
+          "version": "2.6.1"
+        },
+        "run_id": "RUN-MVT-01",
+        "evidence_id": "EV-002",
+        "file_path": null,
+        "record_ref": null
+      },
+      "data": {
+        "indicator_type": "package",
+        "indicator": "com.sys.monitor.service",
+        "matched_value": "com.sys.monitor.service",
+        "ioc_source": "stalkerware-indicators (jeu d'IOC fictif pour l'exemple)",
+        "malware_family": "FictiveSpy"
+      },
+      "content_sha256": "141028d96cec398952115cccd052944b51e4af86447601040ab90ba19cd25da3",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "MVT",
+            "artifact_id": "ART-0006"
+          }
+        ]
+      },
+      "tags": [
+        "ioc"
+      ]
+    },
+    {
+      "artifact_id": "ART-0007",
+      "category": "app_usage",
+      "timestamp": "2026-09-02T19:40:00+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/system/usagestats/0/daily/",
+        "record_ref": null
+      },
+      "data": {
+        "package": "com.sys.monitor.service",
+        "event": "foreground",
+        "duration_s": 3.0
+      },
+      "content_sha256": "4be1182875fc4d4598224d7a5ba2812c8a5c186ebb1318d69b18683494491d6e",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0007"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0008",
+      "category": "location",
+      "timestamp": "2026-09-01T22:15:30+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.google.android.gms/databases/",
+        "record_ref": null
+      },
+      "data": {
+        "latitude": 11.7802,
+        "longitude": -0.3703,
+        "accuracy_m": 12.0,
+        "altitude_m": null,
+        "provider": "fused",
+        "source_app": "com.google.android.gms"
+      },
+      "content_sha256": "8147f7dedd804072e16f2119836b212e10044770e280e6816efc815bcb811628",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0008"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0009",
+      "category": "browser_history",
+      "timestamp": "2026-08-14T20:58:42+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.android.chrome/app_chrome/Default/History",
+        "record_ref": "urls:id=311"
+      },
+      "data": {
+        "url": "https://download.example-monitor.invalid/apk/latest",
+        "title": "Download",
+        "browser": "Chrome",
+        "visit_count": 1
+      },
+      "content_sha256": "411878160b79c5548b3d79709f8abb9bffe6338755ea68aa516fc7401854b1d4",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0009"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0010",
+      "category": "wifi",
+      "timestamp": "2026-09-02T18:00:00+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/misc/apexdata/com.android.wifi/WifiConfigStore.xml",
+        "record_ref": null
+      },
+      "data": {
+        "ssid": "MAISON-WIFI",
+        "bssid": "a4:2b:b0:00:00:01",
+        "security": "WPA2-PSK",
+        "last_connected": "2026-09-02T18:00:00+00:00"
+      },
+      "content_sha256": "88edf6b5216b43c9d1bd0d7eb99cba722dd6baa868dfbab5aff85d644a06064d",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0010"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0011",
+      "category": "contact",
+      "timestamp": null,
+      "source": {
+        "tool": {
+          "name": "veritrace-sqlite",
+          "version": "0.1.0"
+        },
+        "run_id": "RUN-VT-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/data/com.android.providers.contacts/databases/contacts2.db",
+        "record_ref": "raw_contacts:_id=55"
+      },
+      "data": {
+        "display_name": "Contact A",
+        "phone_numbers": [
+          "+22670000001"
+        ],
+        "emails": [],
+        "account": null
+      },
+      "content_sha256": "34be0e3cf024a7c5c6c1e133e3f5836115443612d56b77dcab5f904e1c378e47",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "veritrace-sqlite",
+            "artifact_id": "ART-0011"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0012",
+      "category": "account",
+      "timestamp": null,
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/system_ce/0/accounts_ce.db",
+        "record_ref": null
+      },
+      "data": {
+        "account_type": "com.google",
+        "account_name": "titulaire.exemple@example.invalid",
+        "package": "com.google.android.gms"
+      },
+      "content_sha256": "a09aeea914fd593b5ea018611009478a5e6a5ae2cf3cf0e795a2766c341599b6",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0012"
+          }
+        ]
+      },
+      "tags": []
+    },
+    {
+      "artifact_id": "ART-0013",
+      "category": "bluetooth",
+      "timestamp": "2026-08-30T08:12:00+00:00",
+      "source": {
+        "tool": {
+          "name": "ALEAPP",
+          "version": "3.4.0"
+        },
+        "run_id": "RUN-ALEAPP-01",
+        "evidence_id": "EV-001",
+        "file_path": "/data/misc/bluedroid/bt_config.conf",
+        "record_ref": null
+      },
+      "data": {
+        "mac": "00:1A:7D:00:00:02",
+        "name": "Écouteurs BT",
+        "paired": true,
+        "last_seen": "2026-08-30T08:12:00+00:00"
+      },
+      "content_sha256": "c3ee1278ae056169e2723e4adb8daafef0080400a1a2986168aebb9df6f760ca",
+      "corroboration": {
+        "status": "single_source",
+        "sources": [
+          {
+            "tool": "ALEAPP",
+            "artifact_id": "ART-0013"
+          }
+        ]
+      },
+      "tags": []
+    }
+  ],
+  "timeline": [
+    {
+      "event_id": "TL-0001",
+      "timestamp": "2026-08-14T20:58:42+00:00",
+      "category": "browser_history",
+      "summary": "Visite d'une page de téléchargement d'APK (download.example-monitor.invalid)",
+      "artifact_ids": [
+        "ART-0009"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": [
+        "notable"
+      ]
+    },
+    {
+      "event_id": "TL-0002",
+      "timestamp": "2026-08-14T21:03:11+00:00",
+      "category": "installed_app",
+      "summary": "Installation hors Play Store de com.sys.monitor.service (« System Service »)",
+      "artifact_ids": [
+        "ART-0004",
+        "ART-0005"
+      ],
+      "corroborated": true,
+      "sources": [
+        "ALEAPP",
+        "MVT"
+      ],
+      "flags": [
+        "suspicious_app"
+      ]
+    },
+    {
+      "event_id": "TL-0003",
+      "timestamp": "2026-08-14T21:03:11+00:00",
+      "category": "ioc_match",
+      "summary": "Correspondance IOC : com.sys.monitor.service (famille FictiveSpy)",
+      "artifact_ids": [
+        "ART-0006"
+      ],
+      "corroborated": false,
+      "sources": [
+        "MVT"
+      ],
+      "flags": [
+        "ioc"
+      ]
+    },
+    {
+      "event_id": "TL-0004",
+      "timestamp": "2026-08-30T08:12:00+00:00",
+      "category": "bluetooth",
+      "summary": "Dernière connexion de l'appareil Bluetooth « Écouteurs BT »",
+      "artifact_ids": [
+        "ART-0013"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": []
+    },
+    {
+      "event_id": "TL-0005",
+      "timestamp": "2026-09-01T22:15:30+00:00",
+      "category": "location",
+      "summary": "Position enregistrée 11.7802, -0.3703 (±12 m)",
+      "artifact_ids": [
+        "ART-0008"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": []
+    },
+    {
+      "event_id": "TL-0006",
+      "timestamp": "2026-09-02T18:00:00+00:00",
+      "category": "wifi",
+      "summary": "Connexion au réseau Wi-Fi « MAISON-WIFI »",
+      "artifact_ids": [
+        "ART-0010"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": []
+    },
+    {
+      "event_id": "TL-0007",
+      "timestamp": "2026-09-02T19:40:00+00:00",
+      "category": "app_usage",
+      "summary": "com.sys.monitor.service au premier plan (3 s)",
+      "artifact_ids": [
+        "ART-0007"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": [
+        "suspicious_app"
+      ]
+    },
+    {
+      "event_id": "TL-0008",
+      "timestamp": "2026-09-02T19:44:05+00:00",
+      "category": "sms",
+      "summary": "SMS reçu de +22670000001 (Contact A) : « Je sais où tu étais hier soir. »",
+      "artifact_ids": [
+        "ART-0001",
+        "ART-0002"
+      ],
+      "corroborated": true,
+      "sources": [
+        "ALEAPP",
+        "veritrace-sqlite"
+      ],
+      "flags": [
+        "notable"
+      ]
+    },
+    {
+      "event_id": "TL-0009",
+      "timestamp": "2026-09-02T20:01:47+00:00",
+      "category": "call",
+      "summary": "Appel manqué de +22670000001 (Contact A)",
+      "artifact_ids": [
+        "ART-0003"
+      ],
+      "corroborated": false,
+      "sources": [
+        "ALEAPP"
+      ],
+      "flags": []
+    }
+  ],
+  "findings": [
+    {
+      "finding_id": "F-001",
+      "type": "ioc_match",
+      "severity": "critical",
+      "title": "Application de surveillance connue détectée : com.sys.monitor.service",
+      "description": "Le paquet com.sys.monitor.service correspond à un indicateur de compromission (famille FictiveSpy). Sa présence est confirmée indépendamment par ALEAPP (packages.xml) et MVT (dumpsys).",
+      "artifact_ids": [
+        "ART-0004",
+        "ART-0005",
+        "ART-0006"
+      ],
+      "evidence_ids": [
+        "EV-001",
+        "EV-002"
+      ],
+      "corroborated": true,
+      "confidence": "high",
+      "recommendation": "Conserver l'appareil en l'état ; ne pas désinstaller avant la fin des constatations."
+    },
+    {
+      "finding_id": "F-002",
+      "type": "suspicious_app",
+      "severity": "high",
+      "title": "Permissions sensibles et installation hors magasin officiel",
+      "description": "L'application a été installée sans installateur déclaré (sideload) cinq minutes après la visite d'une page de téléchargement d'APK, et dispose des permissions SMS, localisation précise, micro et service d'accessibilité.",
+      "artifact_ids": [
+        "ART-0004",
+        "ART-0009"
+      ],
+      "evidence_ids": [
+        "EV-001"
+      ],
+      "corroborated": true,
+      "confidence": "medium"
+    },
+    {
+      "finding_id": "F-003",
+      "type": "observation",
+      "severity": "medium",
+      "title": "Message évoquant la connaissance des déplacements",
+      "description": "Un SMS reçu le 02/09/2026 évoque la localisation de la titulaire la veille ; une position est effectivement enregistrée le 01/09/2026 à 22:15 UTC. La corrélation est temporelle, elle n'établit pas à elle seule la source de l'information.",
+      "artifact_ids": [
+        "ART-0001",
+        "ART-0002",
+        "ART-0008"
+      ],
+      "evidence_ids": [
+        "EV-001"
+      ],
+      "corroborated": true,
+      "confidence": "low"
+    }
+  ],
+  "integrity": {
+    "generated_at": "2026-09-11T14:05:00+00:00",
+    "generator": {
+      "name": "Veritrace",
+      "version": "0.1.0",
+      "author": "Nourou Chafikou"
+    },
+    "audit": {
+      "entries": 27,
+      "head_hash": "8b82d069e69980179a8baa7b8509d42fc05c9cefc41347bc261c89a467413b8b",
+      "verified": true,
+      "verified_at": "2026-09-11T14:05:00+00:00"
+    }
+  }
+}

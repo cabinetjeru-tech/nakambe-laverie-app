@@ -11,6 +11,10 @@ stock, finances et statistiques.
 >
 > **`kibaru-faso/`** — PÉDAGOGUE.IA (anciennement MON PROF.IA et KIBARU FASO), assistant pédagogique IA pour les enseignants du secondaire au Burkina Faso
 > (voir [kibaru-faso/README.md](kibaru-faso/README.md)).
+>
+> **`veritrace/`** — VERITRACE, assistant de forensique Android pour examens légalement autorisés
+> (acquisition ADB, parsing ALEAPP/MVT/Autopsy, corrélation, rapports judiciaire/entreprise)
+> (voir [veritrace/README.md](veritrace/README.md)).
 
 ---
 
