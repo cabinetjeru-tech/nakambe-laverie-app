@@ -5,8 +5,8 @@
 
 ## Synthèse
 
-- 41 ressource(s) au registre maître ; 0 intégrée(s) dont 0 consultable(s) et 0 dans l'historique ; 41 NON ENCORE INTÉGRÉE(S).
-- Par statut : ACTIF 0 · PROVISOIRE 0 · À VÉRIFIER 41 · REMPLACÉ 0 · ARCHIVE 0
+- 49 ressource(s) au registre maître ; 0 intégrée(s) dont 0 consultable(s) et 0 dans l'historique ; 49 NON ENCORE INTÉGRÉE(S).
+- Par statut : ACTIF 0 · PROVISOIRE 0 · À VÉRIFIER 49 · REMPLACÉ 0 · ARCHIVE 0
 
 ## Tableau maître
 
@@ -44,15 +44,23 @@
 | BF-BLG2-GEO-001 | Bilingue 2e année-Bilingue 3e année | Géographie | Guide pédagogique | Guide de l'enseignant — Géographie 2e et 3e années bilingues | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-BLG2-MATH-001 | Bilingue 2e année-Bilingue 3e année | Mathématiques | Guide pédagogique | Guide de l'enseignant — Mathématiques 2e et 3e années bilingues | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CE1-ECM-001 | CE1 | Éducation civique et morale | Guide pédagogique | Guide de l'enseignant — Éducation civique et morale CE1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CE1-EPS-001 | CP1-CP2-CE1-Bilingue 1re année-Bilingue 2e année | Activités physiques éducatives | Guide pédagogique | Guide de l'enseignant — Activités physiques éducatives (CP1, CP2, CE1 et 1re-2e années bilingues) | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Moyenne | NON ENCORE INTÉGRÉ |
 | BF-CE1-FR-001 | CE1 | Français | Guide pédagogique | Guide de l'enseignant — Français CE1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CE1-GEN-001 | CE1-CE2 | toutes | Curriculum | Curricula de l'éducation de base — primaire classique, sous-cycle CE | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
+| BF-CE2-FR-001 | CE2 | Français | Fiche pédagogique | Fiches pédagogiques API — Lecture CE2 | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, fiches API | Moyenne | NON ENCORE INTÉGRÉ |
+| BF-CM2-FR-001 | CM2 | Français | Fiche pédagogique | Fiches pédagogiques API — Lecture CM2 | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, fiches API | Moyenne | NON ENCORE INTÉGRÉ |
 | BF-CP1-APA-001 | CP1-CP2-CE1 | Activités pratiques de production | Guide pédagogique | Guide de l'enseignant — Activités pratiques de production | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CP1-ECM-001 | CP1 | Éducation civique et morale | Guide pédagogique | Guide de l'enseignant — Éducation civique et morale CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CP1-EPS-001 | CP1-CP2 | Activités physiques éducatives | Guide pédagogique | Guide de l'enseignant — Activités physiques éducatives CP1-CP2 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CP1-FR-001 | CP1 | Français | Guide pédagogique | Guide de l'enseignant — Français CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-GEN-001 | CP1-CP2 | toutes | Curriculum | Curricula de l'éducation de base — primaire classique, sous-cycle CP | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
 | BF-CP1-MATH-001 | CP1 | Mathématiques | Guide pédagogique | Guide de l'enseignant — Mathématiques CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-CP1-SCI-001 | CP1 | Exercices sensoriels | Guide pédagogique | Guide de l'enseignant — Exercices sensoriels CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP2-FR-001 | CP2 | Français | Fiche pédagogique | Fiches d'aide à la préparation — Lecture CP2 (édition 2020) | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, fiches d'aide à la préparation | Moyenne | NON ENCORE INTÉGRÉ |
 | BF-GS-GEN-001 | Grande section | toutes | Curriculum | Curricula de l'éducation de base — préscolaire, grande section | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
+| BF-GS-GEN-002 | Grande section | toutes | Curriculum | Curricula de l'éducation de base — préscolaire, grande section (version finale 2022) | À vérifier | À vérifier | À VÉRIFIER | Boîte à Outils du Préscolaire (bop.bf) — documents du ministère de l'Éducation nationale | Haute | NON ENCORE INTÉGRÉ |
+| BF-MS-GEN-002 | Moyenne section | toutes | Curriculum | Curricula de l'éducation de base — préscolaire, moyenne section (version finale 2022) | À vérifier | À vérifier | À VÉRIFIER | Boîte à Outils du Préscolaire (bop.bf) — documents du ministère de l'Éducation nationale | Haute | NON ENCORE INTÉGRÉ |
+| BF-PS-GEN-001 | Petite section-Moyenne section-Grande section | toutes | Guide pédagogique | Guide méthodologique pour l'utilisation des fiches pédagogiques au préscolaire | À vérifier | À vérifier | À VÉRIFIER | Boîte à Outils du Préscolaire (bop.bf) — documents du ministère de l'Éducation nationale | Haute | NON ENCORE INTÉGRÉ |
 
 ## Couverture par classe
 
@@ -60,17 +68,17 @@ Nombre de ressources inscrites au registre (dont intégrées). « NON ENCORE INT
 
 | Classe | Programmes / curricula | Guides | Manuels | Référentiels | Progressions | Évaluations / examens | Textes officiels |
 |---|---|---|---|---|---|---|---|
-| Petite section | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| Moyenne section | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| Grande section | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| CP1 | NON ENCORE INTÉGRÉ | 6 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| CP2 | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| CE1 | 1 (0 intégrée) | 3 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| CE2 | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Petite section | NON ENCORE INTÉGRÉ | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Moyenne section | 1 (0 intégrée) | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Grande section | 2 (0 intégrée) | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CP1 | 1 (0 intégrée) | 7 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CP2 | 1 (0 intégrée) | 3 (0 intégrée) | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CE1 | 1 (0 intégrée) | 4 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CE2 | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | CM1 | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| CM2 | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| Bilingue 1re année | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
-| Bilingue 2e année | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CM2 | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 1re année | 1 (0 intégrée) | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 2e année | NON ENCORE INTÉGRÉ | 3 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | Bilingue 3e année | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | Bilingue 4e année | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | Bilingue 5e année | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
@@ -131,6 +139,14 @@ _Aucune ressource intégrée pour le moment._
 | BF-CP1-APA-001 | Guide de l'enseignant — Activités pratiques de production | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/ACTIVITES_PRATIQUES/` |
 | BF-BLG2-GEO-001 | Guide de l'enseignant — Géographie 2e et 3e années bilingues | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE_BILINGUE/BLG2/GEOGRAPHIE/` |
 | BF-BLG2-MATH-001 | Guide de l'enseignant — Mathématiques 2e et 3e années bilingues | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE_BILINGUE/BLG2/MATHEMATIQUES/` |
+| BF-MS-GEN-002 | Curricula de l'éducation de base — préscolaire, moyenne section (version finale 2022) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRESCOLAIRE/MS/MATIERE/` |
+| BF-GS-GEN-002 | Curricula de l'éducation de base — préscolaire, grande section (version finale 2022) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRESCOLAIRE/GS/MATIERE/` |
+| BF-PS-GEN-001 | Guide méthodologique pour l'utilisation des fiches pédagogiques au préscolaire | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRESCOLAIRE/PS/MATIERE/` |
+| BF-CP1-GEN-001 | Curricula de l'éducation de base — primaire classique, sous-cycle CP | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRIMAIRE/CP1/MATIERE/` |
+| BF-CE1-EPS-001 | Guide de l'enseignant — Activités physiques éducatives (CP1, CP2, CE1 et 1re-2e années bilingues) | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/EPS/` |
+| BF-CP2-FR-001 | Fiches d'aide à la préparation — Lecture CP2 (édition 2020) | `03_MANUELS_ET_RESSOURCES/BURKINA_FASO/PRIMAIRE/CP2/FRANCAIS/` |
+| BF-CE2-FR-001 | Fiches pédagogiques API — Lecture CE2 | `03_MANUELS_ET_RESSOURCES/BURKINA_FASO/PRIMAIRE/CE2/FRANCAIS/` |
+| BF-CM2-FR-001 | Fiches pédagogiques API — Lecture CM2 | `03_MANUELS_ET_RESSOURCES/BURKINA_FASO/PRIMAIRE/CM2/FRANCAIS/` |
 
 ## Historique des versions
 
