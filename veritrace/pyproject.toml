@@ -30,6 +30,7 @@ dependencies = [
     "click>=8.1",
     "jsonschema>=4.18",
     "reportlab>=4.0",
+    "tzdata; sys_platform == 'win32'",   # base des fuseaux IANA (absente de Windows)
 ]
 
 [project.optional-dependencies]

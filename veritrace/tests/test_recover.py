@@ -2,7 +2,6 @@
 import json
 import os
 import random
-import shutil
 import sqlite3
 import tarfile
 from collections import Counter
@@ -253,4 +252,3 @@ def test_parse_all_can_skip_recovery(tmp_path, fs):
                       input=AUTH_INPUT)
     assert r.exit_code == 0, r.output
     assert "] " in r.output and "veritrace-recover [" not in r.output
-    shutil.rmtree(case)

@@ -18,8 +18,10 @@ HERE = SPECPATH  # noqa: F821 (défini par PyInstaller)
 datas = (collect_data_files("veritrace")          # schéma JSON, exemple, polices DejaVu
          + collect_data_files("reportlab")        # polices de repli, ressources ReportLab
          + collect_data_files("jsonschema")
-         + collect_data_files("jsonschema_specifications"))
+         + collect_data_files("jsonschema_specifications")
+         + (collect_data_files("tzdata") if sys.platform == "win32" else []))   # fuseaux IANA (Windows)
 hidden = (collect_submodules("veritrace") + collect_submodules("reportlab.graphics.barcode")
+          + (collect_submodules("tzdata") if sys.platform == "win32" else [])
           + ["PIL.Image", "PIL.TiffImagePlugin", "PIL.JpegImagePlugin"])
 
 a = Analysis([os.path.join(HERE, "entry.py")], pathex=[os.path.dirname(HERE)], datas=datas, hiddenimports=hidden,

@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -206,10 +206,10 @@ class ReportPrecheckError(ValueError):
 class _Fmt:
     def __init__(self, tz_name: str | None) -> None:
         try:
-            self.tz = ZoneInfo(tz_name or "UTC")
+            self.tz = timezone.utc if (tz_name or "UTC") == "UTC" else ZoneInfo(tz_name)
             self.tz_name = tz_name or "UTC"
         except (ZoneInfoNotFoundError, ValueError):
-            self.tz, self.tz_name = ZoneInfo("UTC"), "UTC"
+            self.tz, self.tz_name = timezone.utc, "UTC"   # pas de ZoneInfo : base IANA absente sous Windows sans tzdata
 
     def ts(self, value: str | None) -> str:
         if not value:
