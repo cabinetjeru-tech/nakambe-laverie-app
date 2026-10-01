@@ -98,7 +98,7 @@ def build_example() -> dict[str, Any]:
              "plain_summary": ("Un logiciel espion connu est installé sur le téléphone. Il peut permettre à un tiers "
                                "de lire les messages et de suivre la position de l'utilisatrice."),
              "business_impact": "Exposition des communications et de la localisation de la personne concernée.",
-             "confidence": "elevee",
+             "confidence": "elevee", "reviewed": True,
              "remediation": [
                  {"action": "Isoler l'appareil (mode avion) et le conserver sous scellé jusqu'à la clôture des constatations.",
                   "priority": "immediat", "owner": "Responsable sécurité"},
@@ -112,27 +112,7 @@ def build_example() -> dict[str, Any]:
                  {"exhibit_id": "PC-002", "type": "export", "path": "parsed/mvt/RUN-MVT-01/raw/alerts.json",
                   "sha256": _h("PC-002"), "description": "Export MVT des détections IOC.", "artifact_id": "ART-0006",
                   "captured_at": "2026-09-10T10:38:00+00:00"}]}},
-        {"finding_id": "F-002", "type": "application_suspecte", "severity": "eleve", "source_tool": "examinateur",
-         "title": "Installation hors magasin officiel avec permissions étendues",
-         "description": ("Le 14/08/2026 à 20:58:42 UTC, le navigateur Chrome a visité "
-                         "https://download.example-monitor.invalid/apk/latest. Le 14/08/2026 à 21:03:11 UTC, le "
-                         f"paquet {SPY} a été installé sans installateur déclaré. Il détient les permissions "
-                         "READ_SMS, ACCESS_FINE_LOCATION, RECORD_AUDIO et BIND_ACCESSIBILITY_SERVICE."),
-         "artifact_ids": ["ART-0004", "ART-0009"], "item_ids": ["EV-001"], "corroborated": True,
-         "x_veritrace": {
-             "interpretation": ("L'enchaînement (téléchargement puis installation 4 min 29 s plus tard, sans magasin "
-                                "d'applications) est compatible avec une installation manuelle d'un APK. Ces "
-                                "éléments ne permettent pas d'identifier la personne ayant réalisé l'installation."),
-             "plain_summary": ("Le logiciel a été installé manuellement depuis un site web, en contournant le magasin "
-                               "d'applications, et dispose d'accès étendus (SMS, position, micro)."),
-             "business_impact": "Indique un accès physique à l'appareil déverrouillé le 14/08/2026 au soir.",
-             "confidence": "moyenne",
-             "remediation": [
-                 {"action": "Interdire l'installation d'applications de sources inconnues (politique MDM).",
-                  "priority": "court_terme", "owner": "Administrateur MDM"},
-                 {"action": "Sensibiliser la personne concernée au verrouillage de l'appareil et au partage du code.",
-                  "priority": "moyen_terme", "owner": "RH / Sécurité"}]}},
-        {"finding_id": "F-003", "type": "observation", "severity": "moyen", "source_tool": "examinateur",
+        {"finding_id": "F-002", "type": "observation", "severity": "moyen", "source_tool": "examinateur",
          "title": "Message évoquant la localisation de la titulaire",
          "description": ("Le 02/09/2026 à 19:44:05 UTC, un SMS provenant de +22670000001 (« Contact A ») a été "
                          "reçu : « Je sais où tu étais hier soir. ». Une position (11.7802, -0.3703, ±12 m) est "

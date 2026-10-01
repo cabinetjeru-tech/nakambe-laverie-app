@@ -89,6 +89,8 @@ GLOSSARY = [
     ("Chaîne de custody", "Traçabilité continue d'une preuve : qui l'a manipulée, quand, où, pour quelle action, "
      "et avec quelle empreinte."),
     ("Corroboré", "Fait extrait par au moins deux moteurs d'analyse indépendants (même empreinte de fait)."),
+    ("Règle de détection", "Contrôle automatique appliqué aux données normalisées (R1 à R5) ; ses constats sont des "
+     "signalements à apprécier par l'examinateur."),
     ("Empreinte SHA-256", "Valeur de 64 caractères calculée à partir d'un contenu. La moindre modification du "
      "contenu produit une empreinte totalement différente : elle permet d'en vérifier l'intégrité."),
     ("IMEI", "International Mobile Equipment Identity — identifiant unique d'un terminal mobile."),
@@ -469,6 +471,48 @@ def _corroboration_line(c: _Ctx, f: dict) -> str:
     return f"{label} — moteur(s) : {', '.join(sorted(engines)) or '—'}"
 
 
+def is_generated(f: dict) -> bool:
+    """Constat produit automatiquement (règle Veritrace ou outil), par opposition à l'examinateur."""
+    return bool(ext(f).get("rule_id")) or (f.get("source_tool") or "examinateur").lower() != "examinateur"
+
+
+def interpretation_label(f: dict) -> str:
+    x = ext(f)
+    if not is_generated(f) or x.get("reviewed"):
+        return "Interprétation de l'examinateur"
+    origin = f"règle {x['rule_id']}" if x.get("rule_id") else (f.get("source_tool") or "outil")
+    return f"Interprétation proposée automatiquement ({origin}) — non revue par l'examinateur"
+
+
+def _origin_row(f: dict) -> list[tuple[str, str]]:
+    """Origine du constat ; un constat généré automatiquement est signalé comme tel."""
+    x = ext(f)
+    if x.get("rule_id"):
+        state = "revu par l'examinateur" if x.get("reviewed") else "généré automatiquement, non revu par l'examinateur"
+        return [("Origine", f"Règle {x['rule_id']} v{x.get('rule_version', '?')} — {state}")]
+    if is_generated(f):
+        state = "revu par l'examinateur" if ext(f).get("reviewed") else "non revu par l'examinateur"
+        return [("Origine", f"{f.get('source_tool')} — {state}")]
+    return [("Origine", "Examinateur")]
+
+
+def _rules_blocks(doc: dict) -> list[Block]:
+    applied = (doc.get("x_veritrace") or {}).get("rules_applied") or []
+    if not applied:
+        return [Paragraph("Aucune règle de détection automatique n'a été évaluée.", "small")]
+    rows = [[r["rule_id"], r["title"], r.get("description") or "", f"v{r['version']}",
+             "appliquée" if r["enabled"] else "désactivée", str(r["hits"])] for r in applied]
+    params = applied[0].get("parameters") or {}
+    blocks: list[Block] = [
+        Paragraph("Des règles de détection automatique sont appliquées aux données normalisées. Leurs constats "
+                  "sont des signalements à apprécier : chacun indique sa règle d'origine et s'il a été revu par "
+                  "l'examinateur."),
+        Table(["Règle", "Objet", "Critère", "Version", "État", "Constats"], rows, [0.5, 1.5, 2.8, 0.6, 0.8, 0.8])]
+    if params:
+        blocks.append(Paragraph("Paramètres : " + ", ".join(f"{k} = {v:g}" for k, v in params.items()) + ".", "small"))
+    return blocks
+
+
 def _ioc_row(f: dict) -> list[tuple[str, str]]:
     ioc = f.get("ioc")
     if not ioc:
@@ -564,6 +608,8 @@ def _judiciaire(c: _Ctx) -> list[Section]:
                   "outils n'est compté qu'une fois. Lorsqu'au moins deux moteurs d'analyse INDÉPENDANTS l'ont "
                   "extrait, il est qualifié de « corroboré » (fiabilité renforcée). Un outil qui réutilise le "
                   "moteur d'un autre (ex. le module aLEAPP intégré à Autopsy) n'est pas une source indépendante."),
+        Subheading("3.5 Règles de détection appliquées"),
+        *_rules_blocks(doc),
     ]
 
     findings_blocks: list[Block] = [Paragraph(
@@ -574,14 +620,14 @@ def _judiciaire(c: _Ctx) -> list[Section]:
         findings_blocks += [
             Subheading(f"Constat n° {n} — {f['title']}"),
             KeyValue([("Référence", f["finding_id"]), ("Fiabilité", _corroboration_line(c, f)),
-                      ("Éléments de preuve", _v(f.get("item_ids")))] + _ioc_row(f)),
+                      ("Éléments de preuve", _v(f.get("item_ids")))] + _origin_row(f) + _ioc_row(f)),
             Label("Faits constatés"), Paragraph(f["description"]),
             Label("Sources et empreintes"), _sources_table(c, f["artifact_ids"]),
         ]
         ex = _exhibit_blocks(c, ext(f).get("exhibits") or [])
         if ex:
             findings_blocks += [Label("Captures et références")] + ex
-        findings_blocks += [Label("Interprétation de l'examinateur"),
+        findings_blocks += [Label(interpretation_label(f)),
                             Paragraph(ext(f).get("interpretation") or "Aucune interprétation n'est formulée.",
                                       "interpretation")]
     if not doc["findings"]:
@@ -671,7 +717,7 @@ def _entreprise(c: _Ctx) -> list[Section]:
             Subheading(f"{f['finding_id']} — {f['title']}"),
             KeyValue([("Criticité", SEVERITY_FR[f["severity"]]), ("Fiabilité", _corroboration_line(c, f))]
                      + ([("Confiance", CONFIDENCE_FR[ext(f)["confidence"]])] if ext(f).get("confidence") else [])
-                     + _ioc_row(f)),
+                     + _origin_row(f) + _ioc_row(f)),
             Label("Faits constatés"), Paragraph(f["description"]),
         ]
         if ext(f).get("interpretation"):
@@ -714,6 +760,7 @@ def _entreprise(c: _Ctx) -> list[Section]:
                                 f"{case['authorization']['reference']}"),
                       ("Périmètre autorisé", _v(ext(case["authorization"]).get("scope")))]),
             _devices_table(doc), _tools_inventory(doc),
+            Subheading("Règles de détection appliquées"), *_rules_blocks(doc),
         ], new_page=True),
         Section("5. Limites", _limitations(doc)),
         Section("Annexe — Preuves", [

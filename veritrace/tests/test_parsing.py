@@ -45,7 +45,7 @@ def test_aleapp_lava_and_tsv_give_same_facts(tmp_path):
     aleapp_normalize(tmp_path, tsv, {"name": "ALEAPP", "version": "2026.4.2"})
     assert _facts(lava) == _facts(tsv)
     cats = Counter(a["category"] for a in lava.items)
-    assert cats == {"sms": 2, "appel": 2, "application": 2, "usage_app": 2, "navigation": 1,
+    assert cats == {"sms": 2, "appel": 3, "application": 3, "usage_app": 2, "navigation": 1,
                     "localisation": 1, "wifi": 1, "bluetooth": 1, "compte": 1}
 
 
@@ -58,6 +58,9 @@ def test_aleapp_fields_and_internal_dedup():
     assert call["data"]["direction"] == "manque"   # balise HTML d'icône retirée
     spy = next(a for a in b.items if a["category"] == "application" and a["data"]["package"] == SPY_PKG)
     assert spy["data"]["installer"] is None and spy["source"]["file_path"] == "data/system/packages.xml"
+    assert spy["data"]["is_system"] is False and "android.permission.READ_SMS" in spy["data"]["permissions"]
+    settings = next(a for a in b.items if a["category"] == "application" and a["data"]["package"] == "com.android.settings")
+    assert settings["data"]["is_system"] is True            # /system/priv-app → application système
     wifi = next(a for a in b.items if a["category"] == "wifi")
     assert wifi["data"]["bssid"] == "a4:2b:b0:00:00:01"   # complété par le second artefact ALEAPP
     usage = [a for a in b.items if a["category"] == "usage_app"]

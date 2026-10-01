@@ -1,3 +1,4 @@
 ﻿Call Date	Phone Account Address	Partner	Type	Duration in Secs	Partner Location	Country ISO	Data	Mime Type	Transcription	Deleted
 2026-09-02 20:01:47+00:00	 	+22670000001	"Missed <i data-feather=""phone-missed"" stroke=""red""></i>"	0	Burkina Faso	BF	 	 	 	0
 2026-09-03 08:15:00+00:00	 	+22670000002	"Outgoing <i data-feather=""phone-outgoing"" stroke=""green""></i>"	125	 	BF	 	 	 	0
+2031-01-01 12:00:00+00:00	 	+22670000003	"Incoming <i data-feather=""phone-incoming"" stroke=""green""></i>"	30	 	BF	 	 	 	0

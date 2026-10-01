@@ -27,10 +27,10 @@ class IntegrityError(RuntimeError):
 
 def next_id(items: list[dict], key: str, prefix: str, width: int) -> str:
     n = 0
+    pattern = re.compile(re.escape(prefix) + r"(\d+)$")  # « F-012 » oui ; « F-R4-a0976e9839 » non
     for it in items:
-        value = str(it.get(key, ""))
-        m = re.search(r"(\d+)$", value)
-        if m and value.startswith(prefix):
+        m = pattern.match(str(it.get(key, "")))
+        if m:
             n = max(n, int(m.group(1)))
     return f"{prefix}{n + 1:0{width}d}"
 

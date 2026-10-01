@@ -60,7 +60,10 @@ def build_android_fs(root: str | Path) -> Path:
         [("INSERT INTO calls VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
           (902, _ms("2026-09-02T20:01:47"), None, "+22670000001", 3, 0, "Burkina Faso", "BF", None, None, None, 0)),
          ("INSERT INTO calls VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-          (903, _ms("2026-09-03T08:15:00"), None, "+22670000002", 2, 125, None, "BF", None, None, None, 0))])
+          (903, _ms("2026-09-03T08:15:00"), None, "+22670000002", 2, 125, None, "BF", None, None, None, 0)),
+         # horodatage dans le futur (horloge modifiée) : doit déclencher la règle R4
+         ("INSERT INTO calls VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+          (904, _ms("2031-01-01T12:00:00"), None, "+22670000003", 1, 30, None, "BF", None, None, None, 0))])
 
     _db(data / "data/com.android.chrome/app_chrome/Default/History",
         ["CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, visit_count INTEGER, typed_count INTEGER,"
@@ -81,7 +84,24 @@ def build_android_fs(root: str | Path) -> Path:
         ' version="421" userId="10245" />\n'
         f'  <package name="com.whatsapp" codePath="/data/app/~~y/com.whatsapp-1" ft="{it2}" it="{it2}" ut="{it2}"'
         ' version="1" userId="10150" installer="com.android.vending" installOriginator="com.android.vending" />\n'
+        # application système sans installateur : ne doit PAS être signalée comme sideload
+        f'  <package name="com.android.settings" codePath="/system/priv-app/Settings" ft="{it2}" it="{it2}"'
+        f' ut="{it2}" version="34" userId="1000" />\n'
         "</packages>\n", encoding="utf-8")
+
+    # Permissions d'exécution (Android 10+)
+    rp = data / "system/users/0/runtime-permissions.xml"
+    rp.parent.mkdir(parents=True, exist_ok=True)
+    perms = ["READ_SMS", "RECEIVE_SMS", "ACCESS_FINE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "RECORD_AUDIO",
+             "READ_CALL_LOG"]
+    rp.write_text(
+        "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<runtime-permissions version=\"10\">\n"
+        f'<pkg name="{SPY_PKG}">\n'
+        + "".join(f'<item name="android.permission.{x}" granted="true" flags="0" />\n' for x in perms)
+        + "</pkg>\n<pkg name=\"com.whatsapp\">\n"
+        '<item name="android.permission.RECORD_AUDIO" granted="true" flags="0" />\n'
+        '<item name="android.permission.CAMERA" granted="false" flags="0" />\n'
+        "</pkg>\n</runtime-permissions>\n", encoding="utf-8")
 
     _db(data / "system_ce/0/accounts_ce.db",
         ["CREATE TABLE accounts (_id INTEGER PRIMARY KEY, name TEXT, type TEXT, password TEXT)"],

@@ -512,7 +512,84 @@ def correlate(c: Ctx, case_dir: Path) -> None:
     s = run_correlation(_open_case(c, case_dir))
     click.secho(f"✔ {s['artifacts']} artefact(s) → {s['facts']} fait(s) unique(s) ; {s['corroborated_facts']} "
                 f"corroboré(s) ; {s['merged_duplicates']} doublon(s) inter-outils ; {s['timeline_events']} "
-                "événement(s) de timeline.", fg="green")
+                f"événement(s) de timeline ; {s['rule_findings']} constat(s) des règles R1–R5.", fg="green")
+
+
+# --------------------------------------------------------------------------- règles
+@cli.group()
+def rules() -> None:
+    """Règles de détection d'anomalies (R1–R5) : liste, configuration, revue des constats."""
+
+
+@rules.command("list")
+@pass_ctx
+def rules_list(c: Ctx) -> None:
+    """Liste les règles et leurs paramètres par défaut."""
+    from veritrace.correlation.rules import DEFAULTS, RULES, RULES_VERSION
+
+    click.echo(f"Règles de détection Veritrace (version {RULES_VERSION}) :")
+    for r in RULES:
+        click.echo(f"  {r.rule_id}  {r.title}\n      {r.description}")
+    click.echo("Paramètres par défaut : " + ", ".join(f"{k}={v:g}" for k, v in DEFAULTS.items()))
+
+
+@rules.command("config")
+@click.option("--case", "case_dir", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Dossier d'affaire.")
+@click.option("--disable", multiple=True, help="Règle à désactiver (ex. R5). Répétable.")
+@click.option("--enable", multiple=True, help="Règle à réactiver. Répétable.")
+@click.option("--gap-hours", type=float, help="R5 : seuil minimal d'interruption (heures).")
+@click.option("--future-tolerance-hours", type=float, help="R4 : tolérance au-delà de l'acquisition (heures).")
+@click.option("--download-window-minutes", type=float, help="R3 : fenêtre téléchargement → installation (minutes).")
+@pass_ctx
+def rules_config(c: Ctx, case_dir: Path, disable: tuple[str, ...], enable: tuple[str, ...], gap_hours: float | None,
+                 future_tolerance_hours: float | None, download_window_minutes: float | None) -> None:
+    """Configure les règles pour l'affaire, puis relance la corrélation."""
+    from veritrace.correlation.rules import RULES
+    from veritrace.parsing.runner import run_correlation
+
+    known = {r.rule_id for r in RULES}
+    unknown = (set(disable) | set(enable)) - known
+    if unknown:
+        raise click.UsageError(f"Règle(s) inconnue(s) : {', '.join(sorted(unknown))}")
+    k = _open_case(c, case_dir)
+    doc = k.load()
+    cfg = doc["case"].setdefault("x_veritrace", {}).setdefault("rules", {})
+    cfg["disabled"] = sorted((set(cfg.get("disabled") or []) | set(disable)) - set(enable))
+    for key, value in (("gap_hours", gap_hours), ("future_tolerance_hours", future_tolerance_hours),
+                       ("download_window_minutes", download_window_minutes)):
+        if value is not None:
+            cfg[key] = value
+    k.save(doc, reason="rules_config")
+    k.audit.append("rules_configured", cfg)
+    s = run_correlation(k)
+    click.secho(f"✔ Configuration enregistrée ({cfg}). {s['rule_findings']} constat(s) produit(s) par les règles.",
+                fg="green")
+
+
+@rules.command("review")
+@click.option("--case", "case_dir", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Dossier d'affaire.")
+@click.argument("finding_id")
+@click.option("--interpretation", help="Interprétation rédigée par l'examinateur (remplace le texte généré).")
+@pass_ctx
+def rules_review(c: Ctx, case_dir: Path, finding_id: str, interpretation: str | None) -> None:
+    """Marque un constat (règle ou outil) comme revu par l'examinateur.
+
+    Un constat de règle revu n'est plus régénéré ni supprimé ; dans les rapports, son
+    interprétation est présentée comme celle de l'examinateur.
+    """
+    k = _open_case(c, case_dir)
+    doc = k.load()
+    f = next((f for f in doc["findings"] if f["finding_id"] == finding_id), None)
+    if f is None:
+        raise click.ClickException(f"{finding_id} : constat introuvable.")
+    f.setdefault("x_veritrace", {})["reviewed"] = True
+    if interpretation:
+        f["x_veritrace"]["interpretation"] = interpretation
+    k.save(doc, reason="finding_reviewed")
+    k.audit.append("finding_reviewed", {"finding_id": finding_id, "interpretation_edited": bool(interpretation)})
+    click.secho(f"✔ {finding_id} marqué comme revu par {c.auth.examiner}.", fg="green")
 
 
 # --------------------------------------------------------------------------- report

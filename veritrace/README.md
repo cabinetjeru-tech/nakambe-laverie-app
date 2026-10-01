@@ -29,7 +29,8 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Acquisition ADB : fiche appareil, getprop, applications, dumpsys, backup, pull ciblé, bugreport, custody automatique (`veritrace acquire`) | ✅ |
 | Wrappers ALEAPP / MVT / Autopsy (`veritrace parse …`) | ✅ |
 | Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
-| Parseurs SQLite natifs Veritrace, règles de détection d'anomalies | ⏳ |
+| Règles de détection d'anomalies R1–R5 (`veritrace rules …`) | ✅ |
+| Parseurs SQLite natifs Veritrace | ⏳ |
 
 ---
 
@@ -340,6 +341,53 @@ Pour chaque outil, Veritrace enchaîne les étapes suivantes :
 
 ---
 
+## Règles de détection d'anomalies
+
+Les règles s'exécutent automatiquement à chaque corrélation, c'est-à-dire après chaque
+outil et lors de `veritrace correlate`. Elles ne lisent que le format pivot.
+
+| Règle | Détecte | Criticité |
+|---|---|---|
+| **R1** | Application **non système** installée hors magasin officiel : aucun installateur déclaré (adb, installation sans trace), ou installateur de paquets / navigateur / gestionnaire de fichiers (APK manuel) | `moyen` ; `eleve` si ≥ 2 permissions sensibles (SMS, journal d'appels, localisation, micro, caméra, contacts, accessibilité…) |
+| **R2** | Application de magasin cumulant un service d'accessibilité, d'écoute des notifications ou d'administration **et** ≥ 2 permissions de surveillance | `moyen` |
+| **R3** | Visite d'une URL d'APK dans les 60 min précédant l'installation d'une application hors magasin | `eleve` |
+| **R4** | Horodatages postérieurs de plus de 24 h au début de l'acquisition, ou antérieurs à Android (2008) : horloge modifiée, données altérées ou erreur de décodage | `moyen` |
+| **R5** | Interruption de l'activité (SMS, appels, navigation, usage, localisation) > 72 h **et** > 10 × l'écart médian (au plus 3 signalées) | `faible` |
+
+Garanties :
+- **Format des constats** : les faits figurent dans `description` et l'interprétation dans
+  `x_veritrace.interpretation`, rédigée prudemment, avec ses limites. Chaque constat est
+  relié à ses artefacts, donc à des éléments de preuve hachés.
+- **Prudence** : une application n'est signalée par R1 que si au moins une source
+  indique **explicitement** qu'elle n'est pas système. ALEAPP le déduit du chemin
+  d'installation : `/system/…` pour une application système, `/data/app/…` sinon. Les
+  dates impossibles (R4) sont exclues du calcul des interruptions (R5).
+- **Identifiants stables et régénération** : `F-R1-<empreinte>`. Les constats de règles
+  sont recalculés à chaque corrélation, donc toujours à jour avec les données.
+- **Revue par l'examinateur** : `veritrace rules review --case ./VT F-R1-… [--interpretation "…"]`
+  fige le constat (il n'est plus régénéré ni supprimé). Dans les rapports, toute
+  interprétation générée automatiquement par une règle ou par MVT est présentée comme
+  « **proposée automatiquement — non revue par l'examinateur** » tant que le constat n'a
+  pas été revu.
+- **Traçabilité** : la liste des règles évaluées (version, paramètres, état, nombre de
+  constats) est consignée dans `x_veritrace.rules_applied`. Elle est reprise dans le
+  rapport judiciaire (§ 3.5) et dans le rapport entreprise.
+
+```bash
+veritrace rules list
+veritrace rules config --case ./VT --disable R5 --gap-hours 48 --download-window-minutes 30
+veritrace rules review --case ./VT F-R1-2f5fa2e88c --interpretation "Application de contrôle parental installée par le titulaire (déclaration au PV)."
+```
+
+Limites actuelles :
+- Les permissions proviennent d'ALEAPP (`runtime-permissions.xml`, magasin de
+  permissions). Les permissions d'installation de `dumpsys package` ne sont pas encore
+  analysées.
+- L'activation effective d'un service d'accessibilité (paramètres sécurisés) n'est pas
+  encore lue : R2 repose sur les permissions déclarées.
+
+---
+
 ## Rapports
 
 Le gabarit se choisit avec `--report judiciaire` ou `--report entreprise`. Les deux sont
@@ -422,8 +470,9 @@ veritrace acquire run --case ./VT-2026-0042 --imei 35xxxxxxxxxxxxx --seal SC-004
 veritrace parse all --case ./VT-2026-0042 --input ./extraction --mvt-input ./androidqf \
   --iocs stalkerware.stix2 --autopsy-case ./CasAutopsy
 
-# 4. Relire les constats générés (MVT) et compléter interprétation / remédiation
-#    dans normalized/veritrace_case.json, puis :
+# 4. Relire les constats générés (MVT, règles R1–R5) ; les valider ou en corriger l'interprétation :
+veritrace rules review --case ./VT-2026-0042 F-R1-… --interpretation "…"
+#    (compléments éventuels dans normalized/veritrace_case.json), puis :
 veritrace schema validate VT-2026-0042/normalized/veritrace_case.json
 
 # 5. Rapports
@@ -469,7 +518,7 @@ veritrace/
 ├── reporting/             modèle → Markdown / PDF
 ├── acquisition/           adb.py (client sûr), session.py (collecte + custody), backup.py (.ab → .tar)
 ├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, runner.py
-└── correlation/           engine.py : corroboration, dédoublonnage, timeline
+└── correlation/           engine.py (corroboration, dédoublonnage, timeline), rules.py (R1–R5)
 ```
 
 ---

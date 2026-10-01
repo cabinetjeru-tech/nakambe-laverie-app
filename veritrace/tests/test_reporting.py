@@ -143,7 +143,7 @@ def test_entreprise_remediation_sorted_by_priority(example_doc):
     rows = _remediation_rows(_Ctx(example_doc, _Fmt("UTC"), "0" * 64, None))
     prios = [r[1] for r in rows]
     assert prios == sorted(prios, key=list(PRIORITY_FR.values()).index)
-    assert len(rows) == 5
+    assert len(rows) >= 3 and prios[0] == PRIORITY_FR["immediat"]
 
 
 def test_screenshot_embedded_when_file_present(tmp_path, example_doc):

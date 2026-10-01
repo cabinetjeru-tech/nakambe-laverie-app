@@ -6,8 +6,8 @@
   "leapp_mode": "CLI",
   "package": "Source code",
   "OS": "Linux-6.18.44-fc-v50-x86_64-with-glibc2.39",
-  "start_timestamp": 1790824185,
-  "end_timestamp": 1790824186
+  "start_timestamp": 1790827301,
+  "end_timestamp": 1790827301
  },
  "param_input": "<extraction>",
  "param_output": "<sortie>",
@@ -1645,9 +1645,9 @@
   },
   {
    "module_name": "androidUsers",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "android_users",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "androidauto",
@@ -5773,9 +5773,9 @@
   },
   {
    "module_name": "runtimePerms",
-   "module_status": "No files found",
+   "module_status": "Complete",
    "artifact_name": "get_runtimePerms",
-   "file_count": 0
+   "file_count": 1
   },
   {
    "module_name": "ryanair",
@@ -7849,7 +7849,7 @@
      "deleted": "Deleted"
     },
     "artifact_icon": "phone",
-    "record_count": 2,
+    "record_count": 3,
     "source_path": "data/data/com.android.providers.contacts/databases/calllog.db",
     "object_columns": [
      {
@@ -7931,7 +7931,7 @@
      "private_flags": "Private Flags"
     },
     "artifact_icon": "package",
-    "record_count": 2,
+    "record_count": 3,
     "source_path": "data/system/packages.xml",
     "object_columns": [
      {
@@ -7947,6 +7947,25 @@
       "type": "datetime"
      }
     ]
+   }
+  ],
+  "Permissions": [
+   {
+    "artifact_key": "get_runtimePerms",
+    "name": "runtimePerms",
+    "tablename": "get_runtimeperms",
+    "module": "runtimePerms",
+    "column_map": {
+     "user": "User",
+     "type": "Type",
+     "name": "Name",
+     "permission": "Permission",
+     "granted": "Granted?",
+     "flag": "Flag"
+    },
+    "artifact_icon": "activity",
+    "record_count": 8,
+    "source_path": "data/system/users/0/runtime-permissions.xml"
    }
   ],
   "SMS & MMS": [
@@ -8326,6 +8345,23 @@
       "last_updated_date": "2026-08-01",
       "notes": "Usage Type names the record kind a row was read from: 'packages' and 'configurations' are per-interval aggregates written by the platform, 'event-log' rows are individually recorded events. Interval names the daily, weekly, monthly or yearly folder the record came from; in the tested images the same record appears in more than one interval folder, so rows repeated across intervals are not necessarily separate occurrences. Event Type shows the UsageEvents.Event constant whose value matches the stored numeric 'type' field; a value with no matching constant is shown as stored. The constant name is the platform's label for a recorded transition and does not by itself establish what a person did: ACTIVITY_RESUMED records an activity moving to the foreground, and SCREEN_INTERACTIVE records the screen entering an interactive state, which is a separate constant from KEYGUARD_SHOWN and KEYGUARD_HIDDEN and therefore does not record keyguard (lock) state. Timestamps are rendered in UTC. Each stored time is added to the interval file's numeric name, except that a negative stored value is used as its own magnitude; all four timestamp columns are converted the same way. The millisecond units in the column names come from the protobuf field names (last_time_active_ms, total_time_visible_ms and siblings); the matching XML attributes carry no unit in their names. Standby Bucket and Standby Reason are the high and low 16 bits of the single stored standbyBucket value; that split is applied by this parser and is not labelled in the file. Event Flags is the stored numeric 'flags' bitmask, undecoded. Reference: Google, 'UsageEvents.Event', https://developer.android.com/reference/android/app/usage/UsageEvents.Event",
       "category": "Usage Stats"
+     }
+    ]
+   },
+   {
+    "module_name": "runtimePerms",
+    "module_filename": "runtimePerms.py",
+    "artifacts": [
+     {
+      "artifact_key": "get_runtimeperms",
+      "tablename": "get_runtimeperms",
+      "name": "runtimePerms",
+      "description": "Parses granted runtime permissions (user, type, name, permission, granted state and flags) from the runtime-permissions.xml file.",
+      "author": "@abrignoni",
+      "created_date": "2021-01-25",
+      "last_updated_date": "2021-01-25",
+      "notes": "",
+      "category": "Permissions"
      }
     ]
    },

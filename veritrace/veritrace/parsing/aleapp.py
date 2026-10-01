@@ -114,6 +114,20 @@ def map_location(provider: str) -> Callable[[Row, Emit], None]:
     return _map
 
 
+SYSTEM_PREFIXES = ("/system/", "/product/", "/vendor/", "/system_ext/", "/apex/", "/odm/")
+
+
+def is_system_path(code_path: str | None) -> bool | None:
+    """Application système (partition en lecture seule) d'après son chemin ; None si inconnu."""
+    if not code_path:
+        return None
+    if code_path.startswith(SYSTEM_PREFIXES):
+        return True
+    if code_path.startswith(("/data/app", "/mnt/expand", "/data/")):
+        return False
+    return None
+
+
 def map_package_info(row: Row, emit: Emit) -> None:
     pkg = clean(_first(row, "Name", "Package Name", "Package"))
     if not pkg:
@@ -121,7 +135,21 @@ def map_package_info(row: Row, emit: Emit) -> None:
     first = to_iso(_first(row, "Install Time", "ft"))
     emit("application", first, {
         "package": pkg, "installer": clean(row.get("Installer")), "first_install": first,
+        "is_system": is_system_path(clean(row.get("Code Path"))),
     })
+
+
+def map_permissions(rows: list[Row], emit: Emit, ref: str | None) -> None:
+    """Permissions accordées, agrégées par application (fusionnées avec package_info)."""
+    granted: dict[str, set[str]] = {}
+    for r in rows:
+        pkg = clean(_first(r, "Name", "Package Name"))
+        perm = clean(r.get("Permission"))
+        ok = str(_first(r, "Granted?", "Granted") or "").strip().lower() in ("true", "1", "yes", "oui")
+        if pkg and perm and ok and (r.get("Type") in (None, "", "pkg")):
+            granted.setdefault(pkg, set()).add(perm)
+    for pkg, perms in granted.items():
+        emit("application", None, {"package": pkg, "permissions": sorted(perms)}, ref)
 
 
 def map_usage(row: Row, emit: Emit) -> None:
@@ -199,7 +227,8 @@ ROW_MAPPERS: dict[str, Callable[[Row, Emit], None]] = {
     "WiFi Config Store": map_wifi,
     "Bluetooth Connections": map_bluetooth,
 }
-GROUP_MAPPERS = {"Contacts": map_contact}
+GROUP_MAPPERS = {"Contacts": map_contact, "runtimePerms": map_permissions,
+                 "Permission Grants (Permission Store)": map_permissions}
 
 
 # --------------------------------------------------------------------------- lecture des sorties

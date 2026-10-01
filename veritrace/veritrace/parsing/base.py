@@ -119,7 +119,10 @@ class ArtifactBuilder:
             local_id = self._seen[fact]
             art = next(a for a in self.items if a["artifact_id"] == local_id)
             for k, v in data.items():
-                if art["data"].get(k) in (None, "", []) and v not in (None, "", []):
+                cur = art["data"].get(k)
+                if isinstance(cur, list) and isinstance(v, list) and cur and v:
+                    art["data"][k] = sorted(set(cur) | set(v))
+                elif cur in (None, "", []) and v not in (None, "", []):
                     art["data"][k] = v
             if not art["timestamp"] and timestamp:
                 art["timestamp"] = timestamp

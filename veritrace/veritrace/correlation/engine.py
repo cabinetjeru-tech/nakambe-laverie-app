@@ -7,7 +7,8 @@
 2. **Dédoublonnage** — un fait n'apparaît qu'UNE fois dans la timeline et les inventaires.
 3. **Timeline** — un événement par fait horodaté (`x_veritrace.generated = true`, régénéré
    à chaque passage) ; les événements saisis à la main sont conservés.
-4. **Rattachement des constats** — un constat IOC est relié aux artefacts d'autres outils
+4. **Règles de détection** (`rules.py`) — R1 à R5, constats régénérés à chaque passage.
+5. **Rattachement des constats** — un constat IOC est relié aux artefacts d'autres outils
    décrivant le même élément (application, usage, domaine visité) ; il est corroboré si
    l'un de ses artefacts l'est.
 """
@@ -33,6 +34,7 @@ class CorrelationSummary:
     merged_duplicates: int
     timeline_events: int
     findings_linked: int
+    rule_findings: int = 0
 
     def as_dict(self) -> dict[str, int]:
         return self.__dict__.copy()
@@ -86,15 +88,22 @@ def related_to_iocs(a: dict, pkgs: set[str], domains: set[str]) -> bool:
     return False
 
 
-def _flags(group: list[dict], pkgs: set[str], domains: set[str]) -> list[str]:
+def _flags(group: list[dict], pkgs: set[str], domains: set[str],
+           flagged: dict[str, set[str]] | None = None) -> list[str]:
     flags: list[str] = []
+    for a in group:  # artefacts cités par un constat de règle
+        for fl in sorted((flagged or {}).get(a["artifact_id"], ())):  # ordre déterministe
+            if fl not in flags:
+                flags.append(fl)
     a = group[0]
     if a["category"] == "ioc" or any(related_to_iocs(x, pkgs, domains) for x in group):
-        flags.append("ioc")
-    if a["category"] == "application":
+        if "ioc" not in flags:
+            flags.append("ioc")
+    if a["category"] == "application" and "application_suspecte" not in flags:
         if all(not x["data"].get("installer") for x in group) and not any(x["data"].get("is_system") for x in group):
             flags.append("application_suspecte")
-    if a["category"] == "usage_app" and (a["data"].get("package") or "").lower() in pkgs:
+    if a["category"] == "usage_app" and (a["data"].get("package") or "").lower() in pkgs \
+            and "application_suspecte" not in flags:
         flags.append("application_suspecte")
     return flags
 
@@ -105,6 +114,11 @@ def _best(group: list[dict]) -> dict:
 
 def build_timeline(doc: dict[str, Any], groups: dict[str, list[dict]]) -> list[dict]:
     pkgs, domains = _ioc_index(doc["artifacts"])
+    flagged: dict[str, set[str]] = defaultdict(set)
+    for f in doc["findings"]:
+        if f["type"] in ("anomalie", "application_suspecte"):
+            for aid in f["artifact_ids"]:
+                flagged[aid].add(f["type"])
     manual = [t for t in doc["timeline"] if not ext(t).get("generated")]
     events = []
     for fact, group in groups.items():
@@ -120,7 +134,7 @@ def build_timeline(doc: dict[str, Any], groups: dict[str, list[dict]]) -> list[d
             "artifact_ids": [a["artifact_id"] for a in group],
             "corroborated": group[0]["corroborated"],
             "sources": sorted({a["source"]["tool"] for a in group}),
-            "x_veritrace": {"generated": True, "flags": _flags(group, pkgs, domains)},
+            "x_veritrace": {"generated": True, "flags": _flags(group, pkgs, domains, flagged)},
         })
     events.sort(key=lambda e: (parse_iso(e["timestamp"]), e["event_id"]))
     return manual + events
@@ -144,7 +158,10 @@ def link_findings(doc: dict[str, Any]) -> int:
 
 
 def correlate(doc: dict[str, Any]) -> CorrelationSummary:
+    from veritrace.correlation.rules import run_rules
+
     groups = refresh_corroboration(doc["artifacts"])
+    rule_findings = run_rules(doc)
     doc["timeline"] = build_timeline(doc, groups)
     linked = link_findings(doc)
     return CorrelationSummary(
@@ -153,4 +170,5 @@ def correlate(doc: dict[str, Any]) -> CorrelationSummary:
         merged_duplicates=sum(len(g) - 1 for g in groups.values()),
         timeline_events=sum(1 for t in doc["timeline"] if ext(t).get("generated")),
         findings_linked=linked,
+        rule_findings=rule_findings,
     )

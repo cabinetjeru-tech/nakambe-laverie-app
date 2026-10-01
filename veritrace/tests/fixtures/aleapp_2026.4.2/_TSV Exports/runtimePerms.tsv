@@ -1,0 +1,9 @@
+﻿User	Type	Name	Permission	Granted?	Flag
+0	pkg	com.sys.monitor.service	android.permission.READ_SMS	true	0
+0	pkg	com.sys.monitor.service	android.permission.RECEIVE_SMS	true	0
+0	pkg	com.sys.monitor.service	android.permission.ACCESS_FINE_LOCATION	true	0
+0	pkg	com.sys.monitor.service	android.permission.ACCESS_BACKGROUND_LOCATION	true	0
+0	pkg	com.sys.monitor.service	android.permission.RECORD_AUDIO	true	0
+0	pkg	com.sys.monitor.service	android.permission.READ_CALL_LOG	true	0
+0	pkg	com.whatsapp	android.permission.RECORD_AUDIO	true	0
+0	pkg	com.whatsapp	android.permission.CAMERA	false	0

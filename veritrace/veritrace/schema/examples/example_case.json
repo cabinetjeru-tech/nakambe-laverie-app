@@ -667,6 +667,7 @@
         "plain_summary": "Un logiciel espion connu est installé sur le téléphone. Il peut permettre à un tiers de lire les messages et de suivre la position de l'utilisatrice.",
         "business_impact": "Exposition des communications et de la localisation de la personne concernée.",
         "confidence": "elevee",
+        "reviewed": true,
         "remediation": [
           {
             "action": "Isoler l'appareil (mode avion) et le conserver sous scellé jusqu'à la clôture des constatations.",
@@ -703,40 +704,6 @@
     },
     {
       "finding_id": "F-002",
-      "type": "application_suspecte",
-      "severity": "eleve",
-      "source_tool": "examinateur",
-      "title": "Installation hors magasin officiel avec permissions étendues",
-      "description": "Le 14/08/2026 à 20:58:42 UTC, le navigateur Chrome a visité https://download.example-monitor.invalid/apk/latest. Le 14/08/2026 à 21:03:11 UTC, le paquet com.sys.monitor.service a été installé sans installateur déclaré. Il détient les permissions READ_SMS, ACCESS_FINE_LOCATION, RECORD_AUDIO et BIND_ACCESSIBILITY_SERVICE.",
-      "artifact_ids": [
-        "ART-0004",
-        "ART-0009"
-      ],
-      "item_ids": [
-        "EV-001"
-      ],
-      "corroborated": true,
-      "x_veritrace": {
-        "interpretation": "L'enchaînement (téléchargement puis installation 4 min 29 s plus tard, sans magasin d'applications) est compatible avec une installation manuelle d'un APK. Ces éléments ne permettent pas d'identifier la personne ayant réalisé l'installation.",
-        "plain_summary": "Le logiciel a été installé manuellement depuis un site web, en contournant le magasin d'applications, et dispose d'accès étendus (SMS, position, micro).",
-        "business_impact": "Indique un accès physique à l'appareil déverrouillé le 14/08/2026 au soir.",
-        "confidence": "moyenne",
-        "remediation": [
-          {
-            "action": "Interdire l'installation d'applications de sources inconnues (politique MDM).",
-            "priority": "court_terme",
-            "owner": "Administrateur MDM"
-          },
-          {
-            "action": "Sensibiliser la personne concernée au verrouillage de l'appareil et au partage du code.",
-            "priority": "moyen_terme",
-            "owner": "RH / Sécurité"
-          }
-        ]
-      }
-    },
-    {
-      "finding_id": "F-003",
       "type": "observation",
       "severity": "moyen",
       "source_tool": "examinateur",
@@ -763,6 +730,107 @@
           }
         ]
       }
+    },
+    {
+      "finding_id": "F-R1-2f5fa2e88c",
+      "type": "application_suspecte",
+      "severity": "eleve",
+      "title": "Application installée hors magasin officiel : com.sys.monitor.service",
+      "description": "L'application com.sys.monitor.service est installée sur l'appareil (première installation le 14/08/2026 à 21:03:11 UTC). Il ne s'agit pas d'une application système et aucun installateur n'est déclaré (installation par adb ou par un moyen ne laissant pas de trace d'installateur). Permissions sensibles accordées : ACCESS_FINE_LOCATION, BIND_ACCESSIBILITY_SERVICE, READ_SMS, RECORD_AUDIO. 1 événement(s) d'utilisation enregistré(s), le dernier le 02/09/2026 à 19:40:00 UTC. Ce paquet fait par ailleurs l'objet d'une détection IOC.",
+      "artifact_ids": [
+        "ART-0004",
+        "ART-0005",
+        "ART-0007"
+      ],
+      "item_ids": [
+        "EV-001",
+        "EV-002"
+      ],
+      "corroborated": true,
+      "source_tool": "Veritrace (règles) R1",
+      "x_veritrace": {
+        "rule_id": "R1",
+        "rule_version": "1.0",
+        "interpretation": "Une installation hors magasin n'est pas illicite en soi (application d'entreprise, outil de développement). Elle contourne toutefois les contrôles du magasin officiel et constitue le mode d'installation habituel des logiciels de surveillance ; les permissions accordées permettent l'accès aux communications ou à la localisation.",
+        "plain_summary": "Une application (com.sys.monitor.service) a été installée manuellement, en dehors du magasin d'applications, avec des accès étendus aux données.",
+        "confidence": "elevee",
+        "remediation": [
+          {
+            "action": "Vérifier auprès de l'utilisateur l'origine et la légitimité de com.sys.monitor.service.",
+            "priority": "immediat",
+            "owner": "Responsable sécurité"
+          },
+          {
+            "action": "Bloquer l'installation de sources inconnues (politique MDM).",
+            "priority": "court_terme",
+            "owner": "Administrateur MDM"
+          }
+        ],
+        "business_impact": "Risque d'accès non autorisé aux données de l'appareil."
+      }
+    },
+    {
+      "finding_id": "F-R3-6f634623aa",
+      "type": "anomalie",
+      "severity": "eleve",
+      "title": "Téléchargement d'APK suivi de l'installation de com.sys.monitor.service",
+      "description": "Le 14/08/2026 à 20:58:42 UTC, l'adresse https://download.example-monitor.invalid/apk/latest a été visitée avec Chrome. Le 14/08/2026 à 21:03:11 UTC, soit 4 min 29 s plus tard, l'application com.sys.monitor.service a été installée hors magasin officiel.",
+      "artifact_ids": [
+        "ART-0009",
+        "ART-0004",
+        "ART-0005"
+      ],
+      "item_ids": [
+        "EV-001",
+        "EV-002"
+      ],
+      "corroborated": true,
+      "source_tool": "Veritrace (règles) R3",
+      "x_veritrace": {
+        "rule_id": "R3",
+        "rule_version": "1.0",
+        "interpretation": "L'enchaînement est compatible avec le téléchargement puis l'installation manuelle de l'APK de cette application. La corrélation est temporelle : le fichier téléchargé n'a pas été rapproché de l'application installée (empreinte), et l'auteur de l'installation n'est pas identifié.",
+        "plain_summary": "L'application com.sys.monitor.service a été installée quelques minutes après le téléchargement d'un fichier d'installation sur internet.",
+        "confidence": "moyenne",
+        "remediation": [
+          {
+            "action": "Rechercher le fichier APK téléchargé (dossier Téléchargements) et comparer son empreinte avec l'application installée.",
+            "priority": "court_terme",
+            "owner": "Examinateur"
+          }
+        ],
+        "business_impact": "Indique une intervention manuelle sur l'appareil déverrouillé."
+      }
+    },
+    {
+      "finding_id": "F-R5-3dd376ceb2",
+      "type": "anomalie",
+      "severity": "faible",
+      "title": "Interruption de l'activité enregistrée (18.1 jours)",
+      "description": "Aucune activité (SMS, appels, navigation, usage des applications, localisation) n'est enregistrée entre le 14/08/2026 à 20:58:42 UTC (https://download.example-monitor.invalid/apk/latest (Chrome)) et le 01/09/2026 à 22:15:30 UTC (11.7802, -0.3703 ±12 m (fused)), soit 18.1 jours ; l'intervalle médian entre deux activités est de 10.9 h.",
+      "artifact_ids": [
+        "ART-0009",
+        "ART-0008"
+      ],
+      "item_ids": [
+        "EV-001"
+      ],
+      "corroborated": false,
+      "source_tool": "Veritrace (règles) R5",
+      "x_veritrace": {
+        "rule_id": "R5",
+        "rule_version": "1.0",
+        "interpretation": "Une telle interruption peut s'expliquer par l'appareil éteint ou inutilisé, par la rotation des journaux, ou par la suppression de données sur la période. Elle délimite une période sur laquelle les constatations sont incomplètes.",
+        "plain_summary": "Aucune activité n'est enregistrée pendant 18 jours : données possiblement manquantes.",
+        "confidence": "faible",
+        "remediation": [
+          {
+            "action": "Interroger l'utilisateur sur l'usage de l'appareil pendant la période et rechercher d'éventuelles suppressions.",
+            "priority": "moyen_terme",
+            "owner": "Examinateur"
+          }
+        ]
+      }
     }
   ],
   "timeline": [
@@ -780,7 +848,9 @@
       ],
       "x_veritrace": {
         "generated": true,
-        "flags": []
+        "flags": [
+          "anomalie"
+        ]
       }
     },
     {
@@ -800,8 +870,9 @@
       "x_veritrace": {
         "generated": true,
         "flags": [
-          "ioc",
-          "application_suspecte"
+          "anomalie",
+          "application_suspecte",
+          "ioc"
         ]
       }
     },
@@ -855,7 +926,9 @@
       ],
       "x_veritrace": {
         "generated": true,
-        "flags": []
+        "flags": [
+          "anomalie"
+        ]
       }
     },
     {
@@ -890,8 +963,8 @@
       "x_veritrace": {
         "generated": true,
         "flags": [
-          "ioc",
-          "application_suspecte"
+          "application_suspecte",
+          "ioc"
         ]
       }
     },
@@ -1091,6 +1164,73 @@
         "verified": true,
         "verified_at": "2026-09-11T14:05:00+00:00"
       }
-    }
+    },
+    "rules_applied": [
+      {
+        "rule_id": "R1",
+        "version": "1.0",
+        "title": "Application installée hors magasin officiel",
+        "description": "Application non système sans installateur ou installée par un installateur de paquets / navigateur.",
+        "enabled": true,
+        "hits": 1,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      },
+      {
+        "rule_id": "R2",
+        "version": "1.0",
+        "title": "Capacités de surveillance cumulées",
+        "description": "Application de magasin combinant accessibilité/notifications/administration et ≥ 2 permissions de surveillance.",
+        "enabled": true,
+        "hits": 0,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      },
+      {
+        "rule_id": "R3",
+        "version": "1.0",
+        "title": "Téléchargement d'APK suivi d'une installation",
+        "description": "Visite d'une URL d'APK dans la fenêtre précédant l'installation d'une application hors magasin.",
+        "enabled": true,
+        "hits": 1,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      },
+      {
+        "rule_id": "R4",
+        "version": "1.0",
+        "title": "Horodatages incohérents",
+        "description": "Dates postérieures à l'acquisition (au-delà de la tolérance) ou antérieures à Android.",
+        "enabled": true,
+        "hits": 0,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      },
+      {
+        "rule_id": "R5",
+        "version": "1.0",
+        "title": "Interruption de l'activité",
+        "description": "Écart entre deux activités supérieur au seuil et à 10 fois l'écart médian.",
+        "enabled": true,
+        "hits": 1,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      }
+    ]
   }
 }
