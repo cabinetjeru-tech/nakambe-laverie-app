@@ -1,7 +1,7 @@
 import "server-only";
 import { detectKind, extractText } from "../extract";
 import type { DocMeta } from "../metadata";
-import { hoteOfficiel } from "./sources-officielles";
+import { hoteOfficiel, HOTES_OFFICIELS } from "./sources-officielles";
 
 /**
  * Import automatique d'un document officiel depuis son lien (site du ministère, Faso e-education) :
@@ -14,7 +14,7 @@ const TEXTE_MAX = 1_500_000;
 export class ImportError extends Error {}
 
 export async function telechargerEtExtraire(url: string): Promise<{ texte: string; fichierNom: string }> {
-  if (!hoteOfficiel(url)) throw new ImportError("Lien hors des sites officiels autorisés (education.gov.bf, fasoeducation.bf).");
+  if (!hoteOfficiel(url)) throw new ImportError(`Lien hors des sites officiels autorisés (${HOTES_OFFICIELS.join(", ")}).`);
   let res: Response;
   try {
     res = await fetch(url, { signal: AbortSignal.timeout(150_000), headers: { "User-Agent": "PEDAGOGUE.IA/1.0 (+https://pedagogue-ia.vercel.app)" }, redirect: "follow" });
