@@ -7,7 +7,10 @@
 2. **Dédoublonnage** — un fait n'apparaît qu'UNE fois dans la timeline et les inventaires.
 3. **Timeline** — un événement par fait horodaté (`x_veritrace.generated = true`, régénéré
    à chaque passage) ; les événements saisis à la main sont conservés.
-4. **Règles de détection** (`rules.py`) — R1 à R5, constats régénérés à chaque passage.
+4. **Règles de détection** (`rules.py`) — R1 à R6, constats régénérés à chaque passage.
+   Les enregistrements récupérés hors des données actives ont leur propre empreinte de
+   fait (statut inclus) : ils ne corroborent jamais un fait actif et portent le drapeau
+   `recupere` dans la timeline.
 5. **Rattachement des constats** — un constat IOC est relié aux artefacts d'autres outils
    décrivant le même élément (application, usage, domaine visité) ; il est corroboré si
    l'un de ses artefacts l'est.
@@ -21,7 +24,7 @@ from urllib.parse import urlparse
 
 from veritrace.core.timeutil import parse_iso
 from veritrace.schema.describe import artifact_summary
-from veritrace.schema.pivot import engine, ext, ext_set, fact_sha
+from veritrace.schema.pivot import engine, ext, ext_set, fact_sha, recovery
 
 AUTO_PREFIX = "TL-A-"
 
@@ -105,6 +108,8 @@ def _flags(group: list[dict], pkgs: set[str], domains: set[str],
     if a["category"] == "usage_app" and (a["data"].get("package") or "").lower() in pkgs \
             and "application_suspecte" not in flags:
         flags.append("application_suspecte")
+    if any(recovery(x) for x in group):
+        flags.append("recupere")
     return flags
 
 

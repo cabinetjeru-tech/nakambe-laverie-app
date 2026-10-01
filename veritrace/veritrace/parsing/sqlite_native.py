@@ -25,8 +25,9 @@ paquet Android présent dans leur chemin.
 Non-altération : chaque base est copiée (avec ses fichiers `-wal` / `-journal`) dans
 `parsed/veritrace-sqlite/<RUN-ID>/work/` et ouverte sur cette copie de travail ; le
 journal WAL y est rejoué, ce qui inclut les écritures non encore consolidées. Les
-originaux ne sont jamais ouverts en écriture. Les enregistrements supprimés (pages
-libres) ne sont pas récupérés.
+originaux ne sont jamais ouverts en écriture. Les enregistrements supprimés sont traités
+par le moteur distinct `veritrace-recover` (`parsing/recover.py`), qui réutilise les
+fonctions `map_*` de ce module.
 """
 from __future__ import annotations
 
@@ -36,7 +37,7 @@ import shutil
 import sqlite3
 import tarfile
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Iterator
@@ -199,8 +200,49 @@ def _webkit(v: Any) -> str | None:
 
 
 # --------------------------------------------------------------------------- bases SQLite
+# Chaque `map_*` convertit UNE ligne (dict colonne → valeur) en (catégorie, horodatage, données)
+# ou None. Les mêmes fonctions servent aux données actives et aux enregistrements récupérés
+# (`veritrace-recover`) : un enregistrement récupéré est normalisé exactement comme une ligne active.
 SMS_DIRECTION = {1: "entrant", 2: "sortant", 4: "sortant", 5: "sortant", 6: "sortant"}
 CALL_DIRECTION = {1: "entrant", 2: "sortant", 3: "manque", 4: "entrant", 5: "rejete", 6: "bloque", 7: "entrant"}
+Mapped = "tuple[str, str | None, dict[str, Any]] | None"
+
+
+def _opt_bool(v: Any) -> bool | None:
+    return None if v is None else bool(v)
+
+
+def _opt_str(v: Any) -> str | None:
+    return None if v is None else str(v)
+
+
+def _text(v: Any) -> str | None:
+    return v.strip() if isinstance(v, str) and v.strip() else None
+
+
+def map_sms(r: dict) -> Mapped:
+    if not r.get("address") and not r.get("body"):
+        return None
+    return "sms", _ms(r.get("date")), {
+        "direction": SMS_DIRECTION.get(r.get("type"), "inconnu"), "address": clean(r.get("address")) or "",
+        "body": r.get("body"), "service": "sms", "read": _opt_bool(r.get("read")),
+        "thread_id": _opt_str(r.get("thread_id"))}
+
+
+def map_call(r: dict) -> Mapped:
+    if not r.get("number"):
+        return None
+    return "appel", _ms(r.get("date")), {
+        "direction": CALL_DIRECTION.get(r.get("type"), "inconnu"), "number": r["number"],
+        "contact_name": clean(r.get("name")),
+        "duration_s": int(r["duration"]) if isinstance(r.get("duration"), (int, float)) else None}
+
+
+def map_url(r: dict, browser: str | None) -> Mapped:
+    if not r.get("url") or not isinstance(r["url"], str):
+        return None
+    return "navigation", _webkit(r.get("last_visit_time")), {
+        "url": r["url"], "title": clean(r.get("title")), "browser": browser, "visit_count": r.get("visit_count")}
 
 
 def parse_sms(con: sqlite3.Connection, src: Source, emit) -> int:
@@ -208,14 +250,10 @@ def parse_sms(con: sqlite3.Connection, src: Source, emit) -> int:
     tables = _tables(con)
     if "sms" in tables:
         for r in con.execute("SELECT * FROM sms ORDER BY _id"):
-            if not r["address"] and not r["body"]:
-                continue
-            emit("sms", _ms(r["date"]), {
-                "direction": SMS_DIRECTION.get(r["type"], "inconnu"), "address": clean(r["address"]) or "",
-                "body": r["body"], "service": "sms", "read": None if r["read"] is None else bool(r["read"]),
-                "thread_id": None if r["thread_id"] is None else str(r["thread_id"])},
-                src, f"sms:_id={r['_id']}")
-            n += 1
+            m = map_sms(dict(r))
+            if m:
+                emit(*m, src, f"sms:_id={r['_id']}")
+                n += 1
     if {"pdu", "addr", "part"} <= tables:  # MMS : date en secondes ; adresse FROM 0x89 / TO 0x97
         for r in con.execute("SELECT _id, thread_id, date, msg_box, read FROM pdu ORDER BY _id"):
             box = r["msg_box"]
@@ -236,17 +274,12 @@ def parse_sms(con: sqlite3.Connection, src: Source, emit) -> int:
 def parse_calls(con: sqlite3.Connection, src: Source, emit) -> int:
     if "calls" not in _tables(con):
         return 0
-    cols = _cols(con, "calls")
     n = 0
     for r in con.execute("SELECT * FROM calls ORDER BY _id"):
-        if not r["number"]:
-            continue
-        emit("appel", _ms(r["date"]), {
-            "direction": CALL_DIRECTION.get(r["type"], "inconnu"), "number": r["number"],
-            "contact_name": clean(r["name"]) if "name" in cols else None,
-            "duration_s": int(r["duration"]) if r["duration"] is not None else None},
-            src, f"calls:_id={r['_id']}")
-        n += 1
+        m = map_call(dict(r))
+        if m:
+            emit(*m, src, f"calls:_id={r['_id']}")
+            n += 1
     return n
 
 
@@ -275,18 +308,20 @@ def parse_contacts(con: sqlite3.Connection, src: Source, emit) -> int:
     return n
 
 
+def browser_name(src: Source) -> str | None:
+    return next((b for k, b in BROWSERS.items() if k in PurePosixPath(src.rel).parts), None)
+
+
 def parse_browser(con: sqlite3.Connection, src: Source, emit) -> int:
     if "urls" not in _tables(con):
         return 0
-    browser = next((b for k, b in BROWSERS.items() if k in PurePosixPath(src.rel).parts), None)
+    browser = browser_name(src)
     n = 0
     for r in con.execute("SELECT id, url, title, visit_count, last_visit_time FROM urls ORDER BY id"):
-        if not r["url"]:
-            continue
-        emit("navigation", _webkit(r["last_visit_time"]), {
-            "url": r["url"], "title": clean(r["title"]), "browser": browser,
-            "visit_count": r["visit_count"]}, src, f"urls:id={r['id']}")
-        n += 1
+        m = map_url(dict(r), browser)
+        if m:
+            emit(*m, src, f"urls:id={r['id']}")
+            n += 1
     return n
 
 
@@ -310,7 +345,7 @@ def _wa_contact_name(r: sqlite3.Row) -> str:
     return given or family or display or r["jid"]
 
 
-def _wa_app(src: Source) -> str:
+def wa_app(src: Source) -> str:
     return next((label for pkg, label in WHATSAPP_PACKAGES.items() if pkg in PurePosixPath(src.rel).parts),
                 "WhatsApp")
 
@@ -330,86 +365,135 @@ def parse_whatsapp_contacts(con: sqlite3.Connection, src: Source, emit) -> tuple
         names[jid] = (r["wa_name"] if "wa_name" in cols and r["wa_name"] else None) or name
         if name and r["number"]:
             emit("contact", None, {"display_name": name, "phone_numbers": [r["number"]], "emails": [],
-                                   "app": _wa_app(src)}, src, f"wa_contacts:jid={jid}")
+                                   "app": wa_app(src)}, src, f"wa_contacts:jid={jid}")
             n += 1
     return n, names
 
 
+@dataclass
+class WaContext:
+    """Tables de référence de msgstore.db (schéma moderne) nécessaires à la lecture d'un message."""
+    app: str
+    names: dict[str, str]
+    jids: dict[int, str] = field(default_factory=dict)
+    chats: dict[int, tuple[str | None, str | None]] = field(default_factory=dict)
+    media: dict[int, str] = field(default_factory=dict)
+    locs: dict[int, tuple[float, float]] = field(default_factory=dict)
+
+    @classmethod
+    def load(cls, con: sqlite3.Connection, app: str, names: dict[str, str]) -> "WaContext":
+        tables = _tables(con)
+        ctx = cls(app, names)
+        if {"chat", "jid"} <= tables:
+            ctx.jids = {r["_id"]: r["raw_string"] for r in con.execute("SELECT _id, raw_string FROM jid")}
+            ctx.chats = {r["_id"]: (ctx.jids.get(r["jid_row_id"]), r["subject"])
+                         for r in con.execute("SELECT _id, jid_row_id, subject FROM chat")}
+        if "message_media" in tables:
+            ctx.media = {r["message_row_id"]: r["file_path"] for r in con.execute(
+                "SELECT message_row_id, file_path FROM message_media")}
+        if "message_location" in tables:
+            ctx.locs = {r["message_row_id"]: (r["latitude"], r["longitude"]) for r in con.execute(
+                "SELECT message_row_id, latitude, longitude FROM message_location")}
+        return ctx
+
+
+def map_wa_message(r: dict, ctx: WaContext) -> Mapped:
+    """Message WhatsApp, schéma moderne (2022+)."""
+    chat_jid, subject = ctx.chats.get(r.get("chat_row_id"), (None, None))
+    if not chat_jid or chat_jid.endswith("@newsletter"):
+        return None                                                # chaînes publiques : hors conversations
+    group = chat_jid.endswith("@g.us")
+    incoming = r.get("from_me") == 0
+    sender = (ctx.jids.get(r.get("sender_jid_row_id")) if group else chat_jid) if incoming else None
+    lat, lon = ctx.locs.get(r.get("_id"), (None, None))
+    return "message", _ms(r.get("timestamp")), {
+        "app": ctx.app, "direction": "entrant" if incoming else "sortant",
+        "conversation": subject if group else (ctx.names.get(chat_jid) or chat_jid), "is_group": group,
+        "sender": sender, "sender_name": ctx.names.get(sender) if sender else None,
+        "body": _text(r.get("text_data")), "message_type": WA_TYPES.get(r.get("message_type"), "autre"),
+        "attachment": ctx.media.get(r.get("_id")), "latitude": lat, "longitude": lon}
+
+
+def map_wa_call(r: dict, ctx: WaContext) -> Mapped:
+    raw = ctx.jids.get(r.get("jid_row_id"))
+    return "appel", _ms(r.get("timestamp")), {
+        "app": ctx.app, "direction": "entrant" if r.get("from_me") == 0 else "sortant",
+        "number": _wa_number(raw) or "", "contact_name": ctx.names.get(raw),
+        "duration_s": r.get("duration"), "call_type": "video" if r.get("video_call") else "audio"}
+
+
+def map_wa_legacy(r: dict, ctx: WaContext) -> Mapped:
+    """Message WhatsApp, schéma historique (table `messages`)."""
+    remote = r.get("key_remote_jid") or ""
+    if not isinstance(remote, str) or remote in ("-1", "") or remote.endswith("@newsletter"):
+        return None
+    group = remote.endswith("@g.us")
+    incoming = r.get("key_from_me") == 0
+    sender = (r.get("remote_resource") if group else remote) if incoming else None
+    return "message", _ms(r.get("timestamp")), {
+        "app": ctx.app, "direction": "entrant" if incoming else "sortant",
+        "conversation": ctx.names.get(remote) or remote, "is_group": group, "sender": sender or None,
+        "sender_name": ctx.names.get(sender) if sender else None,
+        "body": _text(r.get("data")), "message_type": "texte" if r.get("data") else "autre",
+        "attachment": r.get("media_name") or None, "latitude": r.get("latitude") or None,
+        "longitude": r.get("longitude") or None}
+
+
 def parse_whatsapp(con: sqlite3.Connection, src: Source, emit, names: dict[str, str]) -> int:
-    app = _wa_app(src)
     tables = _tables(con)
+    ctx = WaContext.load(con, wa_app(src), names)
     n = 0
     if {"message", "chat", "jid"} <= tables:                       # schéma moderne (2022+)
-        jids = {r["_id"]: r["raw_string"] for r in con.execute("SELECT _id, raw_string FROM jid")}
-        chats = {r["_id"]: (jids.get(r["jid_row_id"]), r["subject"])
-                 for r in con.execute("SELECT _id, jid_row_id, subject FROM chat")}
-        media = {r["message_row_id"]: r["file_path"] for r in con.execute(
-            "SELECT message_row_id, file_path FROM message_media")} if "message_media" in tables else {}
-        locs = {r["message_row_id"]: (r["latitude"], r["longitude"]) for r in con.execute(
-            "SELECT message_row_id, latitude, longitude FROM message_location")} if "message_location" in tables else {}
         for r in con.execute("SELECT * FROM message ORDER BY _id"):
-            chat_jid, subject = chats.get(r["chat_row_id"], (None, None))
-            if not chat_jid or chat_jid.endswith("@newsletter"):
-                continue                                           # chaînes publiques : hors conversations
-            group = chat_jid.endswith("@g.us")
-            incoming = r["from_me"] == 0
-            sender = (jids.get(r["sender_jid_row_id"]) if group else chat_jid) if incoming else None
-            lat, lon = locs.get(r["_id"], (None, None))
-            emit("message", _ms(r["timestamp"]), {
-                "app": app, "direction": "entrant" if incoming else "sortant",
-                "conversation": subject if group else (names.get(chat_jid) or chat_jid), "is_group": group,
-                "sender": sender, "sender_name": names.get(sender) if sender else None,
-                "body": r["text_data"].strip() if r["text_data"] and r["text_data"].strip() else None,
-                "message_type": WA_TYPES.get(r["message_type"], "autre"), "attachment": media.get(r["_id"]),
-                "latitude": lat, "longitude": lon}, src, f"message:_id={r['_id']}")
-            n += 1
+            m = map_wa_message(dict(r), ctx)
+            if m:
+                emit(*m, src, f"message:_id={r['_id']}")
+                n += 1
         if "call_log" in tables:
             for r in con.execute("SELECT * FROM call_log ORDER BY _id"):
-                raw = jids.get(r["jid_row_id"])
-                emit("appel", _ms(r["timestamp"]), {
-                    "app": app, "direction": "entrant" if r["from_me"] == 0 else "sortant",
-                    "number": _wa_number(raw) or "", "contact_name": names.get(raw),
-                    "duration_s": r["duration"], "call_type": "video" if r["video_call"] else "audio"},
-                    src, f"call_log:_id={r['_id']}")
+                emit(*map_wa_call(dict(r), ctx), src, f"call_log:_id={r['_id']}")
                 n += 1
     elif "messages" in tables:                                     # schéma historique
-        cols = _cols(con, "messages")
         for r in con.execute("SELECT * FROM messages ORDER BY _id"):
-            remote = r["key_remote_jid"] or ""
-            if remote in ("-1", "") or remote.endswith("@newsletter"):
-                continue
-            group = remote.endswith("@g.us")
-            incoming = r["key_from_me"] == 0
-            sender = (r["remote_resource"] if group and "remote_resource" in cols else remote) if incoming else None
-            emit("message", _ms(r["timestamp"]), {
-                "app": app, "direction": "entrant" if incoming else "sortant",
-                "conversation": names.get(remote) or remote, "is_group": group, "sender": sender or None,
-                "sender_name": names.get(sender) if sender else None,
-                "body": r["data"].strip() if r["data"] and str(r["data"]).strip() else None,
-                "message_type": "texte" if r["data"] else "autre",
-                "attachment": (r["media_name"] if "media_name" in cols else None) or None,
-                "latitude": (r["latitude"] or None) if "latitude" in cols else None,
-                "longitude": (r["longitude"] or None) if "longitude" in cols else None}, src, f"messages:_id={r['_id']}")
-            n += 1
+            m = map_wa_legacy(dict(r), ctx)
+            if m:
+                emit(*m, src, f"messages:_id={r['_id']}")
+                n += 1
     return n
+
+
+def viber_numbers(con: sqlite3.Connection) -> dict[int, str]:
+    if not {"participants", "participants_info"} <= _tables(con):
+        return {}
+    return {r["pid"]: r["number"] for r in con.execute(
+        "SELECT p._id AS pid, i.number AS number FROM participants p JOIN participants_info i ON i._id = p.participant_info_id")}
+
+
+def map_viber_message(r: dict, numbers: dict[int, str]) -> Mapped:
+    incoming = r.get("send_type") == 0
+    return "message", _ms(r.get("msg_date")), {
+        "app": "Viber", "direction": "entrant" if incoming else "sortant" if r.get("send_type") == 1 else "inconnu",
+        "conversation": _opt_str(r.get("conversation_id")), "is_group": None,
+        "sender": numbers.get(r.get("participant_id")) if incoming else None,
+        "body": _text(r.get("body")), "message_type": "texte" if r.get("body") else "autre",
+        "attachment": r.get("extra_uri") or None, "read": None if r.get("unread") is None else not bool(r["unread"])}
+
+
+def map_viber_call(r: dict) -> Mapped:
+    return "appel", _ms(r.get("date")), {
+        "app": "Viber", "direction": {1: "entrant", 2: "sortant"}.get(r.get("type"), "inconnu"),
+        "number": r.get("canonized_number") or "", "duration_s": r.get("duration"),
+        "call_type": {1: "audio", 4: "video"}.get(r.get("viber_call_type"))}
 
 
 def parse_viber_messages(con: sqlite3.Connection, src: Source, emit) -> int:
     tables = _tables(con)
     if not {"messages", "participants", "participants_info"} <= tables:
         return 0
-    numbers = {r["pid"]: r["number"] for r in con.execute(
-        "SELECT p._id AS pid, i.number AS number FROM participants p JOIN participants_info i ON i._id = p.participant_info_id")}
+    numbers = viber_numbers(con)
     n = 0
     for r in con.execute("SELECT * FROM messages ORDER BY _id"):
-        incoming = r["send_type"] == 0
-        emit("message", _ms(r["msg_date"]), {
-            "app": "Viber", "direction": "entrant" if incoming else "sortant" if r["send_type"] == 1 else "inconnu",
-            "conversation": str(r["conversation_id"]), "is_group": None,
-            "sender": numbers.get(r["participant_id"]) if incoming else None,
-            "body": r["body"].strip() if r["body"] and r["body"].strip() else None,
-            "message_type": "texte" if r["body"] else "autre", "attachment": r["extra_uri"] or None,
-            "read": None if r["unread"] is None else not bool(r["unread"])}, src, f"messages:_id={r['_id']}")
+        emit(*map_viber_message(dict(r), numbers), src, f"messages:_id={r['_id']}")
         n += 1
     return n
 
@@ -419,10 +503,7 @@ def parse_viber_data(con: sqlite3.Connection, src: Source, emit) -> int:
     n = 0
     if "calls" in tables:
         for r in con.execute("SELECT * FROM calls ORDER BY _id"):
-            emit("appel", _ms(r["date"]), {
-                "app": "Viber", "direction": {1: "entrant", 2: "sortant"}.get(r["type"], "inconnu"),
-                "number": r["canonized_number"] or "", "duration_s": r["duration"],
-                "call_type": {1: "audio", 4: "video"}.get(r["viber_call_type"])}, src, f"calls:_id={r['_id']}")
+            emit(*map_viber_call(dict(r)), src, f"calls:_id={r['_id']}")
             n += 1
     if {"phonebookcontact", "phonebookdata"} <= tables:
         for r in con.execute("""SELECT c._id AS cid, c.display_name AS name, coalesce(d.data2, d.data1, d.data3) AS num
@@ -434,30 +515,37 @@ def parse_viber_data(con: sqlite3.Connection, src: Source, emit) -> int:
     return n
 
 
+def _json(v: Any, default: Any) -> Any:
+    try:
+        return json.loads(v) if isinstance(v, str) and v else default
+    except ValueError:
+        return default
+
+
+def map_messenger(r: dict) -> Mapped:
+    if (r.get("msg_type") or 0) == -1 or r.get("generic_admin_message_extensible_data") is not None:
+        return None                                                # messages d'administration
+    sender = _json(r.get("sender"), {})
+    sender = sender if isinstance(sender, dict) else {}
+    att = _json(r.get("attachments"), [])
+    user_key = str(sender.get("user_key") or "")
+    return "message", _ms(r.get("timestamp_ms")), {
+        "app": "Facebook Messenger", "direction": "inconnu", "conversation": r.get("thread_key"), "is_group": None,
+        "sender": user_key.split(":", 1)[-1] or None, "sender_name": sender.get("name"),
+        "body": _text(r.get("text")), "message_type": "texte" if r.get("text") else "autre",
+        "attachment": (att[0] or {}).get("filename") if isinstance(att, list) and att and isinstance(att[0], dict)
+        else None}
+
+
 def parse_messenger(con: sqlite3.Connection, src: Source, emit) -> int:
     if "messages" not in _tables(con):
         return 0
-    cols = _cols(con, "messages")
-    admin = "AND generic_admin_message_extensible_data IS NULL" if "generic_admin_message_extensible_data" in cols else ""
     n = 0
-    for r in con.execute(f"SELECT * FROM messages WHERE coalesce(msg_type, 0) != -1 {admin} ORDER BY timestamp_ms"):
-        try:
-            sender = json.loads(r["sender"] or "{}")
-        except ValueError:
-            sender = {}
-        try:
-            att = json.loads(r["attachments"] or "[]") if "attachments" in cols else []
-        except ValueError:
-            att = []
-        user_key = str(sender.get("user_key") or "")
-        emit("message", _ms(r["timestamp_ms"]), {
-            "app": "Facebook Messenger", "direction": "inconnu", "conversation": r["thread_key"], "is_group": None,
-            "sender": user_key.split(":", 1)[-1] or None, "sender_name": sender.get("name"),
-            "body": r["text"].strip() if r["text"] and r["text"].strip() else None,
-            "message_type": "texte" if r["text"] else "autre",
-            "attachment": (att[0] or {}).get("filename") if att and isinstance(att[0], dict) else None},
-            src, f"msg_id={r['msg_id']}")
-        n += 1
+    for r in con.execute("SELECT * FROM messages ORDER BY timestamp_ms"):
+        m = map_messenger(dict(r))
+        if m:
+            emit(*m, src, f"msg_id={r['msg_id']}")
+            n += 1
     return n
 
 
@@ -684,7 +772,7 @@ class SqliteNativeWrapper(ToolWrapper):
             notes.append(f"{wal_files} journal(aux) WAL rejoué(s) sur copie de travail.")
         if builder.internal_duplicates:
             notes.append(f"{builder.internal_duplicates} doublon(s) interne(s) fusionné(s).")
-        notes.append("Enregistrements supprimés (pages libres SQLite) non récupérés.")
+        notes.append("Données actives uniquement ; enregistrements supprimés : voir veritrace-recover.")
         notes += limitations
         return WrapperResult(tool=TOOL, mode="execute", command=["veritrace", "parse", "sqlite"], started_at=started,
                              ended_at=utc_now_iso(), output_path=None, artifacts=builder.items, notes=notes,

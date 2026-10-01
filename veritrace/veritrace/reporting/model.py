@@ -28,8 +28,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from veritrace import CREDIT_LINE
 from veritrace.core.timeutil import parse_iso, utc_now_iso
 from veritrace.core.authorization import LEGAL_BASES
-from veritrace.schema.describe import artifact_summary  # noqa: F401  (réexporté)
-from veritrace.schema.pivot import PRIORITIES, SEVERITIES, engine, ext, fact_sha, items_index, iter_items
+from veritrace.schema.describe import RECOVERY_METHOD_FR, RECOVERY_STATUS_FR, artifact_summary  # noqa: F401
+from veritrace.schema.pivot import PRIORITIES, SEVERITIES, engine, ext, fact_sha, items_index, iter_items, recovery
 
 TEMPLATES = ("judiciaire", "entreprise")
 
@@ -90,7 +90,7 @@ GLOSSARY = [
     ("Chaîne de custody", "Traçabilité continue d'une preuve : qui l'a manipulée, quand, où, pour quelle action, "
      "et avec quelle empreinte."),
     ("Corroboré", "Fait extrait par au moins deux moteurs d'analyse indépendants (même empreinte de fait)."),
-    ("Règle de détection", "Contrôle automatique appliqué aux données normalisées (R1 à R5) ; ses constats sont des "
+    ("Règle de détection", "Contrôle automatique appliqué aux données normalisées (R1 à R6) ; ses constats sont des "
      "signalements à apprécier par l'examinateur."),
     ("Empreinte SHA-256", "Valeur de 64 caractères calculée à partir d'un contenu. La moindre modification du "
      "contenu produit une empreinte totalement différente : elle permet d'en vérifier l'intégrité."),
@@ -100,6 +100,14 @@ GLOSSARY = [
     ("MVT", "Mobile Verification Toolkit (Amnesty International) — détection de logiciels espions par IOC."),
     ("Paquet (package)", "Identifiant technique unique d'une application Android (ex. com.exemple.app)."),
     ("Sideload", "Installation d'une application hors magasin officiel, à partir d'un fichier APK."),
+    ("Bloc libre / page libre", "Zones d'une base SQLite libérées par une suppression ; tant qu'elles ne sont pas "
+     "réutilisées, elles peuvent conserver le contenu des enregistrements supprimés."),
+    ("Journal WAL / journal de rollback", "Fichiers annexes d'une base SQLite (-wal, -journal) conservant des versions "
+     "de pages avant ou après modification ; ils peuvent contenir des enregistrements depuis supprimés."),
+    ("Effacement sécurisé (secure_delete)", "Option de SQLite, activée dans la bibliothèque d'Android, qui remet à "
+     "zéro le contenu supprimé : les suppressions ne sont alors plus récupérables dans la base elle-même."),
+    ("Enregistrement récupéré", "Enregistrement lu hors des données actives d'une base : « absent » (supprimé ou "
+     "remplacé) ou « version antérieure » d'une ligne encore présente."),
     ("Source unique", "Fait extrait par un seul outil."),
     ("UTC", "Temps universel coordonné, référence horaire internationale."),
 ]
@@ -556,7 +564,58 @@ def _limitations(doc: dict) -> list[Block]:
                  "horloge et peuvent avoir été modifiés par l'utilisateur ou des applications.")
     items.append("Un fait « corroboré » est confirmé par au moins deux outils indépendants à partir des mêmes "
                  "données ; un fait « source unique » n'a été extrait que par un seul outil.")
+    if (doc.get("x_veritrace") or {}).get("recovery"):
+        items.append("Enregistrements récupérés : la date de suppression n'est jamais connue (seul l'horodatage propre "
+                     "à l'enregistrement l'est) ; un enregistrement récupéré n'est corroboré par aucun autre outil. "
+                     "L'absence de résultat ne prouve pas l'absence de suppression : sur Android, l'effacement "
+                     "sécurisé de SQLite et l'auto-vacuum effacent la plupart des contenus supprimés.")
     return [Bullets(items)]
+
+
+# --------------------------------------------------------------------------- récupération
+def _recovery_blocks(c: "_Ctx") -> list[Block]:
+    stats = (c.doc.get("x_veritrace") or {}).get("recovery") or []
+    if not stats:
+        return [Paragraph("Aucune récupération d'enregistrements supprimés n'a été conduite.", "small")]
+    rows = []
+    for s in stats:
+        wal = f"{s.get('wal_frames', 0)} trame(s)" if s.get("wal_frames") else "absent"
+        journal = f"{s.get('journal_pages', 0)} page(s)" if s.get("journal") else "absent"
+        rows.append([s["database"], str(s.get("pages", "—")), wal, journal, str(s.get("freelist_pages", 0)),
+                     "oui" if s.get("secure_delete_observed") else "non",
+                     str(s.get("recovered_absent", 0)), str(s.get("recovered_previous", 0))])
+    return [
+        Paragraph("Les bases SQLite ont été relues octet par octet sur une copie, sans passer par le moteur SQLite, "
+                  "pour rechercher les enregistrements qui ne figurent plus parmi leurs données actives : anciennes "
+                  "versions de pages conservées dans les journaux WAL et de rollback, pages libres, espace non alloué "
+                  "et blocs libres des pages de table. Chaque enregistrement retrouvé est normalisé comme une ligne "
+                  "active puis comparé aux données actives : identique, il est écarté ; même identifiant de ligne et "
+                  "contenu différent, il est qualifié de « version antérieure » ; sinon d'« absent des données "
+                  "actives » (supprimé, ou remplacé par une modification)."),
+        Paragraph("Fiabilité de lecture : élevée pour une cellule intacte située dans une page de la table (journal, "
+                  "WAL, espace non alloué) ; moyenne pour une cellule dont l'en-tête a été partiellement écrasé "
+                  "(bloc libre), attribuée à sa table par sa seule structure (page libre) ou provenant d'une trame "
+                  "WAL non validée ; abaissée d'un niveau si le contenu est incomplet.", "small"),
+        Table(["Base", "Pages", "WAL", "Journal", "Pages libres", "Effacement sécurisé constaté",
+               "Absents", "Versions antérieures"], rows, [2.4, 0.5, 0.7, 0.7, 0.6, 0.8, 0.6, 0.7]),
+    ]
+
+
+def _recovered_table(c: "_Ctx") -> Table | Paragraph:
+    arts = [a for a in c.doc["artifacts"] if recovery(a)]
+    if not arts:
+        return Paragraph("Aucun enregistrement récupéré.", "small")
+    arts.sort(key=lambda a: (a.get("timestamp") is None, a.get("timestamp") or "", a["artifact_id"]))
+    rows = []
+    for a in arts:
+        r = recovery(a)
+        where = f"{r['database']} · table {r['table']}" + (f" · ligne {r['rowid']}" if r.get("rowid") is not None else "")
+        where += " · " + "; ".join(r["locations"])
+        rows.append([a["artifact_id"], c.fmt.ts(a.get("timestamp")), artifact_summary(a),
+                     RECOVERY_STATUS_FR[r["status"]], where,
+                     CONFIDENCE_FR[r["confidence"]] + (" (incomplet)" if r.get("truncated") else "")])
+    return Table(["Artefact", "Horodatage", "Contenu", "Statut", "Base · emplacement(s)", "Fiabilité"], rows,
+                 [0.8, 1.0, 2.2, 0.9, 2.2, 0.7])
 
 
 def _cited_artifacts(c: _Ctx) -> list[str]:
@@ -611,6 +670,8 @@ def _judiciaire(c: _Ctx) -> list[Section]:
                   "moteur d'un autre (ex. le module aLEAPP intégré à Autopsy) n'est pas une source indépendante."),
         Subheading("3.5 Règles de détection appliquées"),
         *_rules_blocks(doc),
+        Subheading("3.6 Récupération des enregistrements supprimés"),
+        *_recovery_blocks(c),
     ]
 
     findings_blocks: list[Block] = [Paragraph(
@@ -675,7 +736,8 @@ def _judiciaire(c: _Ctx) -> list[Section]:
             Subheading("Artefacts cités et empreintes de contenu"),
             Table(["Artefact", "Catégorie", "Contenu", "Empreinte du contenu (SHA-256)"], cited_rows,
                   [0.7, 1.1, 3.0, 2.4], mono_cols=(3,)),
-            Subheading("Inventaire par catégorie"), _inventory_table(doc)]),
+            Subheading("Inventaire par catégorie"), _inventory_table(doc),
+            Subheading("Enregistrements récupérés hors des données actives"), _recovered_table(c)]),
         Section("Annexe C — Intégrité du rapport et journal d'audit", _integrity_blocks(c)),
         Section("Annexe D — Glossaire", [Table(["Terme", "Définition"], [[t, d] for t, d in GLOSSARY], [1.4, 4])]),
     ]
@@ -762,6 +824,7 @@ def _entreprise(c: _Ctx) -> list[Section]:
                       ("Périmètre autorisé", _v(ext(case["authorization"]).get("scope")))]),
             _devices_table(doc), _tools_inventory(doc),
             Subheading("Règles de détection appliquées"), *_rules_blocks(doc),
+            Subheading("Récupération des enregistrements supprimés"), *_recovery_blocks(c),
         ], new_page=True),
         Section("5. Limites", _limitations(doc)),
         Section("Annexe — Preuves", [
@@ -770,6 +833,7 @@ def _entreprise(c: _Ctx) -> list[Section]:
             Subheading("Pièces (captures, exports)"),
             *(_exhibit_blocks(c, exhibits) or [Paragraph("Aucune pièce jointe.")]),
             Subheading("Inventaire des artefacts"), _inventory_table(doc),
+            Subheading("Enregistrements récupérés hors des données actives"), _recovered_table(c),
             Subheading("Intégrité du rapport"), *_integrity_blocks(c),
         ], new_page=True),
     ]

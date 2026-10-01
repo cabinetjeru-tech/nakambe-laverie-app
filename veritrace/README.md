@@ -29,9 +29,10 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Acquisition ADB : fiche appareil, getprop, applications, dumpsys, backup, pull ciblé, bugreport, custody automatique (`veritrace acquire`) | ✅ |
 | Wrappers ALEAPP / MVT / Autopsy (`veritrace parse …`) | ✅ |
 | Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
-| Règles de détection d'anomalies R1–R5 (`veritrace rules …`) | ✅ |
+| Règles de détection d'anomalies R1–R6 (`veritrace rules …`) | ✅ |
 | Parseurs natifs Veritrace : SMS/MMS, appels, contacts, navigation, EXIF/GPS, dumpsys package/accessibility (`veritrace parse sqlite`) | ✅ |
 | Messageries tierces : WhatsApp, Viber, Facebook Messenger (natif + ALEAPP), Telegram (ALEAPP), Signal (détection) | ✅ |
+| Récupération des enregistrements supprimés SQLite : WAL, journal, pages et blocs libres (`veritrace parse recover`) | ✅ *(testée sur des bases synthétiques ; à valider sur appareil réel)* |
 
 ---
 
@@ -299,6 +300,7 @@ chemin de l'extraction. La **sortie** est du JSON normalisé, versé dans le dos
 veritrace parse aleapp  --case ./VT --input ./extraction            # lance ALEAPP (parsing complet)
 veritrace parse sqlite  --case ./VT --input ./extraction            # parseurs natifs (sans outil externe)
 veritrace parse sqlite  --case ./VT --input ./VT/acquisition/raw/ACQ-03   # dumpsys collectés par acquire
+veritrace parse recover --case ./VT --input ./extraction            # enregistrements supprimés (SQLite)
 veritrace parse mvt     --case ./VT --input ./androidqf --iocs stalkerware.stix2
 veritrace parse autopsy --case ./VT --input ./CasAutopsy --autopsy-version 4.21.0
 veritrace parse all     --case ./VT --input ./extraction --mvt-input ./androidqf \
@@ -321,7 +323,7 @@ Pour chaque outil, Veritrace enchaîne les étapes suivantes :
 
 | Outil | Ce qui est normalisé |
 |---|---|
-| **veritrace-sqlite** (natif, toujours disponible) | Bases Android lues directement : `mmssms.db` (SMS/MMS), `calllog.db` / `contacts2.db` (appels, contacts), `History` de Chrome / Samsung Internet / Opera / WebView. Photos JPEG (DCIM, Pictures…) : EXIF, plus une localisation GPS horodatée en UTC. `dumpsys package` : installateur, statut système, permissions accordées. `dumpsys accessibility` : services d'accessibilité **activés**. Entrées acceptées : dossier, `.tar` / `.zip`, **y compris le tar d'une sauvegarde ADB** (`apps/<paquet>/…`). Les bases sont ouvertes sur une **copie de travail**, avec le journal WAL rejoué (les originaux ne sont jamais ouverts en écriture). Les enregistrements supprimés ne sont pas récupérés. |
+| **veritrace-sqlite** (natif, toujours disponible) | Bases Android lues directement : `mmssms.db` (SMS/MMS), `calllog.db` / `contacts2.db` (appels, contacts), `History` de Chrome / Samsung Internet / Opera / WebView. Photos JPEG (DCIM, Pictures…) : EXIF, plus une localisation GPS horodatée en UTC. `dumpsys package` : installateur, statut système, permissions accordées. `dumpsys accessibility` : services d'accessibilité **activés**. Entrées acceptées : dossier, `.tar` / `.zip`, **y compris le tar d'une sauvegarde ADB** (`apps/<paquet>/…`). Les bases sont ouvertes sur une **copie de travail**, avec le journal WAL rejoué (les originaux ne sont jamais ouverts en écriture). Les enregistrements supprimés relèvent de `veritrace-recover` (ci-dessous). |
 | ALEAPP | Lit la sortie LAVA (`_lava_data.lava` + `_lava_artifacts.db`), ou les TSV pour les versions antérieures. Catégories : SMS/MMS, appels, contacts, historique web, localisations, applications installées, usage des applications (événements), comptes, Wi-Fi, Bluetooth. Les artefacts non couverts sont listés dans le rapport et restent dans la sortie brute. |
 | MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat de type `ioc`, de criticité `critique` (alerte MVT CRITICAL) ou `eleve` (autres niveaux)**, avec le bloc `ioc` (type, valeur, fichier d'IOC, famille). Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
 | Autopsy | Lit `autopsy.db` (cas, Portable Case ou fichier `.db`). Seuls les artefacts du **module Android** sont retenus (option `--module` pour en ajouter d'autres). |
@@ -382,6 +384,68 @@ Points d'attention :
 - Choix prudent : en cas de doute, Veritrace ne fusionne pas deux faits. Une fausse
   corroboration serait plus grave qu'un doublon.
 
+### Récupération des enregistrements supprimés (`veritrace-recover`)
+
+`veritrace parse recover` (également lancé par `parse all`, sauf `--no-recover`) relit les
+bases SQLite **octet par octet**, sans passer par SQLite, sur une copie en lecture seule
+de la base et de ses fichiers `-wal` / `-journal`. Les originaux ne sont jamais ouverts.
+
+| Emplacement examiné | Ce qu'il conserve | Fiabilité de lecture |
+|---|---|---|
+| Journal **WAL** : version de page du fichier principal masquée par une trame, trames anciennes | état de la page **avant** la suppression ou la modification | élevée (cellule intacte, identifiant de ligne connu) |
+| Trames WAL **non validées** (après le dernier commit, ou génération antérieure du WAL) | écritures peut-être jamais validées | moyenne |
+| **Journal de rollback** (`-journal`, y compris en mode PERSIST, en-tête remis à zéro) | images des pages avant la dernière transaction | élevée |
+| **Pages libres** (feuilles et « troncs » de la liste des pages libres) | pages entières libérées | moyenne (table déduite de la structure) |
+| **Espace non alloué** des pages de table (feuilles et pages intérieures) | anciennes cellules | élevée si cellule complète, sinon moyenne |
+| **Blocs libres** (cellules supprimées) | cellule dont les 4 premiers octets sont écrasés | moyenne |
+
+Bases prises en charge : `mmssms.db` (SMS), `calllog.db` / `contacts2.db` (appels),
+`History` (Chrome, Samsung Internet, Opera, WebView), WhatsApp `msgstore.db` (messages,
+appels ; schémas moderne et historique), Viber (messages, appels), Messenger `threads_db2`.
+Contacts Android (`raw_contacts` / `data`, répartis sur plusieurs tables) : non récupérés.
+
+Chaque enregistrement retrouvé est normalisé par **la même fonction** que les lignes actives
+(`sqlite_native.map_*`), puis comparé aux données actives de la base :
+
+- **fait identique** à une ligne active → écarté. C'est une copie ou une ancienne version
+  sans différence significative, par exemple un SMS simplement passé à « lu » ;
+- **même identifiant de ligne, contenu différent** → `version_anterieure`, par exemple le
+  texte d'un message avant sa modification ;
+- **sinon** → `absent` des données actives : supprimé, ou remplacé par une modification.
+
+Garde-fous contre les faux positifs :
+- signature stricte : nombre de colonnes et compatibilité de chaque valeur avec le type
+  déclaré de sa colonne ;
+- une cellule compatible avec **plusieurs** tables n'est attribuée à aucune ; elle est
+  seulement comptée (`ambiguous`) ;
+- textes lisibles exigés, et blocs entièrement nuls rejetés.
+
+Mesure réalisée sur une base de 13 Mo : 60 000 SMS dont 20 000 supprimés, **19 996 retrouvés,
+aucun faux positif**, en 7 s.
+
+Dans le format pivot :
+- l'artefact porte `x_veritrace.recovery` : statut, méthode, fiabilité, base, table, ligne
+  et **tous les emplacements** (page, trame WAL, décalage) ;
+- son empreinte de fait inclut le statut, si bien qu'il **ne corrobore jamais** un fait actif ;
+- la timeline lui ajoute le drapeau `recupere` et la mention « [Récupéré] » ;
+- le bilan par base (pages, WAL, journal, pages libres, effacement sécurisé constaté, nombre
+  d'enregistrements récupérés) est consigné dans `x_veritrace.recovery` ;
+- la règle **R6** groupe les enregistrements par base. Le rapport judiciaire présente la
+  méthode au § 3.6 et la liste complète en annexe B.
+
+**Limites (à lire avant toute conclusion) :**
+- la bibliothèque SQLite d'Android est compilée avec l'**effacement sécurisé**
+  (`SQLITE_SECURE_DELETE`), et les bases système sont en **auto-vacuum**. Dans ces bases,
+  les cellules supprimées sont remises à zéro et les pages libérées tronquées. La
+  récupération repose alors surtout sur le **WAL** et le **journal**, qu'il faut donc
+  collecter avec la base. Veritrace détecte les blocs libres remis à zéro et l'indique
+  dans les limites du rapport ;
+- les applications qui embarquent leur propre SQLite peuvent se comporter autrement.
+  Ce comportement est à vérifier application par application sur un appareil réel ;
+- la **date de suppression n'est jamais connue**, seul l'horodatage de l'enregistrement
+  l'est ;
+- **l'absence de résultat ne prouve pas l'absence de suppression**.
+
 ---
 
 ## Règles de détection d'anomalies
@@ -396,6 +460,7 @@ outil et lors de `veritrace correlate`. Elles ne lisent que le format pivot.
 | **R3** | Visite d'une URL d'APK dans les 60 min précédant l'installation d'une application hors magasin | `eleve` |
 | **R4** | Horodatages postérieurs de plus de 24 h au début de l'acquisition, ou antérieurs à Android (2008) : horloge modifiée, données altérées ou erreur de décodage | `moyen` |
 | **R5** | Interruption de l'activité (SMS, appels, navigation, usage, localisation) > 72 h **et** > 10 × l'écart médian (au plus 3 signalées) | `faible` |
+| **R6** | Enregistrements récupérés hors des données actives, par base : supprimés (`absent`) ou contenus antérieurs de lignes modifiées (`version_anterieure`, avec le contenu actuel en regard) | `moyen` pour les communications (SMS, messages, appels) ; `faible` sinon |
 
 Garanties :
 - **Format des constats** : les faits figurent dans `description` et l'interprétation dans
@@ -443,14 +508,14 @@ exportés en PDF et en Markdown à partir du même JSON.
 | Page de garde | Logo et coordonnées du cabinet, n° d'affaire, autorité requérante, examinateur(s), dates (ouverture, période des opérations, rapport), appareil (marque, modèle, IMEI, système), empreinte des données sources |
 | 1. Déclaration d'autorisation | Base légale, référence du consentement ou du mandat, émetteur, date, périmètre, empreinte du document, vérification préalable |
 | 2. Matériel examiné | Appareils, n° de série, scellés, état à réception |
-| 3. Méthodologie | 3.1 outils et versions · 3.2 procédure d'acquisition · 3.3 principe de non-altération · 3.4 analyse et corroboration |
+| 3. Méthodologie | 3.1 outils et versions · 3.2 procédure d'acquisition · 3.3 principe de non-altération · 3.4 analyse et corroboration · 3.5 règles de détection · 3.6 récupération des enregistrements supprimés (méthode, bilan par base) |
 | 4. Éléments de preuve | Fichiers collectés avec leur SHA-256 |
 | 5. Chaîne de custody | Date/heure, preuve, action (et lieu), responsable, SHA-256 |
 | 6. Constatations | Numérotées. Pour chacune : **faits constatés**, puis tableau des sources (artefact, horodatage, outil · fichier · enregistrement, preuve et son SHA-256), captures et références hachées, puis **interprétation de l'examinateur** dans un bloc distinct |
 | 7. Chronologie consolidée | Chaque événement renvoie à ses artefacts et à ses preuves |
 | 8. Limites et réserves | Outils non exécutés, portée de l'acquisition logique, fiabilité des horloges |
 | 9. Attestation | Texte d'attestation et emplacement de signature |
-| Annexes | A : exécutions d'outils (commandes) · B : artefacts cités et empreintes de contenu · C : intégrité du rapport et journal d'audit · D : glossaire |
+| Annexes | A : exécutions d'outils (commandes) · B : artefacts cités et empreintes de contenu, enregistrements récupérés (statut, emplacements, fiabilité) · C : intégrité du rapport et journal d'audit · D : glossaire |
 
 Ce modèle reste neutre : il ne contient ni niveau de criticité ni recommandation. Si un
 constat n'est rattaché à aucun artefact, **le rapport judiciaire est refusé**, car chaque
@@ -514,7 +579,7 @@ veritrace parse all --case ./VT-2026-0042 --input ./extraction --mvt-input ./and
   --iocs stalkerware.stix2 --autopsy-case ./CasAutopsy
 veritrace parse sqlite --case ./VT-2026-0042 --input ./VT-2026-0042/acquisition/raw/ACQ-03   # dumpsys
 
-# 4. Relire les constats générés (MVT, règles R1–R5) ; les valider ou en corriger l'interprétation :
+# 4. Relire les constats générés (MVT, règles R1–R6) ; les valider ou en corriger l'interprétation :
 veritrace rules review --case ./VT-2026-0042 F-R1-… --interpretation "…"
 #    (compléments éventuels dans normalized/veritrace_case.json), puis :
 veritrace schema validate VT-2026-0042/normalized/veritrace_case.json
@@ -561,8 +626,9 @@ veritrace/
 ├── schema/                schéma, validateur, exemple
 ├── reporting/             modèle → Markdown / PDF
 ├── acquisition/           adb.py (client sûr), session.py (collecte + custody), backup.py (.ab → .tar)
-├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, sqlite_native.py, runner.py
-└── correlation/           engine.py (corroboration, dédoublonnage, timeline), rules.py (R1–R5)
+├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, sqlite_native.py, recover.py, runner.py
+├── recovery/              sqlite_format.py (lecture brute : pages, WAL, journal), carver.py (récupération)
+└── correlation/           engine.py (corroboration, dédoublonnage, timeline), rules.py (R1–R6)
 ```
 
 ---

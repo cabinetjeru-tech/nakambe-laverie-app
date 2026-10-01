@@ -64,6 +64,7 @@ class WrapperResult:
     notes: list[str] = field(default_factory=list)   # remarques consignées dans tool_run.message
     extra_items: list[Path] = field(default_factory=list)  # ex. fichiers d'IOC utilisés
     limitations: list[str] = field(default_factory=list)    # versées dans case.x_veritrace.limitations
+    recovery_stats: list[dict[str, Any]] = field(default_factory=list)  # bilan par base (x_veritrace.recovery)
 
 
 def new_artifact(*, artifact_id: str, category: str, timestamp: str | None, tool: dict[str, Any], item_id: str,

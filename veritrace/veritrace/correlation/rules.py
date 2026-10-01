@@ -21,6 +21,7 @@ consignée dans `x_veritrace.rules_applied` et reprise dans les rapports.
 | R3 | Téléchargement d'APK suivi de près par l'installation d'une application hors magasin | eleve |
 | R4 | Horodatages postérieurs à l'acquisition ou antérieurs à Android (horloge modifiée, données altérées) | moyen |
 | R5 | Interruption anormalement longue de l'activité enregistrée | faible |
+| R6 | Enregistrements récupérés hors des données actives (supprimés) ou versions antérieures, par base | moyen (communications) ; faible sinon |
 """
 from __future__ import annotations
 
@@ -34,7 +35,8 @@ from urllib.parse import urlparse
 from veritrace.core.hashing import sha256_json
 from veritrace.core.timeutil import parse_iso
 from veritrace.schema.describe import artifact_summary
-from veritrace.schema.pivot import ext, fact_sha, iter_items
+from veritrace.schema.describe import RECOVERY_METHOD_FR
+from veritrace.schema.pivot import ext, fact_sha, iter_items, recovery
 
 RULES_VERSION = "1.0"
 SOURCE_TOOL = "Veritrace (règles)"
@@ -361,6 +363,108 @@ def rule_activity_gaps(ctx: RuleContext) -> list[Hit]:
     return hits
 
 
+# --------------------------------------------------------------------------- R6
+CATEGORY_SHORT = {"sms": "SMS", "message": "message(s) de messagerie", "appel": "appel(s)",
+                  "navigation": "visite(s) de site", "contact": "contact(s)"}
+COMMUNICATIONS = {"sms", "message", "appel"}
+MAX_CITED = 100
+
+
+def _what(arts: list[dict]) -> str:
+    counts: dict[str, int] = defaultdict(int)
+    for a in arts:
+        label = CATEGORY_SHORT.get(a["category"], a["category"])
+        if a["category"] in ("message", "appel") and a["data"].get("app"):
+            label += f" {a['data']['app']}"
+        counts[label] += 1
+    return ", ".join(f"{n} {label}" for label, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+
+
+def _current_version(ctx: RuleContext, a: dict) -> dict | None:
+    """Ligne active (autre artefact du même fichier, même table, même identifiant) d'une version antérieure."""
+    rec = recovery(a)
+    for b in ctx.doc["artifacts"]:
+        ref = b["source"].get("record_ref") or ""
+        if (not recovery(b) and b["source"].get("file_path") == rec["database"] and ref.startswith(f"{rec['table']}:")
+                and ref.rsplit("=", 1)[-1] == str(rec["rowid"])):
+            return b
+    return None
+
+
+def rule_recovered(ctx: RuleContext) -> list[Hit]:
+    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for a in ctx.doc["artifacts"]:
+        rec = recovery(a)
+        if rec:
+            groups[(rec["status"], rec["database"])].append(a)
+    hits = []
+    for (status, db), arts in sorted(groups.items()):
+        arts = sorted(arts, key=lambda a: (a.get("timestamp") is None, a.get("timestamp") or ""))
+        stamped = [a for a in arts if a.get("timestamp")]
+        methods: dict[str, int] = defaultdict(int)
+        for a in arts:
+            methods[recovery(a)["method"]] += 1
+        confs = {recovery(a)["confidence"] for a in arts}
+        where = ", ".join(f"{RECOVERY_METHOD_FR[m]} ({n})" for m, n in sorted(methods.items(), key=lambda kv: -kv[1]))
+        period = (f" Horodatages propres aux enregistrements : du {_fmt(stamped[0]['timestamp'])} au "
+                  f"{_fmt(stamped[-1]['timestamp'])}." if stamped else "")
+        examples = "; ".join(artifact_summary(a) for a in arts[:3])
+        more = f" Seuls les {MAX_CITED} premiers sont cités." if len(arts) > MAX_CITED else ""
+        comms = any(a["category"] in COMMUNICATIONS for a in arts)
+        confidence = "elevee" if confs == {"elevee"} else "faible" if confs == {"faible"} else "moyenne"
+        if status == "absent":
+            hits.append(Hit(
+                key=f"{status}|{db}", type="observation", severity="moyen" if comms else "faible",
+                title=f"Enregistrements supprimés récupérés : {_what(arts)}",
+                description=(f"La base {db} contient {len(arts)} enregistrement(s) qui ne figurent pas parmi ses "
+                             f"données actives ({_what(arts)}). Emplacement(s) de lecture : {where}.{period} "
+                             f"Exemples : {examples}.{more}"),
+                artifact_ids=[a["artifact_id"] for a in arts[:MAX_CITED]],
+                interpretation=("Ces enregistrements ont existé dans la base puis en ont été retirés, ou ont été "
+                                "remplacés lors d'une modification. Leur présence ne permet pas, à elle seule, de "
+                                "déterminer l'auteur ni la cause du retrait (action de l'utilisateur, purge "
+                                "automatique ou synchronisation de l'application) ; la date de suppression n'est pas "
+                                "connue. Les enregistrements lus dans des blocs libres ou attribués à leur table par "
+                                "leur seule structure (fiabilité moyenne ou faible) peuvent être incomplets et "
+                                "doivent être confirmés avant d'être retenus."),
+                plain_summary=(f"{len(arts)} élément(s) effacé(s) ({_what(arts)}) ont pu être retrouvés dans les "
+                               "données de l'appareil."),
+                confidence=confidence,
+                business_impact=("Des communications supprimées de l'appareil restent partiellement accessibles."
+                                 if comms else None),
+                remediation=[{"action": "Examiner chaque enregistrement récupéré avant de le retenir (emplacement, "
+                                        "fiabilité, cohérence avec les données actives).", "priority": "court_terme",
+                              "owner": "Examinateur"}]))
+        else:
+            ex = []
+            for a in arts[:3]:
+                cur = _current_version(ctx, a)
+                ex.append(f"ligne {recovery(a)['rowid']} : contenu antérieur « {_summary_body(a)} »"
+                          + (f", contenu actuel « {_summary_body(cur)} »" if cur else ""))
+            hits.append(Hit(
+                key=f"{status}|{db}", type="observation", severity="faible",
+                title=f"Contenus antérieurs d'enregistrements modifiés : {_what(arts)}",
+                description=(f"La base {db} conserve, pour {len(arts)} ligne(s) encore active(s), un contenu "
+                             f"antérieur différent du contenu actuel ({_what(arts)}). Emplacement(s) de lecture : "
+                             f"{where}.{period} {'; '.join(ex)}.{more}"),
+                artifact_ids=[a["artifact_id"] for a in arts[:MAX_CITED]]
+                + [c["artifact_id"] for c in (_current_version(ctx, a) for a in arts[:MAX_CITED]) if c],
+                interpretation=("Le contenu de ces lignes a été modifié après leur création (par exemple un message "
+                                "modifié par son auteur) ; l'identifiant de ligne peut aussi avoir été réutilisé pour "
+                                "un nouvel enregistrement après une suppression. L'auteur et la date de la "
+                                "modification ne sont pas établis par ces seules données."),
+                plain_summary="Le contenu antérieur de messages ou d'enregistrements modifiés a été retrouvé.",
+                confidence=confidence,
+                remediation=[{"action": "Comparer contenus antérieur et actuel et vérifier la réutilisation éventuelle "
+                                        "de l'identifiant.", "priority": "court_terme", "owner": "Examinateur"}]))
+    return hits
+
+
+def _summary_body(a: dict) -> str:
+    d = a["data"]
+    return str(d.get("body") or d.get("url") or d.get("number") or artifact_summary(a))
+
+
 RULES: list[Rule] = [
     Rule("R1", "Application installée hors magasin officiel",
          "Application non système sans installateur ou installée par un installateur de paquets / navigateur.",
@@ -377,6 +481,10 @@ RULES: list[Rule] = [
     Rule("R5", "Interruption de l'activité",
          "Écart entre deux activités supérieur au seuil et à 10 fois l'écart médian.",
          rule_activity_gaps),
+    Rule("R6", "Enregistrements supprimés récupérés",
+         "Enregistrements lus hors des données actives des bases SQLite (WAL, journal, pages et blocs libres), "
+         "regroupés par base : absents des données actives, ou versions antérieures de lignes actives.",
+         rule_recovered),
 ]
 
 

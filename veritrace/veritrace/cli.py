@@ -487,6 +487,17 @@ def parse_sqlite(c: Ctx, case_dir: Path, extraction: Path) -> None:
     _print_outcome("veritrace-sqlite", _run(c, case_dir, SqliteNativeWrapper(), extraction, {}))
 
 
+@parse.command("recover")
+@_case_opt
+@_input_opt
+@pass_ctx
+def parse_recover(c: Ctx, case_dir: Path, extraction: Path) -> None:
+    """Récupère les enregistrements supprimés des bases SQLite (WAL, journal, pages et blocs libres)."""
+    from veritrace.parsing.recover import RecoverWrapper
+
+    _print_outcome("veritrace-recover", _run(c, case_dir, RecoverWrapper(), extraction, {}))
+
+
 @parse.command("all")
 @_case_opt
 @_input_opt
@@ -495,17 +506,22 @@ def parse_sqlite(c: Ctx, case_dir: Path, extraction: Path) -> None:
 @click.option("--mvt-input", type=click.Path(exists=True, path_type=Path),
               help="Entrée spécifique pour MVT (bundle AndroidQF, .ab, bugreport) si différente.")
 @click.option("--autopsy-case", type=click.Path(exists=True, path_type=Path), help="Cas Autopsy à intégrer.")
+@click.option("--no-recover", is_flag=True, help="Ne pas rechercher les enregistrements supprimés.")
 @pass_ctx
 def parse_all(c: Ctx, case_dir: Path, extraction: Path, iocs: tuple[Path, ...], mvt_input: Path | None,
-              autopsy_case: Path | None) -> None:
-    """Enchaîne ALEAPP, les parseurs natifs, MVT et (si fourni) Autopsy ; un outil absent est ignoré."""
+              autopsy_case: Path | None, no_recover: bool) -> None:
+    """Enchaîne ALEAPP, les parseurs natifs, la récupération des supprimés, MVT et (si fourni) Autopsy ;
+    un outil absent est ignoré."""
     from veritrace.parsing.aleapp import AleappWrapper
     from veritrace.parsing.autopsy import AutopsyWrapper, find_case_db
     from veritrace.parsing.mvt import MvtWrapper
+    from veritrace.parsing.recover import RecoverWrapper
     from veritrace.parsing.sqlite_native import SqliteNativeWrapper
 
     _print_outcome("ALEAPP", _run(c, case_dir, AleappWrapper(), extraction, {}))
     _print_outcome("veritrace-sqlite", _run(c, case_dir, SqliteNativeWrapper(), extraction, {}))
+    if not no_recover:
+        _print_outcome("veritrace-recover", _run(c, case_dir, RecoverWrapper(), extraction, {}))
     _print_outcome("MVT", _run(c, case_dir, MvtWrapper(), mvt_input or extraction, {"iocs": list(iocs)}))
     if autopsy_case:
         db = find_case_db(autopsy_case)
@@ -525,13 +541,13 @@ def correlate(c: Ctx, case_dir: Path) -> None:
     s = run_correlation(_open_case(c, case_dir))
     click.secho(f"✔ {s['artifacts']} artefact(s) → {s['facts']} fait(s) unique(s) ; {s['corroborated_facts']} "
                 f"corroboré(s) ; {s['merged_duplicates']} doublon(s) inter-outils ; {s['timeline_events']} "
-                f"événement(s) de timeline ; {s['rule_findings']} constat(s) des règles R1–R5.", fg="green")
+                f"événement(s) de timeline ; {s['rule_findings']} constat(s) des règles R1–R6.", fg="green")
 
 
 # --------------------------------------------------------------------------- règles
 @cli.group()
 def rules() -> None:
-    """Règles de détection d'anomalies (R1–R5) : liste, configuration, revue des constats."""
+    """Règles de détection d'anomalies (R1–R6) : liste, configuration, revue des constats."""
 
 
 @rules.command("list")

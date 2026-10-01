@@ -17,11 +17,13 @@ from typing import Any
 
 from veritrace import __author__, __version__
 from veritrace.core.hashing import sha256_bytes
+from veritrace.schema.facts import fact_hash
 from veritrace.schema.pivot import SCHEMA_VERSION
 
 ALEAPP = {"name": "ALEAPP", "version": "2026.4.2"}
 MVT = {"name": "MVT", "version": "2026.9.28"}
 VT = {"name": "veritrace-sqlite", "version": __version__}
+REC = {"name": "veritrace-recover", "version": __version__}
 EXAMINER = "Examinateur Exemple"
 SPY = "com.sys.monitor.service"
 
@@ -81,6 +83,16 @@ def build_example() -> dict[str, Any]:
             {"mac": "00:1A:7D:00:00:02", "name": "Écouteurs BT", "paired": True,
              "last_seen": "2026-08-30T08:12:00+00:00"}, "/data/misc/bluedroid/bt_config.conf"),
     ]
+    # Enregistrement récupéré hors des données actives (veritrace-recover) : SMS supprimé, lu dans un bloc libre.
+    deleted_sms = {"direction": "entrant", "address": "+22670000001", "body": "Efface ce message après lecture.",
+                   "service": "sms", "read": True, "thread_id": "12"}
+    rec = art("ART-0014", "sms", "2026-09-02T19:46:12+00:00", REC, "RUN-REC-01", "EV-001", deleted_sms, mmssms,
+              "sms:rowid inconnu — bloc libre de la page 37, décalage 0x0B2C", tags=["recupere"])
+    rec["x_veritrace"]["fact_sha256"] = fact_hash("sms", deleted_sms, rec["timestamp"], "absent")
+    rec["x_veritrace"]["recovery"] = {
+        "status": "absent", "method": "bloc_libre", "confidence": "moyenne", "database": mmssms, "table": "sms",
+        "rowid": None, "truncated": False, "locations": ["bloc libre de la page 37, décalage 0x0B2C"]}
+    artifacts.append(rec)
 
     findings = [
         {"finding_id": "F-001", "type": "ioc", "severity": "critique", "source_tool": "MVT",
@@ -229,11 +241,23 @@ def build_example() -> dict[str, Any]:
                  "ended_at": "2026-09-10T10:40:09+00:00", "status": "succes", "message": "",
                  "input_item_ids": ["EV-001"], "output_path": "parsed/veritrace-sqlite/RUN-VT-01/",
                  "artifacts_produced": 2},
+                {"run_id": "RUN-REC-01", "tool": "veritrace-recover", "tool_version": __version__,
+                 "mode": "execute", "command": ["veritrace", "parse", "recover"],
+                 "started_at": "2026-09-10T10:40:10+00:00", "ended_at": "2026-09-10T10:40:12+00:00",
+                 "status": "succes", "message": "1 base(s) examinée(s) ; 1 enregistrement(s) absent(s) des données "
+                 "actives et 0 version(s) antérieure(s) récupéré(s).", "input_item_ids": ["EV-001"],
+                 "output_path": "parsed/veritrace-recover/RUN-REC-01/", "artifacts_produced": 1},
                 {"run_id": "RUN-AUTOPSY-01", "tool": "Autopsy", "tool_version": None, "mode": None, "command": [],
                  "started_at": "2026-09-10T10:41:00+00:00", "ended_at": "2026-09-10T10:41:00+00:00", "status": "ignore",
                  "message": "Aucun cas Autopsy fourni — étape non exécutée.", "input_item_ids": [], "output_path": None,
                  "artifacts_produced": 0},
             ],
+            "recovery": [
+                {"run_id": "RUN-REC-01", "item_id": "EV-001", "database": mmssms, "page_size": 4096, "pages": 212,
+                 "auto_vacuum": False, "wal_frames": 0, "wal_committed_frames": 0, "journal": None,
+                 "journal_pages": 0, "freelist_pages": 0, "free_bytes": 18322, "nonzero_free_bytes": 1210,
+                 "secure_delete_observed": False, "recovered_absent": 1, "recovered_previous": 0,
+                 "already_active": 3, "ambiguous": 0, "by_method": {"bloc_libre": 1}, "notes": []}],
             "integrity": {"generated_at": "2026-09-11T14:05:00+00:00",
                           "generator": {"name": "Veritrace", "version": __version__, "author": __author__},
                           "audit": {"entries": 27, "head_hash": _h("audit-head"), "verified": True,

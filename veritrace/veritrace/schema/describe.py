@@ -21,7 +21,25 @@ def _v(x: Any) -> str:
     return str(x)
 
 
+RECOVERY_STATUS_FR = {"absent": "absent des données actives", "version_anterieure": "version antérieure"}
+RECOVERY_METHOD_FR = {
+    "wal": "ancienne version de page (journal WAL)",
+    "wal_non_valide": "trame WAL non validée",
+    "journal": "journal de rollback",
+    "page_libre": "page libre",
+    "espace_non_alloue": "espace non alloué d'une page",
+    "bloc_libre": "bloc libre (cellule supprimée)",
+}
+_PREFIX = {"absent": "[Récupéré] ", "version_anterieure": "[Version antérieure] "}
+
+
 def artifact_summary(a: dict[str, Any]) -> str:
+    """Résumé lisible ; un enregistrement récupéré hors des données actives est préfixé comme tel."""
+    rec = ((a.get("x_veritrace") or {}).get("recovery") or {}).get("status")
+    return _PREFIX.get(rec, "") + _summary(a)
+
+
+def _summary(a: dict[str, Any]) -> str:
     d, c = a.get("data") or {}, a.get("category")
     if c == "sms":
         who = d.get("contact_name") or d.get("address")

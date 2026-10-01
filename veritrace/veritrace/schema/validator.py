@@ -233,7 +233,8 @@ def _semantic(doc: dict, report: ValidationReport, case_root: Path | None) -> No
             continue
         if a.get("sha256") != content_hash(a["category"], a["data"]):
             report.error(f"{p}.sha256", f"ne correspond pas aux données (attendu {content_hash(a['category'], a['data'])})")
-        expected_fact = fact_hash(a["category"], a["data"], a.get("timestamp"))
+        rec_status = (x.get("recovery") or {}).get("status")
+        expected_fact = fact_hash(a["category"], a["data"], a.get("timestamp"), rec_status)
         if x.get("fact_sha256") and x["fact_sha256"] != expected_fact:
             report.error(f"{p}.x_veritrace.fact_sha256", f"ne correspond pas au fait (attendu {expected_fact})")
         groups[expected_fact].add(engine(a))
@@ -242,7 +243,8 @@ def _semantic(doc: dict, report: ValidationReport, case_root: Path | None) -> No
     for i, a in enumerate(arts):
         if not isinstance(a.get("data"), dict):
             continue
-        n = len(groups[fact_hash(a["category"], a["data"], a.get("timestamp"))])
+        n = len(groups[fact_hash(a["category"], a["data"], a.get("timestamp"),
+                                 (ext(a).get("recovery") or {}).get("status"))])
         if a.get("corroborated") and n < 2:
             report.error(f"artifacts[{i}].corroborated", "« corroboré » exige au moins deux moteurs d'analyse distincts")
         if a.get("corroborated") is False and n >= 2:

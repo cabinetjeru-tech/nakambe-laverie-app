@@ -10,7 +10,7 @@ from typing import Any, Iterator
 SCHEMA_VERSION = "1.0.0"
 
 AUTH_TYPES = ("consentement", "mandat", "ordre_judiciaire", "politique-entreprise")
-CATEGORIES = ("sms", "appel", "contact", "navigation", "localisation", "exif", "usage_app", "application", "wifi",
+CATEGORIES = ("sms", "appel", "message", "contact", "navigation", "localisation", "exif", "usage_app", "application", "wifi",
               "bluetooth", "compte", "ioc", "autre")
 SEVERITIES = ("critique", "eleve", "moyen", "faible", "info")          # ordre décroissant
 FINDING_TYPES = ("ioc", "application_suspecte", "anomalie", "observation")
@@ -19,6 +19,9 @@ CUSTODY_ACTIONS = ("collecte", "verification", "copie", "transfert", "stockage",
 ACQ_STATUS = ("succes", "partiel", "echec")
 RUN_STATUS = ("succes", "avertissement", "echec", "ignore")
 PRIORITIES = ("immediat", "court_terme", "moyen_terme")
+RECOVERY_STATUS = ("absent", "version_anterieure")
+RECOVERY_METHODS = ("wal", "wal_non_valide", "journal", "page_libre", "espace_non_alloue", "bloc_libre")
+CONFIDENCE = ("elevee", "moyenne", "faible")
 ITEM_TYPES = ("extraction", "sauvegarde", "fichier", "archive", "document", "sortie_outil", "ioc")
 
 
@@ -63,8 +66,15 @@ def engine(art: dict[str, Any]) -> str:
     return ext(art).get("engine") or (art.get("source") or {}).get("tool") or "?"
 
 
+def recovery(art: dict[str, Any]) -> dict[str, Any] | None:
+    """Bloc de récupération d'un artefact récupéré hors des données actives (None sinon)."""
+    return ext(art).get("recovery")
+
+
 def fact_sha(art: dict[str, Any]) -> str:
     """Empreinte du fait : extension si présente, sinon recalculée à partir des données."""
     from veritrace.schema.facts import fact_hash
 
-    return ext(art).get("fact_sha256") or fact_hash(art["category"], art.get("data") or {}, art.get("timestamp"))
+    x = ext(art)
+    return x.get("fact_sha256") or fact_hash(art["category"], art.get("data") or {}, art.get("timestamp"),
+                                             (x.get("recovery") or {}).get("status"))

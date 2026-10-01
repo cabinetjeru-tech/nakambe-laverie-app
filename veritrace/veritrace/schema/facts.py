@@ -17,6 +17,9 @@ La direction (entrant/sortant/manqué) n'entre PAS dans la clé des SMS et appel
 outils la codent différemment (Autopsy classe un appel manqué « entrant », ALEAPP
 « manqué ») ; l'horodatage à la seconde + le numéro (+ le texte) suffisent à identifier.
 
+Enregistrements récupérés (`x_veritrace.recovery`, moteur `veritrace-recover`) : leur
+statut (« absent » des données actives, « version_anterieure ») entre dans l'empreinte.
+
 Règles de normalisation (volontairement conservatrices — en cas de doute, on NE fusionne
 pas : une fausse corroboration est plus grave qu'un doublon) :
 - horodatage tronqué à la seconde, en UTC ;
@@ -95,5 +98,11 @@ def fact_key(category: str, data: dict[str, Any], timestamp: str | None) -> dict
     return {"ts": ts, "data": d}
 
 
-def fact_hash(category: str, data: dict[str, Any], timestamp: str | None) -> str:
-    return sha256_json({"category": category, "key": fact_key(category, data, timestamp)})
+def fact_hash(category: str, data: dict[str, Any], timestamp: str | None, recovered: str | None = None) -> str:
+    """Empreinte du fait. `recovered` (statut d'un enregistrement récupéré hors des données actives)
+    entre dans l'empreinte : un enregistrement récupéré n'est jamais fusionné avec — ni ne
+    corrobore — un fait actif extrait par un autre outil."""
+    body: dict[str, Any] = {"category": category, "key": fact_key(category, data, timestamp)}
+    if recovered:
+        body["recovered"] = recovered
+    return sha256_json(body)

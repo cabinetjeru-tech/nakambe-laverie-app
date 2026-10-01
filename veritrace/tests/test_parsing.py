@@ -238,7 +238,8 @@ def test_missing_tool_is_warning_not_crash(tmp_path, monkeypatch):
     assert "ignore" in r.output
     doc = _doc(case)
     status = {t["tool"]: t["status"] for t in doc["x_veritrace"]["tool_runs"]}
-    assert status == {"ALEAPP": "ignore", "MVT": "ignore", "veritrace-sqlite": "succes"}  # moteur natif toujours présent
+    assert status == {"ALEAPP": "ignore", "MVT": "ignore", "veritrace-sqlite": "succes",
+                      "veritrace-recover": "succes"}  # moteurs natifs toujours présents
     assert validate(doc).ok
     r = runner.invoke(cli, ["report", "--case", str(case), "--report", "judiciaire", "--format", "md"],
                       input=AUTH_INPUT)

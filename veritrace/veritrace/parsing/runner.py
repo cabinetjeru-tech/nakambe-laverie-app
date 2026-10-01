@@ -26,11 +26,12 @@ from veritrace.core.timeutil import utc_now_iso
 from veritrace.correlation.engine import correlate
 from veritrace.parsing.base import RunContext, ToolFailed, ToolUnavailable, ToolWrapper, WrapperResult
 from veritrace.parsing.mvt import IocFileError
-from veritrace.schema.pivot import ext, fact_sha, tool_runs
+from veritrace.schema.pivot import ext, fact_sha, root_ext, tool_runs
 
 log = get_logger("parsing.runner")
 
-LABELS = {"aleapp": "ALEAPP", "mvt": "MVT", "autopsy": "Autopsy", "veritrace-sqlite": "veritrace-sqlite"}
+LABELS = {"aleapp": "ALEAPP", "mvt": "MVT", "autopsy": "Autopsy", "veritrace-sqlite": "veritrace-sqlite",
+          "veritrace-recover": "veritrace-recover"}
 
 
 @dataclass
@@ -154,6 +155,10 @@ def run_wrapper(case: Case, wrapper: ToolWrapper, extraction: Path, options: dic
     if result.limitations:  # éléments présents mais non analysables : consignés dans les limites du rapport
         lims = doc["case"].setdefault("x_veritrace", {}).setdefault("limitations", [])
         lims += [x for x in result.limitations if x not in lims]
+    if result.recovery_stats:  # bilan de récupération : une entrée par (élément de preuve, base), la plus récente
+        rec = root_ext(doc).setdefault("recovery", [])
+        fresh = {(s["item_id"], s["database"]) for s in result.recovery_stats}
+        rec[:] = [s for s in rec if (s["item_id"], s["database"]) not in fresh] + result.recovery_stats
     message = " ".join(result.notes + ([f"{already} artefact(s) déjà présent(s) (ré-exécution) non dupliqué(s)."]
                                        if already else []))
     _record("succes", message, result.tool, command=result.command, artifacts=added, mode=result.mode,

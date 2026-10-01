@@ -635,6 +635,57 @@
         ],
         "run_id": "RUN-ALEAPP-01"
       }
+    },
+    {
+      "artifact_id": "ART-0014",
+      "category": "sms",
+      "timestamp": "2026-09-02T19:46:12+00:00",
+      "source": {
+        "tool": "veritrace-recover",
+        "tool_version": "0.1.0",
+        "item_id": "EV-001",
+        "file_path": "/data/data/com.android.providers.telephony/databases/mmssms.db",
+        "record_ref": "sms:rowid inconnu — bloc libre de la page 37, décalage 0x0B2C"
+      },
+      "data": {
+        "direction": "entrant",
+        "address": "+22670000001",
+        "body": "Efface ce message après lecture.",
+        "service": "sms",
+        "read": true,
+        "thread_id": "12"
+      },
+      "sha256": "01327a4983fbfd9c1144f88fa253a88480e25b5ba4ff19257b90772b9ccd4c3c",
+      "corroborated": false,
+      "corroborated_by": [
+        "veritrace-recover"
+      ],
+      "x_veritrace": {
+        "fact_sha256": "5feaf7e3549ee2288cd429c6a1e065312c5c095ab69a374a2278605dae18cf66",
+        "sources": [
+          {
+            "artifact_id": "ART-0014",
+            "tool": "veritrace-recover",
+            "engine": "veritrace-recover"
+          }
+        ],
+        "run_id": "RUN-REC-01",
+        "tags": [
+          "recupere"
+        ],
+        "recovery": {
+          "status": "absent",
+          "method": "bloc_libre",
+          "confidence": "moyenne",
+          "database": "/data/data/com.android.providers.telephony/databases/mmssms.db",
+          "table": "sms",
+          "rowid": null,
+          "truncated": false,
+          "locations": [
+            "bloc libre de la page 37, décalage 0x0B2C"
+          ]
+        }
+      }
     }
   ],
   "findings": [
@@ -807,7 +858,7 @@
       "type": "anomalie",
       "severity": "faible",
       "title": "Interruption de l'activité enregistrée (18.1 jours)",
-      "description": "Aucune activité (SMS, messageries, appels, navigation, usage des applications, localisation) n'est enregistrée entre le 14/08/2026 à 20:58:42 UTC (https://download.example-monitor.invalid/apk/latest (Chrome)) et le 01/09/2026 à 22:15:30 UTC (11.7802, -0.3703 ±12 m (fused)), soit 18.1 jours ; l'intervalle médian entre deux activités est de 10.9 h.",
+      "description": "Aucune activité (SMS, messageries, appels, navigation, usage des applications, localisation) n'est enregistrée entre le 14/08/2026 à 20:58:42 UTC (https://download.example-monitor.invalid/apk/latest (Chrome)) et le 01/09/2026 à 22:15:30 UTC (11.7802, -0.3703 ±12 m (fused)), soit 18.1 jours ; l'intervalle médian entre deux activités est de 0.3 h.",
       "artifact_ids": [
         "ART-0009",
         "ART-0008"
@@ -830,6 +881,36 @@
             "owner": "Examinateur"
           }
         ]
+      }
+    },
+    {
+      "finding_id": "F-R6-59bcf1b031",
+      "type": "observation",
+      "severity": "moyen",
+      "title": "Enregistrements supprimés récupérés : 1 SMS",
+      "description": "La base /data/data/com.android.providers.telephony/databases/mmssms.db contient 1 enregistrement(s) qui ne figurent pas parmi ses données actives (1 SMS). Emplacement(s) de lecture : bloc libre (cellule supprimée) (1). Horodatages propres aux enregistrements : du 02/09/2026 à 19:46:12 UTC au 02/09/2026 à 19:46:12 UTC. Exemples : [Récupéré] SMS reçu de +22670000001 : « Efface ce message après lecture. ».",
+      "artifact_ids": [
+        "ART-0014"
+      ],
+      "item_ids": [
+        "EV-001"
+      ],
+      "corroborated": false,
+      "source_tool": "Veritrace (règles) R6",
+      "x_veritrace": {
+        "rule_id": "R6",
+        "rule_version": "1.0",
+        "interpretation": "Ces enregistrements ont existé dans la base puis en ont été retirés, ou ont été remplacés lors d'une modification. Leur présence ne permet pas, à elle seule, de déterminer l'auteur ni la cause du retrait (action de l'utilisateur, purge automatique ou synchronisation de l'application) ; la date de suppression n'est pas connue. Les enregistrements lus dans des blocs libres ou attribués à leur table par leur seule structure (fiabilité moyenne ou faible) peuvent être incomplets et doivent être confirmés avant d'être retenus.",
+        "plain_summary": "1 élément(s) effacé(s) (1 SMS) ont pu être retrouvés dans les données de l'appareil.",
+        "confidence": "moyenne",
+        "remediation": [
+          {
+            "action": "Examiner chaque enregistrement récupéré avant de le retenir (emplacement, fiabilité, cohérence avec les données actives).",
+            "priority": "court_terme",
+            "owner": "Examinateur"
+          }
+        ],
+        "business_impact": "Des communications supprimées de l'appareil restent partiellement accessibles."
       }
     }
   ],
@@ -988,6 +1069,25 @@
       }
     },
     {
+      "event_id": "TL-A-5feaf7e3549ee228",
+      "timestamp": "2026-09-02T19:46:12+00:00",
+      "category": "sms",
+      "description": "[Récupéré] SMS reçu de +22670000001 : « Efface ce message après lecture. »",
+      "artifact_ids": [
+        "ART-0014"
+      ],
+      "corroborated": false,
+      "sources": [
+        "veritrace-recover"
+      ],
+      "x_veritrace": {
+        "generated": true,
+        "flags": [
+          "recupere"
+        ]
+      }
+    },
+    {
       "event_id": "TL-A-68db396ae8b21e30",
       "timestamp": "2026-09-02T20:01:47+00:00",
       "category": "appel",
@@ -1137,6 +1237,26 @@
         "artifacts_produced": 2
       },
       {
+        "run_id": "RUN-REC-01",
+        "tool": "veritrace-recover",
+        "tool_version": "0.1.0",
+        "mode": "execute",
+        "command": [
+          "veritrace",
+          "parse",
+          "recover"
+        ],
+        "started_at": "2026-09-10T10:40:10+00:00",
+        "ended_at": "2026-09-10T10:40:12+00:00",
+        "status": "succes",
+        "message": "1 base(s) examinée(s) ; 1 enregistrement(s) absent(s) des données actives et 0 version(s) antérieure(s) récupéré(s).",
+        "input_item_ids": [
+          "EV-001"
+        ],
+        "output_path": "parsed/veritrace-recover/RUN-REC-01/",
+        "artifacts_produced": 1
+      },
+      {
         "run_id": "RUN-AUTOPSY-01",
         "tool": "Autopsy",
         "tool_version": null,
@@ -1149,6 +1269,32 @@
         "input_item_ids": [],
         "output_path": null,
         "artifacts_produced": 0
+      }
+    ],
+    "recovery": [
+      {
+        "run_id": "RUN-REC-01",
+        "item_id": "EV-001",
+        "database": "/data/data/com.android.providers.telephony/databases/mmssms.db",
+        "page_size": 4096,
+        "pages": 212,
+        "auto_vacuum": false,
+        "wal_frames": 0,
+        "wal_committed_frames": 0,
+        "journal": null,
+        "journal_pages": 0,
+        "freelist_pages": 0,
+        "free_bytes": 18322,
+        "nonzero_free_bytes": 1210,
+        "secure_delete_observed": false,
+        "recovered_absent": 1,
+        "recovered_previous": 0,
+        "already_active": 3,
+        "ambiguous": 0,
+        "by_method": {
+          "bloc_libre": 1
+        },
+        "notes": []
       }
     ],
     "integrity": {
@@ -1223,6 +1369,19 @@
         "version": "1.0",
         "title": "Interruption de l'activité",
         "description": "Écart entre deux activités supérieur au seuil et à 10 fois l'écart médian.",
+        "enabled": true,
+        "hits": 1,
+        "parameters": {
+          "gap_hours": 72.0,
+          "future_tolerance_hours": 24.0,
+          "download_window_minutes": 60.0
+        }
+      },
+      {
+        "rule_id": "R6",
+        "version": "1.0",
+        "title": "Enregistrements supprimés récupérés",
+        "description": "Enregistrements lus hors des données actives des bases SQLite (WAL, journal, pages et blocs libres), regroupés par base : absents des données actives, ou versions antérieures de lignes actives.",
         "enabled": true,
         "hits": 1,
         "parameters": {

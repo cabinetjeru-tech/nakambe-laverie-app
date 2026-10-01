@@ -30,7 +30,7 @@ def _app(aid, pkg, installer, is_system, perms=(), first="2026-08-14T21:03:11+00
 # --------------------------------------------------------------------------- sur l'exemple
 def test_example_rules(example_doc):
     applied = {r["rule_id"]: r["hits"] for r in example_doc["x_veritrace"]["rules_applied"]}
-    assert applied == {"R1": 1, "R2": 0, "R3": 1, "R4": 0, "R5": 1}
+    assert applied == {"R1": 1, "R2": 0, "R3": 1, "R4": 0, "R5": 1, "R6": 1}
     assert validate(example_doc).ok
 
 
