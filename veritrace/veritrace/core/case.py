@@ -3,7 +3,7 @@
 Structure créée par `veritrace case init` :
 
     <AFFAIRE>/
-    ├── normalized/veritrace_case.json   ← contrat de données (source unique des rapports)
+    ├── normalized/veritrace_case.json   ← format pivot (source unique des rapports)
     ├── acquisition/raw/<ACQ-ID>/        ← données brutes collectées (ne jamais modifier)
     ├── parsed/<outil>/                  ← sorties brutes d'ALEAPP, MVT, Autopsy…
     ├── custody/documents/               ← PV, consentement, mandat (hachés)
@@ -26,6 +26,7 @@ from veritrace.core.authorization import AuthorizationRecord
 from veritrace.core.hashing import sha256_file
 from veritrace.core.logging_setup import attach_case_logfile, get_logger
 from veritrace.core.timeutil import utc_now_iso
+from veritrace.schema.pivot import SCHEMA_VERSION
 from veritrace.schema.validator import ensure_valid
 
 log = get_logger("case")
@@ -50,29 +51,24 @@ class CaseError(RuntimeError):
 
 def empty_document(*, case_id: str, title: str, auth: AuthorizationRecord, organization: dict[str, Any],
                    report_type: str = "judiciaire", display_timezone: str = "UTC") -> dict[str, Any]:
+    """Document pivot vide (appareil non encore identifié)."""
     now = utc_now_iso()
     return {
-        "schema_version": "0.3.0",
         "case": {
             "case_id": case_id,
             "title": title,
+            "examiner": auth.examiner,
             "created_at": now,
-            "report_type": report_type,
-            "display_timezone": display_timezone,
-            "organization": organization,
-            "examiners": [{"name": auth.examiner}],
-            "legal_authorization": {
-                "basis": auth.legal_basis,
-                "reference": auth.reference,
-                "verified_by": auth.examiner,
-                "verified_at": auth.confirmed_at,
-            },
-            "limitations": [],
+            "authorization": {"type": auth.legal_basis, "reference": auth.reference,
+                              "confirmed_by": auth.examiner, "confirmed_at": auth.confirmed_at},
+            "x_veritrace": {"report_type": report_type, "display_timezone": display_timezone,
+                            "organization": organization, "limitations": []},
         },
-        "devices": [], "acquisitions": [], "evidence_items": [], "custody_chain": [],
-        "tool_runs": [], "artifacts": [], "timeline": [], "findings": [],
-        "integrity": {"generated_at": now,
-                      "generator": {"name": "Veritrace", "version": __version__, "author": __author__}},
+        "device": {"manufacturer": None, "model": None, "os_version": None, "imei": [], "serial": None},
+        "acquisitions": [], "artifacts": [], "findings": [], "timeline": [], "chain_of_custody": [],
+        "x_veritrace": {"schema_version": SCHEMA_VERSION, "tool_runs": [],
+                        "integrity": {"generated_at": now,
+                                      "generator": {"name": "Veritrace", "version": __version__, "author": __author__}}},
     }
 
 
@@ -121,10 +117,10 @@ class Case:
             return json.load(fh)
 
     def refresh_integrity(self, doc: dict[str, Any]) -> dict[str, Any]:
-        """Met à jour le bloc `integrity` (version, état et tête du journal d'audit)."""
+        """Met à jour `x_veritrace.integrity` (version, état et tête du journal d'audit)."""
         result = self.audit.verify()
         now = utc_now_iso()
-        doc["integrity"] = {
+        doc.setdefault("x_veritrace", {})["integrity"] = {
             "generated_at": now,
             "generator": {"name": "Veritrace", "version": __version__, "author": __author__},
             "audit": {"entries": result.entries, "head_hash": result.head_hash,

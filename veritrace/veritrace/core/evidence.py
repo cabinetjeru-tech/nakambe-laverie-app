@@ -1,9 +1,11 @@
-"""Enregistrement et vérification des éléments de preuve dans le JSON de l'affaire.
+"""Éléments de preuve (`acquisitions[].items[]`) et chaîne de custody du format pivot.
 
 - Un fichier est haché directement (SHA-256).
-- Un dossier (extraction « fs ») est haché via son manifeste `sha256sum` (chemins
-  triés), écrit dans `custody/manifests/<EV-ID>.sha256sum` : il peut être revérifié sans
-  Veritrace (`sha256sum -c`), et l'empreinte du dossier = SHA-256 de ce manifeste.
+- Un dossier est haché via son manifeste `sha256sum` (chemins triés), écrit dans
+  `custody/manifests/<ITEM-ID>.sha256sum` : revérifiable sans Veritrace (`sha256sum -c`) ;
+  l'empreinte du dossier = SHA-256 de ce manifeste.
+- Tout élément entre dans l'affaire par une acquisition : collecte ADB, ou acquisition
+  « import » pour une extraction, une base Autopsy ou un fichier d'IOC remis à Veritrace.
 - Avant chaque analyse, l'empreinte est recalculée : toute différence lève
   `IntegrityError` et AUCUNE analyse n'est lancée (principe de non-altération).
 """
@@ -13,8 +15,10 @@ import re
 from pathlib import Path
 from typing import Any
 
+from veritrace import __version__
 from veritrace.core.hashing import manifest_text, sha256_bytes, sha256_file, tree_manifest
 from veritrace.core.timeutil import utc_now_iso
+from veritrace.schema.pivot import iter_items
 
 
 class IntegrityError(RuntimeError):
@@ -24,10 +28,15 @@ class IntegrityError(RuntimeError):
 def next_id(items: list[dict], key: str, prefix: str, width: int) -> str:
     n = 0
     for it in items:
-        m = re.search(r"(\d+)$", str(it.get(key, "")))
-        if m and str(it.get(key, "")).startswith(prefix):
+        value = str(it.get(key, ""))
+        m = re.search(r"(\d+)$", value)
+        if m and value.startswith(prefix):
             n = max(n, int(m.group(1)))
     return f"{prefix}{n + 1:0{width}d}"
+
+
+def next_item_id(doc: dict[str, Any]) -> str:
+    return next_id([it for _, it in iter_items(doc)], "item_id", "EV-", 3)
 
 
 def _rel(case_root: Path, path: Path) -> str:
@@ -49,47 +58,12 @@ def hash_evidence(path: Path, manifest_out: Path | None = None) -> tuple[str, in
     return sha256_file(path), path.stat().st_size
 
 
-def _custody(doc: dict, evidence_id: str, action: str, actor: str, sha: str, notes: str) -> dict:
-    ev = {"event_id": next_id(doc["custody_chain"], "event_id", "COC-", 3), "timestamp": utc_now_iso(),
-          "evidence_id": evidence_id, "action": action, "actor": actor, "sha256": sha,
-          "location": "Poste d'analyse Veritrace", "notes": notes}
-    doc["custody_chain"].append(ev)
+def custody(doc: dict, item_id: str, action: str, actor: str, sha: str, notes: str,
+            location: str = "Poste d'analyse Veritrace") -> dict:
+    ev = {"event_id": next_id(doc["chain_of_custody"], "event_id", "COC-", 3), "timestamp": utc_now_iso(),
+          "item_id": item_id, "action": action, "actor": actor, "sha256": sha, "location": location, "notes": notes}
+    doc["chain_of_custody"].append(ev)
     return ev
-
-
-def register_or_verify(doc: dict[str, Any], case_root: Path, path: Path, *, label: str, etype: str,
-                       actor: str, purpose: str) -> str:
-    """Enregistre `path` comme preuve (si nouveau) ou revérifie son empreinte ; renvoie l'ID."""
-    if not path.exists():
-        raise FileNotFoundError(f"élément introuvable : {path}")
-    local = _rel(case_root, path)
-    existing = next((e for e in doc["evidence_items"] if e["local_path"] == local), None)
-    if existing:
-        sha, _ = hash_evidence(path)
-        if sha != existing["sha256"]:
-            raise IntegrityError(
-                f"{existing['evidence_id']} ({local}) : empreinte actuelle {sha} ≠ empreinte de collecte "
-                f"{existing['sha256']} — la preuve a été modifiée, analyse refusée.")
-        _custody(doc, existing["evidence_id"], "verified", actor, sha, f"Empreinte revérifiée avant : {purpose}.")
-        return existing["evidence_id"]
-
-    evidence_id = next_id(doc["evidence_items"], "evidence_id", "EV-", 3)
-    manifest = case_root / "custody" / "manifests" / f"{evidence_id}.sha256sum" if path.is_dir() else None
-    sha, size = hash_evidence(path, manifest)
-    doc["evidence_items"].append({
-        "evidence_id": evidence_id, "acquisition_id": None, "label": label, "type": etype, "local_path": local,
-        "device_path": None, "sha256": sha, "size_bytes": size, "collected_at": utc_now_iso(), "collected_by": actor,
-    })
-    note = f"Enregistrement pour analyse ({purpose})."
-    if manifest:
-        note += f" Dossier : empreinte = SHA-256 du manifeste {_rel(case_root, manifest)}."
-    _custody(doc, evidence_id, "collected", actor, sha, note)
-    return evidence_id
-
-
-def record_parsed(doc: dict[str, Any], evidence_id: str, actor: str, tool_label: str) -> None:
-    ev = next(e for e in doc["evidence_items"] if e["evidence_id"] == evidence_id)
-    _custody(doc, evidence_id, "parsed", actor, ev["sha256"], f"Analyse par {tool_label}.")
 
 
 def make_read_only(path: Path) -> None:
@@ -99,21 +73,52 @@ def make_read_only(path: Path) -> None:
         f.chmod(0o444)
 
 
-def register_collected(doc: dict[str, Any], case_root: Path, path: Path, *, acquisition_id: str | None,
-                       label: str, etype: str, actor: str, device_path: str | None, location: str,
-                       notes: str) -> str:
-    """Enregistre un élément collecté : hachage immédiat, lecture seule, custody « collected »."""
-    evidence_id = next_id(doc["evidence_items"], "evidence_id", "EV-", 3)
-    manifest = case_root / "custody" / "manifests" / f"{evidence_id}.sha256sum" if path.is_dir() else None
+def add_item(doc: dict[str, Any], case_root: Path, acquisition: dict[str, Any], path: Path, *, label: str,
+             itype: str, actor: str, device_path: str | None, location: str, notes: str,
+             read_only: bool = False) -> str:
+    """Hache `path`, l'ajoute aux items de `acquisition` et consigne la « collecte »."""
+    # L'acquisition peut ne pas encore être rattachée au document : on compte aussi ses items.
+    pool = [it for _, it in iter_items(doc)] + list(acquisition["items"])
+    item_id = next_id(pool, "item_id", "EV-", 3)
+    manifest = case_root / "custody" / "manifests" / f"{item_id}.sha256sum" if path.is_dir() else None
     sha, size = hash_evidence(path, manifest)
-    make_read_only(path)
-    doc["evidence_items"].append({
-        "evidence_id": evidence_id, "acquisition_id": acquisition_id, "label": label, "type": etype,
-        "local_path": _rel(case_root, path), "device_path": device_path, "sha256": sha, "size_bytes": size,
-        "collected_at": utc_now_iso(), "collected_by": actor,
+    if read_only:
+        make_read_only(path)
+    acquisition["items"].append({
+        "item_id": item_id, "label": label, "type": itype, "path": _rel(case_root, path), "device_path": device_path,
+        "sha256": sha, "size_bytes": size, "collected_at": utc_now_iso(), "collected_by": actor,
     })
     if manifest:
         notes += f" Dossier : empreinte = SHA-256 du manifeste {_rel(case_root, manifest)} (une ligne par fichier)."
-    ev = _custody(doc, evidence_id, "collected", actor, sha, notes)
-    ev["location"] = location
-    return evidence_id
+    custody(doc, item_id, "collecte", actor, sha, notes, location)
+    return item_id
+
+
+def register_or_verify(doc: dict[str, Any], case_root: Path, path: Path, *, label: str, etype: str,
+                       actor: str, purpose: str) -> str:
+    """Revérifie un élément déjà connu (même chemin) ou l'importe ; renvoie son item_id."""
+    if not path.exists():
+        raise FileNotFoundError(f"élément introuvable : {path}")
+    local = _rel(case_root, path)
+    existing = next((it for _, it in iter_items(doc) if it["path"] == local), None)
+    if existing:
+        sha, _ = hash_evidence(path)
+        if sha != existing["sha256"]:
+            raise IntegrityError(
+                f"{existing['item_id']} ({local}) : empreinte actuelle {sha} ≠ empreinte de collecte "
+                f"{existing['sha256']} — la preuve a été modifiée, analyse refusée.")
+        custody(doc, existing["item_id"], "verification", actor, sha, f"Empreinte revérifiée avant : {purpose}.")
+        return existing["item_id"]
+
+    now = utc_now_iso()
+    acq = {"acquisition_id": next_id(doc["acquisitions"], "acquisition_id", "ACQ-", 2), "method": "import",
+           "tool": {"name": "veritrace", "version": __version__}, "operator": actor, "started_at": now,
+           "ended_at": now, "status": "succes", "notes": f"Import pour {purpose}.", "items": []}
+    doc["acquisitions"].append(acq)
+    return add_item(doc, case_root, acq, path, label=label, itype=etype, actor=actor, device_path=None,
+                    location="Poste d'analyse Veritrace", notes=f"Import pour analyse ({purpose}).")
+
+
+def record_parsed(doc: dict[str, Any], item_id: str, actor: str, tool_label: str) -> None:
+    it = next(i for _, i in iter_items(doc) if i["item_id"] == item_id)
+    custody(doc, item_id, "analyse", actor, it["sha256"], f"Analyse par {tool_label}.")

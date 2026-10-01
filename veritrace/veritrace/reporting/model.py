@@ -27,42 +27,37 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from veritrace import CREDIT_LINE
 from veritrace.core.timeutil import parse_iso, utc_now_iso
+from veritrace.core.authorization import LEGAL_BASES
 from veritrace.schema.describe import artifact_summary  # noqa: F401  (réexporté)
-from veritrace.schema.validator import artifact_engine
+from veritrace.schema.pivot import PRIORITIES, SEVERITIES, engine, ext, fact_sha, items_index, iter_items
 
 TEMPLATES = ("judiciaire", "entreprise")
 
-SEVERITY_ORDER = ["critical", "high", "medium", "low", "info"]
-SEVERITY_FR = {"critical": "Critique", "high": "Élevé", "medium": "Moyen", "low": "Faible", "info": "Information"}
+SEVERITY_ORDER = list(SEVERITIES)
+SEVERITY_FR = {"critique": "Critique", "eleve": "Élevé", "moyen": "Moyen", "faible": "Faible", "info": "Information"}
 SEVERITY_MEANING = {
-    "critical": "Compromission avérée ou exposition majeure — action immédiate requise.",
-    "high": "Risque sérieux, exploitation probable — traitement sous quelques jours.",
-    "medium": "Risque réel mais limité ou non confirmé — traitement planifié.",
-    "low": "Écart mineur, impact faible — amélioration recommandée.",
+    "critique": "Compromission avérée ou exposition majeure — action immédiate requise.",
+    "eleve": "Risque sérieux, exploitation probable — traitement sous quelques jours.",
+    "moyen": "Risque réel mais limité ou non confirmé — traitement planifié.",
+    "faible": "Écart mineur, impact faible — amélioration recommandée.",
     "info": "Observation sans risque identifié.",
 }
-PRIORITY_ORDER = ["immediate", "short_term", "medium_term"]
-PRIORITY_FR = {"immediate": "Immédiat (< 48 h)", "short_term": "Court terme (< 30 j)",
-               "medium_term": "Moyen terme (< 90 j)"}
-CONFIDENCE_FR = {"high": "élevée", "medium": "moyenne", "low": "faible"}
-BASIS_FR = {
-    "consentement": "Consentement écrit du titulaire",
-    "mandat": "Mandat / commission rogatoire",
-    "requisition": "Réquisition judiciaire",
-    "ordonnance": "Ordonnance du juge",
-    "politique-entreprise": "Politique interne de l'entreprise + consentement",
-}
+PRIORITY_ORDER = list(PRIORITIES)
+PRIORITY_FR = {"immediat": "Immédiat (< 48 h)", "court_terme": "Court terme (< 30 j)",
+               "moyen_terme": "Moyen terme (< 90 j)"}
+CONFIDENCE_FR = {"elevee": "élevée", "moyenne": "moyenne", "faible": "faible"}
+BASIS_FR = dict(LEGAL_BASES)
 CATEGORY_FR = {
-    "sms": "SMS / MMS", "call": "Journal d'appels", "contact": "Contacts",
-    "browser_history": "Historique de navigation", "location": "Géolocalisation", "exif": "Métadonnées EXIF",
-    "app_usage": "Usage des applications", "installed_app": "Applications installées", "wifi": "Réseaux Wi-Fi",
-    "bluetooth": "Appareils Bluetooth", "account": "Comptes", "ioc_match": "Correspondances IOC", "other": "Autres",
+    "sms": "SMS / MMS", "appel": "Journal d'appels", "contact": "Contacts", "navigation": "Historique de navigation",
+    "localisation": "Géolocalisation", "exif": "Métadonnées EXIF", "usage_app": "Usage des applications",
+    "application": "Applications installées", "wifi": "Réseaux Wi-Fi", "bluetooth": "Appareils Bluetooth",
+    "compte": "Comptes", "ioc": "Correspondances IOC", "autre": "Autres",
 }
-STATUS_FR = {"success": "Succès", "warning": "Avertissement", "failed": "Échec", "skipped": "Non exécuté",
-             "partial": "Partiel"}
-CUSTODY_FR = {"collected": "Collecte", "hashed": "Hachage", "verified": "Vérification", "copied": "Copie",
-              "transferred": "Transfert", "stored": "Stockage", "parsed": "Analyse", "reported": "Rapport",
-              "sealed": "Mise sous scellé", "returned": "Restitution"}
+STATUS_FR = {"succes": "Succès", "avertissement": "Avertissement", "echec": "Échec", "ignore": "Non exécuté",
+             "partiel": "Partiel"}
+CUSTODY_FR = {"collecte": "Collecte", "verification": "Vérification", "copie": "Copie", "transfert": "Transfert",
+              "stockage": "Stockage", "analyse": "Analyse", "rapport": "Rapport", "scelle": "Mise sous scellé",
+              "restitution": "Restitution"}
 METHOD_FR = {
     "adb_backup": ("Sauvegarde ADB (adb backup)",
                    "Sauvegarde logique des données applicatives autorisant la sauvegarde, initiée depuis le poste "
@@ -77,9 +72,10 @@ METHOD_FR = {
                          "Inventaire des paquets installés avec leur chemin, leur installateur et leur UID."),
     "adb_getprop": ("Propriétés système (adb shell getprop)",
                     "Lecture des propriétés d'identification de l'appareil (modèle, version, empreinte de build)."),
-    "import_external": ("Import externe", "Données remises par un tiers et importées telles quelles."),
+    "import": ("Import", "Élément remis à Veritrace (extraction, base Autopsy, fichier d'IOC) : haché à "
+                         "l'import et conservé tel quel."),
 }
-EXHIBIT_FR = {"screenshot": "Capture d'écran", "export": "Export", "document": "Document", "other": "Autre"}
+EXHIBIT_FR = {"capture": "Capture d'écran", "export": "Export", "document": "Document", "autre": "Autre"}
 IMAGE_EXT = {".png", ".jpg", ".jpeg"}
 
 GLOSSARY = [
@@ -92,8 +88,7 @@ GLOSSARY = [
     ("Autopsy", "Plateforme libre d'analyse forensique fondée sur The Sleuth Kit."),
     ("Chaîne de custody", "Traçabilité continue d'une preuve : qui l'a manipulée, quand, où, pour quelle action, "
      "et avec quelle empreinte."),
-    ("Corroboré", "Fait extrait de manière identique (même empreinte de contenu) par au moins deux outils "
-     "indépendants."),
+    ("Corroboré", "Fait extrait par au moins deux moteurs d'analyse indépendants (même empreinte de fait)."),
     ("Empreinte SHA-256", "Valeur de 64 caractères calculée à partir d'un contenu. La moindre modification du "
      "contenu produit une empreinte totalement différente : elle permet d'en vérifier l'intégrité."),
     ("IMEI", "International Mobile Equipment Identity — identifiant unique d'un terminal mobile."),
@@ -232,7 +227,9 @@ class _Ctx:
 
     def __post_init__(self) -> None:
         self.artifacts = {a["artifact_id"]: a for a in self.doc["artifacts"]}
-        self.evidence = {e["evidence_id"]: e for e in self.doc["evidence_items"]}
+        self.evidence = items_index(self.doc)
+        self.case_x = ext(self.doc["case"])
+        self.runs = (self.doc.get("x_veritrace") or {}).get("tool_runs") or []
         self.findings = sorted(self.doc["findings"], key=lambda f: SEVERITY_ORDER.index(f["severity"]))
 
     def resolve(self, rel: str | None) -> Path | None:
@@ -270,7 +267,7 @@ def _corr(flag: bool) -> str:
 
 
 def _os(d: dict) -> str:
-    v = f"Android {d['android_version']}" if d.get("android_version") else "Android (version inconnue)"
+    v = f"Android {d['os_version']}" if d.get("os_version") else "Android (version inconnue)"
     return v + (f" — correctif {d['security_patch']}" if d.get("security_patch") else "")
 
 
@@ -278,9 +275,9 @@ def _operations_period(doc: dict) -> tuple[str | None, str | None]:
     stamps: list[str] = []
     for a in doc["acquisitions"]:
         stamps += [a["started_at"]] + ([a["ended_at"]] if a.get("ended_at") else [])
-    for r in doc["tool_runs"]:
+    for r in (doc.get("x_veritrace") or {}).get("tool_runs") or []:
         stamps += [r["started_at"]] + ([r["ended_at"]] if r.get("ended_at") else [])
-    stamps += [c["timestamp"] for c in doc["custody_chain"]]
+    stamps += [c["timestamp"] for c in doc["chain_of_custody"]]
     if not stamps:
         return None, None
     parsed = sorted(stamps, key=lambda s: parse_iso(s))
@@ -290,9 +287,10 @@ def _operations_period(doc: dict) -> tuple[str | None, str | None]:
 # --------------------------------------------------------------------------- blocs réutilisables
 def _cover(c: _Ctx, template: str) -> Cover:
     doc, fmt = c.doc, c.fmt
-    case, org = doc["case"], doc["case"]["organization"]
-    auth = case["legal_authorization"]
-    rp = case.get("requesting_party") or {}
+    case = doc["case"]
+    org = c.case_x.get("organization") or {"name": "Cabinet (à renseigner)"}
+    auth = case["authorization"]
+    rp = c.case_x.get("requesting_party") or {}
     org_lines = [x for x in (org.get("address"), org.get("phone"), org.get("email"), org.get("website"),
                              org.get("registration")) if x]
     start, end = _operations_period(doc)
@@ -309,29 +307,31 @@ def _cover(c: _Ctx, template: str) -> Cover:
             meta.append(("Demandeur", rp["name"]))
         conf = "CONFIDENTIEL — usage interne, diffusion limitée aux destinataires désignés."
     meta += [
-        ("Examinateur(s)", ", ".join(e["name"] + (f" — {e['role']}" if e.get("role") else "")
-                                     for e in case["examiners"])),
+        ("Examinateur", _examiner(c)),
         ("Ouverture de l'affaire", fmt.ts(case["created_at"])),
         ("Période des opérations", f"du {fmt.ts(start)} au {fmt.ts(end)}" if start else "—"),
         ("Date du rapport", fmt.ts(utc_now_iso())),
-        ("Autorisation", f"{BASIS_FR.get(auth['basis'], auth['basis'])} — réf. {auth['reference']}"),
+        ("Autorisation", f"{BASIS_FR.get(auth['type'], auth['type'])} — réf. {auth['reference']}"),
         ("Fuseau horaire des dates", fmt.tz_label),
         ("Empreinte des données sources", c.source_sha),
     ]
-    devices = None
-    if doc["devices"]:
-        devices = Table(["Marque", "Modèle", "IMEI", "Système"],
-                        [[d["manufacturer"], d["model"], _v(d.get("imei")), _os(d)] for d in doc["devices"]],
-                        [1, 1.8, 1.6, 2])
+    d = doc["device"]
+    devices = Table(["Marque", "Modèle", "IMEI", "Système"],
+                    [[_v(d.get("manufacturer")), _v(d.get("model")), _v(d.get("imei")), _os(d)]], [1, 1.8, 1.6, 2])
     return Cover(title, case["title"], case["case_id"], org["name"], org_lines,
                  c.resolve(org.get("logo_path")), meta, devices, conf)
 
 
+def _examiner(c: "_Ctx") -> str:
+    role = c.case_x.get("examiner_role")
+    return c.doc["case"]["examiner"] + (f" — {role}" if role else "")
+
+
 def _devices_table(doc: dict) -> Table:
-    rows = [[d["device_id"], d["manufacturer"], d["model"], _os(d), _v(d.get("imei")), _v(d.get("serial")),
-             _v(d.get("seal_number"))] for d in doc["devices"]]
-    return Table(["ID", "Marque", "Modèle", "Système", "IMEI", "N° série", "Scellé"], rows,
-                 [0.6, 0.9, 1.5, 1.8, 1.4, 1.1, 1.1])
+    d = doc["device"]
+    rows = [[_v(d.get("manufacturer")), _v(d.get("model")), _os(d), _v(d.get("imei")), _v(d.get("serial")),
+             _v(d.get("seal_number"))]]
+    return Table(["Marque", "Modèle", "Système", "IMEI", "N° série", "Scellé"], rows, [0.9, 1.5, 1.8, 1.4, 1.1, 1.1])
 
 
 def _tools_inventory(doc: dict) -> Table:
@@ -340,21 +340,22 @@ def _tools_inventory(doc: dict) -> Table:
     for a in doc["acquisitions"]:
         t = a.get("tool") or {}
         if t.get("name"):
-            seen.setdefault((t["name"], t.get("version") or "non déterminée"), []).append("Acquisition")
-    for r in doc["tool_runs"]:
-        key = (r["tool"]["name"], r["tool"].get("version") or "non déterminée")
-        mode = {"executed": ", exécuté par Veritrace", "imported": ", sortie importée"}.get(r.get("tool_mode") or "", "")
+            role = "Import et hachage" if a["method"] == "import" else "Acquisition"
+            seen.setdefault((t["name"], t.get("version") or "non déterminée"), []).append(role)
+    for r in (doc.get("x_veritrace") or {}).get("tool_runs") or []:
+        key = (r["tool"], r.get("tool_version") or "non déterminée")
+        mode = {"execute": ", exécuté par Veritrace", "importe": ", sortie importée"}.get(r.get("mode") or "", "")
         seen.setdefault(key, []).append(f"Analyse — {STATUS_FR[r['status']].lower()}{mode}")
     rows = [[n, v, ", ".join(dict.fromkeys(roles))] for (n, v), roles in seen.items()]
     return Table(["Outil", "Version", "Usage / statut"], rows, [2, 1.5, 3])
 
 
 def _acquisitions_table(doc: dict, fmt: _Fmt) -> Table:
-    rows = [[a["acquisition_id"], a["device_id"], METHOD_FR.get(a["method"], (a["method"],))[0],
-             fmt.ts(a["started_at"]), fmt.ts(a.get("ended_at")), a["operator"],
-             STATUS_FR.get(a["status"], a["status"])] for a in doc["acquisitions"]]
-    return Table(["ID", "Appareil", "Méthode", "Début", "Fin", "Opérateur", "Statut"], rows,
-                 [0.8, 0.8, 1.6, 1.3, 1.3, 1.3, 0.8])
+    rows = [[a["acquisition_id"], METHOD_FR.get(a["method"], (a["method"],))[0], fmt.ts(a["started_at"]),
+             fmt.ts(a.get("ended_at")), a["operator"], STATUS_FR.get(a["status"], a["status"]),
+             ", ".join(i["item_id"] for i in a.get("items") or []) or "—"] for a in doc["acquisitions"]]
+    return Table(["ID", "Méthode", "Début", "Fin", "Opérateur", "Statut", "Éléments"], rows,
+                 [0.7, 1.7, 1.2, 1.2, 1.2, 0.8, 1.0])
 
 
 def _tool_runs_table(doc: dict, fmt: _Fmt, case_root: Path | None = None) -> Table:
@@ -362,29 +363,30 @@ def _tool_runs_table(doc: dict, fmt: _Fmt, case_root: Path | None = None) -> Tab
         text = " ".join(r.get("command") or []) or "—"
         return text.replace(str(case_root.resolve()), "<affaire>") if case_root else text
 
-    rows = [[r["run_id"], f"{r['tool']['name']} {r['tool'].get('version') or ''}".strip(), cmd(r), f"{fmt.ts(r['started_at'])} → {fmt.ts(r.get('ended_at'))}",
-             STATUS_FR[r["status"]], _v(r.get("input_evidence_ids")), _v(r.get("output_path")),
-             r.get("message") or ""] for r in doc["tool_runs"]]
+    runs = (doc.get("x_veritrace") or {}).get("tool_runs") or []
+    rows = [[r["run_id"], f"{r['tool']} {r.get('tool_version') or ''}".strip(), cmd(r),
+             f"{fmt.ts(r['started_at'])} → {fmt.ts(r.get('ended_at'))}", STATUS_FR[r["status"]],
+             _v(r.get("input_item_ids")), _v(r.get("output_path")), r.get("message") or ""] for r in runs]
     return Table(["Exécution", "Outil", "Commande", "Début → fin", "Statut", "Entrées", "Sortie", "Remarque"],
                  rows, [1.1, 0.9, 1.9, 1.5, 0.7, 0.7, 1.0, 1.2])
 
 
 def _evidence_table(doc: dict, fmt: _Fmt) -> Table:
-    rows = [[e["evidence_id"], e["label"], e["local_path"], _size(e.get("size_bytes")), fmt.ts(e["collected_at"]),
-             e["collected_by"], e["sha256"]] for e in doc["evidence_items"]]
-    return Table(["ID", "Description", "Fichier", "Taille", "Collecte", "Par", "SHA-256"], rows,
-                 [0.6, 1.3, 1.5, 0.7, 1.0, 0.9, 2.2], mono_cols=(6,))
+    rows = [[e["item_id"], acq["acquisition_id"], e["label"], e["path"], _size(e.get("size_bytes")),
+             fmt.ts(e["collected_at"]), e["sha256"]] for acq, e in iter_items(doc)]
+    return Table(["ID", "Acq.", "Description", "Fichier", "Taille", "Collecte", "SHA-256"], rows,
+                 [0.6, 0.6, 1.3, 1.5, 0.7, 1.0, 2.2], mono_cols=(6,))
 
 
 def _custody_table(doc: dict, fmt: _Fmt) -> Table:
     rows = []
-    for i, c in enumerate(sorted(doc["custody_chain"], key=lambda c: parse_iso(c["timestamp"])), start=1):
+    for i, c in enumerate(sorted(doc["chain_of_custody"], key=lambda c: parse_iso(c["timestamp"])), start=1):
         action = CUSTODY_FR.get(c["action"], c["action"])
         if c.get("location"):
             action += f" — {c['location']}"
         if c.get("notes"):
             action += f" ({c['notes']})"
-        rows.append([str(i), fmt.ts(c["timestamp"]), c["evidence_id"], action, c["actor"], c["sha256"]])
+        rows.append([str(i), fmt.ts(c["timestamp"]), c["item_id"], action, c["actor"], c["sha256"]])
     return Table(["N°", "Date / heure", "Preuve", "Action", "Responsable", "Empreinte SHA-256"], rows,
                  [0.4, 1.1, 0.6, 2.2, 1.1, 2.3], mono_cols=(5,))
 
@@ -392,8 +394,8 @@ def _custody_table(doc: dict, fmt: _Fmt) -> Table:
 def _timeline_table(c: _Ctx, events: list[dict]) -> Table:
     rows = []
     for t in sorted(events, key=lambda t: parse_iso(t["timestamp"])):
-        ev = sorted({c.artifacts[a]["source"]["evidence_id"] for a in t["artifact_ids"] if a in c.artifacts})
-        rows.append([c.fmt.ts(t["timestamp"]), CATEGORY_FR.get(t["category"], t["category"]), t["summary"],
+        ev = sorted({c.artifacts[a]["source"]["item_id"] for a in t["artifact_ids"] if a in c.artifacts})
+        rows.append([c.fmt.ts(t["timestamp"]), CATEGORY_FR.get(t["category"], t["category"]), t["description"],
                      _corr(t["corroborated"]), ", ".join(t["artifact_ids"]), ", ".join(ev)])
     return Table(["Date / heure", "Type", "Événement", "Fiabilité", "Artefacts", "Preuves"], rows,
                  [1.2, 1.1, 3.0, 0.9, 1.1, 0.7])
@@ -406,7 +408,7 @@ def _inventory_table(doc: dict) -> Table:
     for a in doc["artifacts"]:
         raw[a["category"]] += 1
         g = facts.setdefault(a["category"], {})
-        g.setdefault(a["fact_sha256"], set()).add(artifact_engine(a))
+        g.setdefault(fact_sha(a), set()).add(engine(a))
     rows = []
     for cat in sorted(facts, key=lambda k: -len(facts[k])):
         corr = sum(1 for engines in facts[cat].values() if len(engines) >= 2)
@@ -423,13 +425,13 @@ def _sources_table(c: _Ctx, artifact_ids: list[str]) -> Table:
     for aid in artifact_ids:
         a = c.artifacts[aid]
         src = a["source"]
-        where = _tool_label(src["tool"])
+        where = _tool_label(a)
         if src.get("file_path"):
             where += f" · {src['file_path']}"
         if src.get("record_ref"):
             where += f" · {src['record_ref']}"
-        ev = c.evidence[src["evidence_id"]]
-        rows.append([aid, c.fmt.ts(a.get("timestamp")), artifact_summary(a), where, ev["evidence_id"], ev["sha256"]])
+        ev = c.evidence[src["item_id"]]
+        rows.append([aid, c.fmt.ts(a.get("timestamp")), artifact_summary(a), where, ev["item_id"], ev["sha256"]])
     return Table(["Artefact", "Horodatage", "Contenu", "Outil · fichier · enregistrement", "Preuve",
                   "SHA-256 de la preuve"], rows, [0.9, 1.0, 2.0, 1.8, 0.7, 2.0], mono_cols=(5,))
 
@@ -442,14 +444,14 @@ def _exhibit_blocks(c: _Ctx, exhibits: list[dict]) -> list[Block]:
                                  [0.6, 0.9, 2.3, 1.9, 2.3], mono_cols=(4,))]
     for x in exhibits:
         p = c.resolve(x["path"])
-        if x["type"] == "screenshot" and p and p.suffix.lower() in IMAGE_EXT:
+        if x["type"] == "capture" and p and p.suffix.lower() in IMAGE_EXT:
             blocks.append(Figure(p, f"{x['exhibit_id']} — {x['description']} (SHA-256 {x['sha256']})"))
     return blocks
 
 
-def _tool_label(tool: dict) -> str:
-    eng = tool.get("engine")
-    return tool["name"] + (f" (moteur {eng})" if eng and eng != tool["name"] else "")
+def _tool_label(a: dict) -> str:
+    name, eng = a["source"]["tool"], engine(a)
+    return name + (f" (moteur {eng})" if eng != name else "")
 
 
 def _corroboration_line(c: _Ctx, f: dict) -> str:
@@ -459,22 +461,32 @@ def _corroboration_line(c: _Ctx, f: dict) -> str:
         art = c.artifacts.get(a)
         if not art:
             continue
-        engines.add(artifact_engine(art))
-        for s in art["corroboration"]["sources"]:
+        engines.add(engine(art))
+        for s in ext(art).get("sources") or []:
             other = c.artifacts.get(s["artifact_id"])
-            engines.add(artifact_engine(other) if other else s.get("engine") or s["tool"])
+            engines.add(engine(other) if other else s.get("engine") or s["tool"])
     label = "Corroboré (fiabilité renforcée)" if f["corroborated"] else "Source unique"
     return f"{label} — moteur(s) : {', '.join(sorted(engines)) or '—'}"
 
 
+def _ioc_row(f: dict) -> list[tuple[str, str]]:
+    ioc = f.get("ioc")
+    if not ioc:
+        return []
+    from veritrace.schema.describe import IOC_TYPE_FR
+    text = f"{IOC_TYPE_FR.get(ioc['type'], ioc['type'])} « {ioc['value']} » — fichier {ioc['source']}"
+    return [("IOC correspondant", text + (f" — famille {ioc['family']}" if ioc.get("family") else ""))]
+
+
 def _integrity_blocks(c: _Ctx) -> list[Block]:
-    integ = c.doc["integrity"]
+    integ = (c.doc.get("x_veritrace") or {}).get("integrity") or {}
     audit = integ.get("audit") or {}
-    rows = [
-        ("Données sources (JSON normalisé) — SHA-256", c.source_sha),
-        ("Généré par", f"{integ['generator']['name']} {integ['generator']['version']}"),
-        ("Données consolidées le", c.fmt.ts(integ["generated_at"])),
-    ]
+    gen = integ.get("generator") or {}
+    rows = [("Données sources (JSON pivot) — SHA-256", c.source_sha)]
+    if gen:
+        rows.append(("Généré par", f"{gen.get('name', '')} {gen.get('version', '')}".strip()))
+    if integ.get("generated_at"):
+        rows.append(("Données consolidées le", c.fmt.ts(integ["generated_at"])))
     if audit:
         rows += [("Journal d'audit — entrées", str(audit["entries"])),
                  ("Journal d'audit — empreinte de tête", audit["head_hash"]),
@@ -490,11 +502,11 @@ def _integrity_blocks(c: _Ctx) -> list[Block]:
 
 
 def _limitations(doc: dict) -> list[Block]:
-    items = list(doc["case"].get("limitations") or [])
-    for r in doc["tool_runs"]:
-        if r["status"] in ("skipped", "failed"):
+    items = list(ext(doc["case"]).get("limitations") or [])
+    for r in (doc.get("x_veritrace") or {}).get("tool_runs") or []:
+        if r["status"] in ("ignore", "echec"):
             msg = (r.get("message") or "sans détail").rstrip(".")
-            items.append(f"{r['tool']['name']} : {STATUS_FR[r['status']].lower()} — {msg}.")
+            items.append(f"{r['tool']} : {STATUS_FR[r['status']].lower()} — {msg}.")
     items.append("Les horodatages proviennent des bases de l'appareil ; ils dépendent de l'exactitude de son "
                  "horloge et peuvent avoir été modifiés par l'utilisateur ou des applications.")
     items.append("Un fait « corroboré » est confirmé par au moins deux outils indépendants à partir des mêmes "
@@ -513,16 +525,17 @@ def _cited_artifacts(c: _Ctx) -> list[str]:
 def _judiciaire(c: _Ctx) -> list[Section]:
     doc, fmt = c.doc, c.fmt
     case = doc["case"]
-    auth = case["legal_authorization"]
-    verifs = [x for x in doc["custody_chain"] if x["action"] in ("verified", "copied", "hashed")]
+    auth = case["authorization"]
+    ax = ext(auth)
+    verifs = [x for x in doc["chain_of_custody"] if x["action"] in ("verification", "copie")]
 
     declaration = (
         f"Les opérations décrites dans le présent rapport ont été réalisées en vertu de : "
-        f"{BASIS_FR.get(auth['basis'], auth['basis']).lower()}, référence {auth['reference']}"
-        + (f", délivré(e) par {auth['issued_by']}" if auth.get("issued_by") else "")
-        + (f" le {fmt.date(auth['issued_at'])}" if auth.get("issued_at") else "")
-        + f". L'existence et la validité de cette autorisation ont été vérifiées par {auth['verified_by']} "
-        f"le {fmt.ts(auth['verified_at'])}, avant toute opération sur l'appareil."
+        f"{BASIS_FR.get(auth['type'], auth['type']).lower()}, référence {auth['reference']}"
+        + (f", délivré(e) par {ax['issued_by']}" if ax.get("issued_by") else "")
+        + (f" le {fmt.date(ax['issued_at'])}" if ax.get("issued_at") else "")
+        + f". L'existence et la validité de cette autorisation ont été confirmées par {auth['confirmed_by']} "
+        f"le {fmt.ts(auth['confirmed_at'])}, avant toute opération sur l'appareil."
     )
 
     method_blocks: list[Block] = [
@@ -561,38 +574,39 @@ def _judiciaire(c: _Ctx) -> list[Section]:
         findings_blocks += [
             Subheading(f"Constat n° {n} — {f['title']}"),
             KeyValue([("Référence", f["finding_id"]), ("Fiabilité", _corroboration_line(c, f)),
-                      ("Éléments de preuve", _v(f.get("evidence_ids")))]),
+                      ("Éléments de preuve", _v(f.get("item_ids")))] + _ioc_row(f)),
             Label("Faits constatés"), Paragraph(f["description"]),
             Label("Sources et empreintes"), _sources_table(c, f["artifact_ids"]),
         ]
-        ex = _exhibit_blocks(c, f.get("exhibits") or [])
+        ex = _exhibit_blocks(c, ext(f).get("exhibits") or [])
         if ex:
             findings_blocks += [Label("Captures et références")] + ex
         findings_blocks += [Label("Interprétation de l'examinateur"),
-                            Paragraph(f.get("interpretation") or "Aucune interprétation n'est formulée.",
+                            Paragraph(ext(f).get("interpretation") or "Aucune interprétation n'est formulée.",
                                       "interpretation")]
     if not doc["findings"]:
         findings_blocks.append(Paragraph("Aucun constat n'a été retenu à l'issue de l'analyse."))
 
     cited = _cited_artifacts(c)
     cited_rows = [[a, CATEGORY_FR.get(c.artifacts[a]["category"], ""), artifact_summary(c.artifacts[a]),
-                   c.artifacts[a]["content_sha256"]] for a in cited]
+                   c.artifacts[a]["sha256"]] for a in cited]
 
     return [
         Section("1. Déclaration d'autorisation", [
             Paragraph(declaration),
-            KeyValue([("Base légale", BASIS_FR.get(auth["basis"], auth["basis"])),
+            KeyValue([("Base légale", BASIS_FR.get(auth["type"], auth["type"])),
                       ("Référence", auth["reference"]),
-                      ("Délivrée par", _v(auth.get("issued_by"))),
-                      ("Date", fmt.ts(auth.get("issued_at"))),
-                      ("Périmètre autorisé", _v(auth.get("scope"))),
-                      ("Empreinte du document d'autorisation", _v(auth.get("document_sha256")))]),
+                      ("Délivrée par", _v(ax.get("issued_by"))),
+                      ("Date", fmt.ts(ax.get("issued_at"))),
+                      ("Périmètre autorisé", _v(ax.get("scope"))),
+                      ("Empreinte du document d'autorisation", _v(ax.get("document_sha256"))),
+                      ("Confirmée par / le", f"{auth['confirmed_by']} — {fmt.ts(auth['confirmed_at'])}")]),
             Subheading("Objet de la mission"),
-            Paragraph(case.get("mission") or "Non précisé."),
+            Paragraph(c.case_x.get("mission") or "Non précisé."),
         ]),
-        Section("2. Matériel examiné", [_devices_table(doc)] + [
-            Paragraph(f"{d['device_id']} — état à réception : {d['state_on_receipt']}", "small")
-            for d in doc["devices"] if d.get("state_on_receipt")]),
+        Section("2. Matériel examiné", [_devices_table(doc)] + (
+            [Paragraph(f"État à réception : {doc['device']['state_on_receipt']}", "small")]
+            if doc["device"].get("state_on_receipt") else [])),
         Section("3. Méthodologie", method_blocks),
         Section("4. Éléments de preuve", [_evidence_table(doc, fmt)]),
         Section("5. Chaîne de custody", [_custody_table(doc, fmt)]),
@@ -607,8 +621,7 @@ def _judiciaire(c: _Ctx) -> list[Section]:
                       "constatations qui y figurent sont exactes et sincères au regard des éléments examinés."),
             Paragraph(f"Le présent rapport est établi à partir des données d'empreinte SHA-256 {c.source_sha}.",
                       "small"),
-            Signature([e["name"] + (f" — {e['role']}" if e.get("role") else "") for e in case["examiners"]]
-                      + ["Fait à ____________________, le ____ / ____ / ________", "Signature :"]),
+            Signature([_examiner(c), "Fait à ____________________, le ____ / ____ / ________", "Signature :"]),
         ]),
         Section("Annexe A — Détails techniques des exécutions d'outils", [_tool_runs_table(doc, fmt, c.case_root)], new_page=True),
         Section("Annexe B — Artefacts", [
@@ -624,12 +637,8 @@ def _judiciaire(c: _Ctx) -> list[Section]:
 # --------------------------------------------------------------------------- gabarit entreprise
 def _remediation_rows(c: _Ctx) -> list[list[str]]:
     items: list[tuple[int, int, list[str]]] = []
-    default_prio = {"critical": "immediate", "high": "short_term"}
     for f in c.findings:
-        actions = list(f.get("remediation") or [])
-        if not actions and f.get("recommendation"):
-            actions = [{"action": f["recommendation"], "priority": default_prio.get(f["severity"], "medium_term")}]
-        for a in actions:
+        for a in ext(f).get("remediation") or []:
             items.append((PRIORITY_ORDER.index(a["priority"]), SEVERITY_ORDER.index(f["severity"]),
                           [PRIORITY_FR[a["priority"]], a["action"], a.get("owner") or "À désigner",
                            a.get("due_date") or "—", f"{f['finding_id']} ({SEVERITY_FR[f['severity']]})"]))
@@ -645,37 +654,40 @@ def _entreprise(c: _Ctx) -> list[Section]:
     risk = SEVERITY_FR[worst].upper() if worst and worst != "info" else "FAIBLE / AUCUN RISQUE IDENTIFIÉ"
     start, end = _operations_period(doc)
 
-    auto_summary = (f"L'examen de {len(doc['devices'])} appareil(s) a conduit à {len(doc['findings'])} constat(s) : "
+    dev = doc["device"]
+    device_label = " ".join(x for x in (dev.get("manufacturer"), dev.get("model")) if x) or "—"
+    auto_summary = (f"L'examen de l'appareil {device_label} a conduit à {len(doc['findings'])} constat(s) : "
                     + (", ".join(f"{sev[s]} {SEVERITY_FR[s].lower()}" for s in SEVERITY_ORDER if sev[s]) or "aucun")
                     + ".")
-    key_points = [f"[{SEVERITY_FR[f['severity']]}] {f.get('plain_summary') or f['title']}" for f in c.findings[:5]]
+    key_points = [f"[{SEVERITY_FR[f['severity']]}] {ext(f).get('plain_summary') or f['title']}" for f in c.findings[:5]]
     if len(c.findings) > 5:
         key_points.append(f"… et {len(c.findings) - 5} autre(s) constat(s) détaillé(s) en section 2.")
     rem = _remediation_rows(c)
-    immediate = [r[2] for r in rem if r[1] == PRIORITY_FR["immediate"]]
+    immediate = [r[2] for r in rem if r[1] == PRIORITY_FR["immediat"]]
 
     tech: list[Block] = []
     for n, f in enumerate(c.findings, start=1):
         tech += [
             Subheading(f"{f['finding_id']} — {f['title']}"),
             KeyValue([("Criticité", SEVERITY_FR[f["severity"]]), ("Fiabilité", _corroboration_line(c, f))]
-                     + ([("Confiance", CONFIDENCE_FR[f["confidence"]])] if f.get("confidence") else [])),
+                     + ([("Confiance", CONFIDENCE_FR[ext(f)["confidence"]])] if ext(f).get("confidence") else [])
+                     + _ioc_row(f)),
             Label("Faits constatés"), Paragraph(f["description"]),
         ]
-        if f.get("interpretation"):
-            tech += [Label("Analyse"), Paragraph(f["interpretation"], "interpretation")]
+        if ext(f).get("interpretation"):
+            tech += [Label("Analyse"), Paragraph(ext(f)["interpretation"], "interpretation")]
         tech += [Label("Sources"), _sources_table(c, f["artifact_ids"])] if f["artifact_ids"] else []
 
-    exhibits = [x for f in c.findings for x in (f.get("exhibits") or [])]
-    flagged = [t for t in doc["timeline"] if t.get("flags")]
+    exhibits = [x for f in c.findings for x in (ext(f).get("exhibits") or [])]
+    flagged = [t for t in doc["timeline"] if ext(t).get("flags")]
 
     return [
         Section("1. Résumé exécutif", [
             KeyValue([("Niveau de risque global", risk),
                       ("Constats", ", ".join(f"{SEVERITY_FR[s]} : {sev[s]}" for s in SEVERITY_ORDER if sev[s]) or "0"),
-                      ("Périmètre", ", ".join(f"{d['manufacturer']} {d['model']}" for d in doc["devices"]) or "—"),
+                      ("Périmètre", device_label),
                       ("Période d'examen", f"{fmt.date(start)} → {fmt.date(end)}" if start else "—")]),
-            Paragraph(case.get("executive_summary") or auto_summary),
+            Paragraph(c.case_x.get("executive_summary") or auto_summary),
             Subheading("Ce qu'il faut retenir"),
             Bullets(key_points or ["Aucun constat significatif."]),
             Subheading("Décisions attendues à court terme"),
@@ -684,7 +696,7 @@ def _entreprise(c: _Ctx) -> list[Section]:
         Section("2. Criticité des constats", [
             Table(["N°", "Constat", "Criticité", "Fiabilité", "Impact"],
                   [[f["finding_id"], f["title"], SEVERITY_FR[f["severity"]], _corr(f["corroborated"]),
-                    f.get("business_impact") or "—"] for f in c.findings], [0.6, 2.8, 0.8, 0.9, 2.4]),
+                    ext(f).get("business_impact") or "—"] for f in c.findings], [0.6, 2.8, 0.8, 0.9, 2.4]),
             Subheading("Échelle de criticité"),
             Table(["Niveau", "Signification"], [[SEVERITY_FR[s], SEVERITY_MEANING[s]] for s in SEVERITY_ORDER[:4]],
                   [1, 5]),
@@ -698,9 +710,9 @@ def _entreprise(c: _Ctx) -> list[Section]:
             Paragraph(f"Heures exprimées dans le fuseau {fmt.tz_label}.", "small"),
             _timeline_table(c, flagged) if flagged else Paragraph("Aucun événement signalé."),
             Subheading("Périmètre et méthodologie"),
-            KeyValue([("Cadre", f"{BASIS_FR.get(case['legal_authorization']['basis'])} — réf. "
-                                f"{case['legal_authorization']['reference']}"),
-                      ("Périmètre autorisé", _v(case["legal_authorization"].get("scope")))]),
+            KeyValue([("Cadre", f"{BASIS_FR.get(case['authorization']['type'])} — réf. "
+                                f"{case['authorization']['reference']}"),
+                      ("Périmètre autorisé", _v(ext(case["authorization"]).get("scope")))]),
             _devices_table(doc), _tools_inventory(doc),
         ], new_page=True),
         Section("5. Limites", _limitations(doc)),
@@ -735,7 +747,7 @@ def build_report_model(doc: dict[str, Any], template: str, *, source_sha256: str
     problems = check_template_requirements(doc, template)
     if problems:
         raise ReportPrecheckError(f"Gabarit {template} : " + " ; ".join(problems))
-    c = _Ctx(doc, _Fmt(doc["case"].get("display_timezone")), source_sha256, case_root)
+    c = _Ctx(doc, _Fmt(ext(doc["case"]).get("display_timezone")), source_sha256, case_root)
     sections = _judiciaire(c) if template == "judiciaire" else _entreprise(c)
     return ReportModel(template=template, cover=_cover(c, template), sections=sections, footer=CREDIT_LINE,
                        source_sha256=source_sha256, generated_at=utc_now_iso())

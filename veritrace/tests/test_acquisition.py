@@ -90,33 +90,34 @@ def test_full_acquisition(fake_adb, case):
     doc = _doc(case)
     assert validate(doc, case_root=case).ok, validate(doc, case_root=case).errors   # ré-hachage sur disque
 
-    dev = doc["devices"][0]
-    assert (dev["manufacturer"], dev["model"], dev["android_version"], dev["serial"]) == ("samsung", "SM-A546B", "14", "R5CW0000000")
+    dev = doc["device"]
+    assert (dev["manufacturer"], dev["model"], dev["os_version"], dev["serial"]) == ("samsung", "SM-A546B", "14", "R5CW0000000")
     assert dev["imei"] == ["350000000000001"] and dev["seal_number"] == "SC-1"
 
     methods = {a["method"]: a for a in doc["acquisitions"]}
     assert set(methods) == {"adb_getprop", "adb_package_list", "adb_dumpsys", "adb_backup", "adb_pull", "adb_bugreport"}
-    assert methods["adb_dumpsys"]["status"] == "partial"          # bluetooth_manager indisponible
-    assert methods["adb_pull"]["status"] == "partial"             # 2 chemins absents sur 4
+    assert methods["adb_dumpsys"]["status"] == "partiel"          # bluetooth_manager indisponible
+    assert methods["adb_pull"]["status"] == "partiel"             # 2 chemins absents sur 4
     assert "Android 12" in methods["adb_backup"]["notes"]         # avertissement SDK 34
 
-    # Chaque preuve : hachée, en lecture seule, avec un événement de custody « collected »
-    collected = {c["evidence_id"]: c for c in doc["custody_chain"] if c["action"] == "collected"}
-    for ev in doc["evidence_items"]:
-        assert ev["evidence_id"] in collected and collected[ev["evidence_id"]]["sha256"] == ev["sha256"]
-        assert collected[ev["evidence_id"]]["actor"] == "Examinateur Test"
-        p = case / ev["local_path"]
+    # Chaque élément : haché, en lecture seule, avec un événement de custody « collecte »
+    items = [i for a in doc["acquisitions"] for i in a["items"]]
+    collected = {c["item_id"]: c for c in doc["chain_of_custody"] if c["action"] == "collecte"}
+    for ev in items:
+        assert ev["item_id"] in collected and collected[ev["item_id"]]["sha256"] == ev["sha256"]
+        assert collected[ev["item_id"]]["actor"] == "Examinateur Test"
+        p = case / ev["path"]
         files = [p] if p.is_file() else [f for f in p.rglob("*") if f.is_file()]
         assert all(not (f.stat().st_mode & stat.S_IWUSR) for f in files)
-    labels = " | ".join(e["label"] for e in doc["evidence_items"])
+    labels = " | ".join(e["label"] for e in items)
     assert "backup.ab" in labels and "tar (dérivée de" in labels and "Journal des commandes ADB" in labels
-    tar_ev = next(e for e in doc["evidence_items"] if e["local_path"].endswith("backup.tar"))
-    assert tarfile.open(case / tar_ev["local_path"]).getnames() == ["apps/com.android.providers.telephony/db/mmssms.db"]
+    tar_ev = next(e for e in items if e["path"].endswith("backup.tar"))
+    assert tarfile.open(case / tar_ev["path"]).getnames() == ["apps/com.android.providers.telephony/db/mmssms.db"]
 
     # Le manifeste d'un dossier copié est vérifiable avec sha256sum -c
-    pull_ev = next(e for e in doc["evidence_items"] if e["device_path"] == "/sdcard/DCIM")
-    manifest = case / "custody" / "manifests" / f"{pull_ev['evidence_id']}.sha256sum"
-    out = subprocess.run(["sha256sum", "-c", str(manifest)], cwd=case / pull_ev["local_path"], capture_output=True, text=True)
+    pull_ev = next(e for e in items if e["device_path"] == "/sdcard/DCIM")
+    manifest = case / "custody" / "manifests" / f"{pull_ev['item_id']}.sha256sum"
+    out = subprocess.run(["sha256sum", "-c", str(manifest)], cwd=case / pull_ev["path"], capture_output=True, text=True)
     assert out.returncode == 0 and "OK" in out.stdout
 
     calls = log.read_text()
@@ -149,10 +150,10 @@ def test_device_not_ready_is_refused(fake_adb, case, monkeypatch, mode, expected
 def test_examiner_must_confirm_device(fake_adb, case):
     r = CliRunner().invoke(cli, ["acquire", "run", "--case", str(case)], input=AUTH_INPUT + "n\n")
     assert r.exit_code != 0 and "annulée" in r.output
-    assert _doc(case)["acquisitions"] == [] and _doc(case)["devices"] == []
+    assert _doc(case)["acquisitions"] == [] and _doc(case)["device"]["serial"] is None
 
 
-@pytest.mark.parametrize("behaviour,status,note", [("refuse", "failed", "refusée"), ("encrypted", "partial", "chiffrée")])
+@pytest.mark.parametrize("behaviour,status,note", [("refuse", "echec", "refusée"), ("encrypted", "partiel", "chiffrée")])
 def test_backup_refused_or_encrypted(fake_adb, case, monkeypatch, behaviour, status, note):
     monkeypatch.setenv("FAKE_ADB_BACKUP", behaviour)
     r = CliRunner().invoke(cli, ["acquire", "run", "--case", str(case), "--method", "backup"], input=CONFIRM)
@@ -175,7 +176,21 @@ def test_acquisition_feeds_mvt_backup_mode(fake_adb, case):
     CliRunner().invoke(cli, ["acquire", "run", "--case", str(case), "--method", "backup", "--method", "bugreport"],
                        input=CONFIRM)
     doc = _doc(case)
-    ab = next(e for e in doc["evidence_items"] if e["local_path"].endswith("backup.ab"))
-    br = next(e for e in doc["evidence_items"] if e["local_path"].endswith(".zip"))
-    assert detect_mode(case / ab["local_path"]) == "backup"
-    assert detect_mode(case / br["local_path"]) == "bugreport"
+    items = [i for a in doc["acquisitions"] for i in a["items"]]
+    ab = next(e for e in items if e["path"].endswith("backup.ab"))
+    br = next(e for e in items if e["path"].endswith(".zip"))
+    assert detect_mode(case / ab["path"]) == "backup"
+    assert detect_mode(case / br["path"]) == "bugreport"
+
+
+def test_second_device_refused(fake_adb, case, monkeypatch):
+    """Un seul appareil par affaire : un appareil de n° de série différent est refusé."""
+    CliRunner().invoke(cli, ["acquire", "run", "--case", str(case), "--method", "packages"], input=CONFIRM)
+    import json as _j
+    p = case / "normalized" / "veritrace_case.json"
+    doc = _j.loads(p.read_text(encoding="utf-8"))
+    doc["device"]["serial"] = "AUTRE-APPAREIL"
+    p.chmod(0o644)
+    p.write_text(_j.dumps(doc), encoding="utf-8")
+    r = CliRunner().invoke(cli, ["acquire", "run", "--case", str(case), "--method", "packages"], input=CONFIRM)
+    assert "Un seul appareil par affaire" in r.output

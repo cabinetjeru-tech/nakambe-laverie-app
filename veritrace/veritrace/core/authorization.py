@@ -26,12 +26,12 @@ from veritrace.core.timeutil import utc_now_iso
 
 CONFIRMATION_PHRASE = "AUTORISATION VERIFIEE"
 
+#: Valeurs de `case.authorization.type` du format pivot.
 LEGAL_BASES = {
     "consentement": "Consentement écrit du titulaire de l'appareil",
     "mandat": "Mandat / commission rogatoire",
-    "requisition": "Réquisition judiciaire",
-    "ordonnance": "Ordonnance du juge",
-    "politique-entreprise": "Politique interne + consentement (appareil d'entreprise)",
+    "ordre_judiciaire": "Ordre judiciaire (réquisition, ordonnance)",
+    "politique-entreprise": "Politique interne de l'entreprise (appareil professionnel)",
 }
 
 _WARNING = """\

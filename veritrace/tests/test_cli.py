@@ -67,7 +67,7 @@ def test_end_to_end_case_and_reports(tmp_path, isolated_home):
     assert AuditLog(isolated_home / "audit.jsonl").verify().ok
 
     doc = json.loads((case_dir / "normalized" / "veritrace_case.json").read_text(encoding="utf-8"))
-    assert doc["integrity"]["audit"]["verified"] is True
+    assert doc["x_veritrace"]["integrity"]["audit"]["verified"] is True
 
 
 def test_schema_validate_command(tmp_path, example_doc):

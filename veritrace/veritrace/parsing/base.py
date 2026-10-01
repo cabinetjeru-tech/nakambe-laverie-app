@@ -6,7 +6,7 @@ Interface identique pour ALEAPP, MVT et Autopsy :
 
 - **entrée** : chemin de l'extraction (dossier, archive, sauvegarde, cas Autopsy…) ;
 - **sortie** : `WrapperResult` = une exécution d'outil + des artefacts et constats au
-  schéma normalisé. Le runner (`parsing/runner.py`) les écrit dans
+  FORMAT PIVOT (schema/veritrace_pivot.schema.json). Le runner (`parsing/runner.py`) les écrit dans
   `parsed/<outil>/<RUN-ID>/veritrace_normalized.json` puis les verse dans le JSON de
   l'affaire, avant corrélation.
 
@@ -47,7 +47,7 @@ class ToolFailed(RuntimeError):
 @dataclass
 class RunContext:
     run_id: str
-    evidence_id: str
+    item_id: str
     options: dict[str, Any] = field(default_factory=dict)
 
 
@@ -62,19 +62,49 @@ class WrapperResult:
     artifacts: list[dict[str, Any]] = field(default_factory=list)
     findings: list[dict[str, Any]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)   # remarques consignées dans tool_run.message
-    extra_evidence: list[Path] = field(default_factory=list)  # ex. fichiers d'IOC utilisés
+    extra_items: list[Path] = field(default_factory=list)  # ex. fichiers d'IOC utilisés
+
+
+def new_artifact(*, artifact_id: str, category: str, timestamp: str | None, tool: dict[str, Any], item_id: str,
+                 data: dict[str, Any], run_id: str | None = None, file_path: str | None = None,
+                 record_ref: str | None = None, tags: list[str] | None = None) -> dict[str, Any]:
+    """Artefact au format pivot. `tool` = {"name", "version", "engine"?}."""
+    x: dict[str, Any] = {"fact_sha256": fact_hash(category, data, timestamp),
+                         "sources": [{"artifact_id": artifact_id, "tool": tool["name"]}]}
+    if tool.get("engine") and tool["engine"] != tool["name"]:
+        x["engine"] = tool["engine"]
+    if run_id:
+        x["run_id"] = run_id
+    if tags:
+        x["tags"] = tags
+    return {
+        "artifact_id": artifact_id,
+        "category": category,
+        "timestamp": timestamp,
+        "source": {"tool": tool["name"], "tool_version": tool.get("version"), "item_id": item_id,
+                   "file_path": file_path, "record_ref": record_ref},
+        "data": data,
+        "sha256": content_hash(category, data),
+        "corroborated": False,
+        "corroborated_by": [tool["name"]],
+        "x_veritrace": x,
+    }
+
+
+# Rétrocompatibilité interne (exemple, tests) : même fonction, ancien nom.
+make_artifact = new_artifact
 
 
 class ArtifactBuilder:
-    """Fabrique d'artefacts normalisés avec identifiants LOCAUX et dédoublonnage interne.
+    """Fabrique d'artefacts pivot avec identifiants LOCAUX et dédoublonnage interne.
 
     Un même outil peut produire plusieurs fois le même fait (ex. ALEAPP « SMS Messages » et
-    « SMS and MMS Messages ») : seul le premier est conservé, les doublons sont comptés.
+    « SMS and MMS Messages ») : seul le premier est conservé, complété par les suivants.
     """
 
-    def __init__(self, run_id: str, evidence_id: str) -> None:
+    def __init__(self, run_id: str, item_id: str) -> None:
         self.run_id = run_id
-        self.evidence_id = evidence_id
+        self.item_id = item_id
         self.items: list[dict[str, Any]] = []
         self._seen: dict[str, str] = {}
         self.internal_duplicates = 0
@@ -82,12 +112,9 @@ class ArtifactBuilder:
     def add(self, *, category: str, timestamp: str | None, tool: dict[str, Any], data: dict[str, Any],
             file_path: str | None = None, record_ref: str | None = None,
             tags: list[str] | None = None) -> str:
-        """Ajoute (ou retrouve) un artefact ; renvoie son identifiant local."""
         data = {k: v for k, v in data.items() if v is not None or k in _KEEP_NONE}
         fact = fact_hash(category, data, timestamp)
         if fact in self._seen:
-            # Même fait vu deux fois par le même outil : on complète les champs manquants
-            # (ex. Wi-Fi : « WiFi Config Store » sans BSSID puis « wifiProfiles » avec).
             self.internal_duplicates += 1
             local_id = self._seen[fact]
             art = next(a for a in self.items if a["artifact_id"] == local_id)
@@ -96,48 +123,20 @@ class ArtifactBuilder:
                     art["data"][k] = v
             if not art["timestamp"] and timestamp:
                 art["timestamp"] = timestamp
-            art["content_sha256"] = content_hash(category, art["data"])
-            art["fact_sha256"] = fact_hash(category, art["data"], art["timestamp"])
-            self._seen[art["fact_sha256"]] = local_id
+            art["sha256"] = content_hash(category, art["data"])
+            art["x_veritrace"]["fact_sha256"] = fact_hash(category, art["data"], art["timestamp"])
+            self._seen[art["x_veritrace"]["fact_sha256"]] = local_id
             return local_id
         local_id = f"L{len(self.items) + 1}"
-        self.items.append({
-            "artifact_id": local_id,
-            "category": category,
-            "timestamp": timestamp,
-            "source": {"tool": tool, "run_id": self.run_id, "evidence_id": self.evidence_id,
-                       "file_path": file_path, "record_ref": record_ref},
-            "data": data,
-            "content_sha256": content_hash(category, data),
-            "fact_sha256": fact,
-            "corroboration": {"status": "single_source",
-                              "sources": [{"tool": tool["name"], "artifact_id": local_id}]},
-            "tags": tags or [],
-        })
+        self.items.append(new_artifact(artifact_id=local_id, category=category, timestamp=timestamp, tool=tool,
+                                       item_id=self.item_id, data=data, run_id=self.run_id, file_path=file_path,
+                                       record_ref=record_ref, tags=tags))
         self._seen[fact] = local_id
         return local_id
 
 
 # Champs dont la valeur `null` est informative (ex. installateur inconnu = sideload probable).
 _KEEP_NONE = {"installer"}
-
-
-def make_artifact(*, artifact_id: str, category: str, timestamp: str | None, tool: dict[str, Any],
-                  run_id: str, evidence_id: str, data: dict[str, Any], file_path: str | None = None,
-                  record_ref: str | None = None, tags: list[str] | None = None) -> dict[str, Any]:
-    """Artefact isolé (sans dédoublonnage) — utilisé par l'exemple et les tests."""
-    return {
-        "artifact_id": artifact_id,
-        "category": category,
-        "timestamp": timestamp,
-        "source": {"tool": tool, "run_id": run_id, "evidence_id": evidence_id,
-                   "file_path": file_path, "record_ref": record_ref},
-        "data": data,
-        "content_sha256": content_hash(category, data),
-        "fact_sha256": fact_hash(category, data, timestamp),
-        "corroboration": {"status": "single_source", "sources": [{"tool": tool["name"], "artifact_id": artifact_id}]},
-        "tags": tags or [],
-    }
 
 
 def run_tool(cmd: list[str], log_path: Path, *, timeout: int, cwd: Path | None = None) -> float:

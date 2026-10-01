@@ -66,14 +66,14 @@ def _value(row: sqlite3.Row) -> Any:
 
 def _dir(v: Any) -> str:
     v = (clean(v) or "").lower()
-    return "incoming" if v.startswith("in") else "outgoing" if v.startswith("out") else "unknown"
+    return "entrant" if v.startswith("in") else "sortant" if v.startswith("out") else "inconnu"
 
 
 # --------------------------------------------------------------------------- correspondances
 def m_message(a: Attrs, emit) -> None:
     mtype = (clean(a.get("TSK_MESSAGE_TYPE")) or "SMS").lower()
     direction = _dir(a.get("TSK_DIRECTION"))
-    addr = clean(a.get("TSK_PHONE_NUMBER_FROM") if direction == "incoming" else a.get("TSK_PHONE_NUMBER_TO")) \
+    addr = clean(a.get("TSK_PHONE_NUMBER_FROM") if direction == "entrant" else a.get("TSK_PHONE_NUMBER_TO")) \
         or clean(a.get("TSK_PHONE_NUMBER")) or clean(a.get("TSK_PHONE_NUMBER_FROM")) or ""
     ts = a.get("TSK_DATETIME") or a.get("TSK_DATETIME_RCVD") or a.get("TSK_DATETIME_SENT")
     if "sms" in mtype or "mms" in mtype:
@@ -81,13 +81,13 @@ def m_message(a: Attrs, emit) -> None:
         emit("sms", ts, {"direction": direction, "address": addr, "body": clean(a.get("TSK_TEXT")),
                          "service": "mms" if "mms" in mtype else "sms", "read": None if rs is None else bool(rs)})
     else:  # messageries tierces : conservées hors catégorie SMS
-        emit("other", ts, {"autopsy_type": "TSK_MESSAGE", "message_type": mtype, "direction": direction,
+        emit("autre", ts, {"autopsy_type": "TSK_MESSAGE", "message_type": mtype, "direction": direction,
                            "address": addr, "text": clean(a.get("TSK_TEXT"))})
 
 
 def m_call(a: Attrs, emit) -> None:
     direction = _dir(a.get("TSK_DIRECTION"))
-    num = clean(a.get("TSK_PHONE_NUMBER_FROM") if direction == "incoming" else a.get("TSK_PHONE_NUMBER_TO")) \
+    num = clean(a.get("TSK_PHONE_NUMBER_FROM") if direction == "entrant" else a.get("TSK_PHONE_NUMBER_TO")) \
         or clean(a.get("TSK_PHONE_NUMBER"))
     if not num:
         return
@@ -95,7 +95,7 @@ def m_call(a: Attrs, emit) -> None:
     dur = None
     if start and end:
         dur = max(0, int((parse_iso(end) - parse_iso(start)).total_seconds()))
-    emit("call", start, {"direction": direction, "number": num, "duration_s": dur})
+    emit("appel", start, {"direction": direction, "number": num, "duration_s": dur})
 
 
 def m_contact(a: Attrs, emit) -> None:
@@ -110,7 +110,7 @@ def m_contact(a: Attrs, emit) -> None:
 def m_web(a: Attrs, emit) -> None:
     url = clean(a.get("TSK_URL"))
     if url:
-        emit("browser_history", a.get("TSK_DATETIME_ACCESSED") or a.get("TSK_DATETIME"),
+        emit("navigation", a.get("TSK_DATETIME_ACCESSED") or a.get("TSK_DATETIME"),
              {"url": url, "title": clean(a.get("TSK_TITLE")), "browser": clean(a.get("TSK_PROG_NAME"))})
 
 
@@ -118,7 +118,7 @@ def m_gps(a: Attrs, emit) -> None:
     lat, lon = to_float(a.get("TSK_GEO_LATITUDE")), to_float(a.get("TSK_GEO_LONGITUDE"))
     if lat is None or lon is None:
         return
-    emit("location", a.get("TSK_DATETIME"), {"latitude": lat, "longitude": lon,
+    emit("localisation", a.get("TSK_DATETIME"), {"latitude": lat, "longitude": lon,
                                              "altitude_m": to_float(a.get("TSK_GEO_ALTITUDE")),
                                              "source_app": clean(a.get("TSK_PROG_NAME"))})
 
@@ -127,7 +127,7 @@ def m_installed(a: Attrs, emit) -> None:
     pkg = clean(a.get("TSK_PROG_NAME"))
     if pkg:
         ts = a.get("TSK_DATETIME")
-        emit("installed_app", ts, {"package": pkg, "first_install": ts})
+        emit("application", ts, {"package": pkg, "first_install": ts})
 
 
 def m_wifi(a: Attrs, emit) -> None:
@@ -149,7 +149,7 @@ def m_account(a: Attrs, emit) -> None:
     name = clean(a.get("TSK_USER_ID")) or clean(a.get("TSK_USER_NAME")) or clean(a.get("TSK_EMAIL"))
     atype = clean(a.get("TSK_CATEGORY")) or clean(a.get("TSK_PROG_NAME"))
     if name and atype:
-        emit("account", None, {"account_type": atype, "account_name": name})
+        emit("compte", None, {"account_type": atype, "account_name": name})
 
 
 def m_exif(a: Attrs, emit, file_path: str | None = None) -> None:
@@ -161,7 +161,7 @@ def m_exif(a: Attrs, emit, file_path: str | None = None) -> None:
 def m_prog_run(a: Attrs, emit) -> None:
     pkg = clean(a.get("TSK_PROG_NAME"))
     if pkg:
-        emit("app_usage", a.get("TSK_DATETIME"), {"package": pkg, "event": "launch"})
+        emit("usage_app", a.get("TSK_DATETIME"), {"package": pkg, "event": "lancement"})
 
 
 MAPPERS: dict[str, Callable] = {
@@ -251,12 +251,12 @@ class AutopsyWrapper(ToolWrapper):
         source = Path(ctx.options.get("from_output") or extraction)
         db = find_case_db(source)
         version = ctx.options.get("version")
-        builder = ArtifactBuilder(ctx.run_id, ctx.evidence_id)
+        builder = ArtifactBuilder(ctx.run_id, ctx.item_id)
         notes = normalize(db, builder, version, tuple(ctx.options.get("modules") or DEFAULT_MODULES))
         if builder.internal_duplicates:
             notes.append(f"{builder.internal_duplicates} doublon(s) interne(s) fusionné(s).")
         if not version:
             notes.append("Version d'Autopsy non déclarée (utiliser --autopsy-version).")
-        return WrapperResult(tool={"name": "Autopsy", "version": version}, mode="imported", command=[],
+        return WrapperResult(tool={"name": "Autopsy", "version": version}, mode="importe", command=[],
                              started_at=started, ended_at=utc_now_iso(), output_path=db,
                              artifacts=builder.items, notes=notes)

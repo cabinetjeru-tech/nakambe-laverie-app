@@ -45,16 +45,16 @@ csv.field_size_limit(sys.maxsize)
 def _direction_sms(v: Any) -> str:
     v = (clean(v) or "").lower()
     if v in ("received", "inbox", "incoming"):
-        return "incoming"
+        return "entrant"
     if v in ("sent", "outbox", "outgoing", "queued", "failed"):
-        return "outgoing"
-    return "unknown"
+        return "sortant"
+    return "inconnu"
 
 
 def _direction_call(v: Any) -> str:
     v = (clean(v) or "").lower()
-    return {"incoming": "incoming", "outgoing": "outgoing", "missed": "missed", "rejected": "rejected",
-            "blocked": "blocked", "answered externally": "incoming", "voicemail": "incoming"}.get(v, "unknown")
+    return {"incoming": "entrant", "outgoing": "sortant", "missed": "manque", "rejected": "rejete",
+            "blocked": "bloque", "answered externally": "entrant", "voicemail": "entrant"}.get(v, "inconnu")
 
 
 def _first(row: Row, *names: str) -> Any:
@@ -74,7 +74,7 @@ def map_sms(row: Row, emit: Emit) -> None:
         "direction": _direction_sms(_first(row, "Direction", "Type")),
         "address": address or "",
         "body": clean(row.get("Body")),
-        "service": mtype if mtype in ("sms", "mms", "rcs") else "unknown",
+        "service": mtype if mtype in ("sms", "mms", "rcs") else "inconnu",
         "read": {"1": True, "0": False}.get(str(row.get("Read") or "").strip()),
         "thread_id": clean(row.get("Thread ID")),
     }, f"msg_id={clean(row.get('MSG ID'))}")
@@ -84,7 +84,7 @@ def map_call(row: Row, emit: Emit) -> None:
     number = clean(_first(row, "Partner", "Phone Number", "Number"))
     if not number:
         return
-    emit("call", to_iso(_first(row, "Call Date", "Date")), {
+    emit("appel", to_iso(_first(row, "Call Date", "Date")), {
         "direction": _direction_call(row.get("Type")),
         "number": number,
         "duration_s": to_int(_first(row, "Duration in Secs", "Duration")),
@@ -95,7 +95,7 @@ def map_web(row: Row, emit: Emit) -> None:
     url = clean(_first(row, "URL", "Url"))
     if not url:
         return
-    emit("browser_history", to_iso(_first(row, "Last Visit Time", "Visit Time", "Timestamp")), {
+    emit("navigation", to_iso(_first(row, "Last Visit Time", "Visit Time", "Timestamp")), {
         "url": url, "title": clean(row.get("Title")), "browser": clean(row.get("Browser Name")),
         "visit_count": to_int(row.get("Visit Count")),
     })
@@ -107,7 +107,7 @@ def map_location(provider: str) -> Callable[[Row, Emit], None]:
         lon = to_float(_first(row, "longitude", "Longitude"))
         if lat is None or lon is None or not (-90 <= lat <= 90 and -180 <= lon <= 180):
             return
-        emit("location", to_iso(_first(row, "timestamp", "Timestamp", "Readtime")), {
+        emit("localisation", to_iso(_first(row, "timestamp", "Timestamp", "Readtime")), {
             "latitude": lat, "longitude": lon, "accuracy_m": to_float(_first(row, "accuracy", "Accuracy")),
             "provider": provider,
         })
@@ -119,7 +119,7 @@ def map_package_info(row: Row, emit: Emit) -> None:
     if not pkg:
         return
     first = to_iso(_first(row, "Install Time", "ft"))
-    emit("installed_app", first, {
+    emit("application", first, {
         "package": pkg, "installer": clean(row.get("Installer")), "first_install": first,
     })
 
@@ -131,19 +131,19 @@ def map_usage(row: Row, emit: Emit) -> None:
     if not pkg:
         return
     etype = (row.get("Event Type") or "").upper()
-    event = ("foreground" if etype in ("ACTIVITY_RESUMED", "MOVE_TO_FOREGROUND") else
-             "background" if etype in ("ACTIVITY_PAUSED", "ACTIVITY_STOPPED", "MOVE_TO_BACKGROUND") else
-             "screen_on" if etype == "SCREEN_INTERACTIVE" else
-             "screen_off" if etype == "SCREEN_NON_INTERACTIVE" else
-             "notification" if etype == "NOTIFICATION_INTERRUPTION" else "other")
-    emit("app_usage", to_iso(row.get("Timestamp / Last Time Active")), {"package": pkg, "event": event},
+    event = ("premier_plan" if etype in ("ACTIVITY_RESUMED", "MOVE_TO_FOREGROUND") else
+             "arriere_plan" if etype in ("ACTIVITY_PAUSED", "ACTIVITY_STOPPED", "MOVE_TO_BACKGROUND") else
+             "ecran_allume" if etype == "SCREEN_INTERACTIVE" else
+             "ecran_eteint" if etype == "SCREEN_NON_INTERACTIVE" else
+             "notification" if etype == "NOTIFICATION_INTERRUPTION" else "autre")
+    emit("usage_app", to_iso(row.get("Timestamp / Last Time Active")), {"package": pkg, "event": event},
          f"event={etype or '?'}")
 
 
 def map_account(row: Row, emit: Emit) -> None:
     t, n = clean(row.get("Account Type")), clean(row.get("Account Name"))
     if t and n:
-        emit("account", None, {"account_type": t, "account_name": n})
+        emit("compte", None, {"account_type": t, "account_name": n})
 
 
 def map_wifi(row: Row, emit: Emit) -> None:
@@ -315,7 +315,7 @@ class AleappWrapper(ToolWrapper):
         command: list[str] = []
         if imported:
             report = find_report_dir(Path(imported))
-            mode = "imported"
+            mode = "importe"
             version = lava_version(report)
         else:
             status = detect("aleapp")
@@ -328,11 +328,11 @@ class AleappWrapper(ToolWrapper):
                               "-i", str(extraction.resolve()), "-o", str(raw.resolve())]
             run_tool(command, out_dir / "aleapp.log", timeout=int(ctx.options.get("timeout") or 4 * 3600), cwd=cwd)
             report = find_report_dir(raw)
-            mode = "executed"
+            mode = "execute"
             version = lava_version(report) or (status.version or "").replace("ALEAPP", "").strip() or None
 
         tool = {"name": "ALEAPP", "version": version}
-        builder = ArtifactBuilder(ctx.run_id, ctx.evidence_id)
+        builder = ArtifactBuilder(ctx.run_id, ctx.item_id)
         notes = normalize(report, builder, tool)
         if builder.internal_duplicates:
             notes.append(f"{builder.internal_duplicates} doublon(s) interne(s) fusionné(s) "

@@ -56,7 +56,7 @@ def test_invalid_document_refused(tmp_path, example_doc):
 def test_logo_used_when_present(tmp_path, example_doc):
     PIL = pytest.importorskip("PIL.Image")
     PIL.new("RGB", (240, 120), (31, 58, 95)).save(tmp_path / "logo.png")
-    example_doc["case"]["organization"]["logo_path"] = "logo.png"
+    example_doc["case"]["x_veritrace"]["organization"]["logo_path"] = "logo.png"
     p = tmp_path / "case.json"
     p.write_text(json.dumps(example_doc), encoding="utf-8")
     res = generate(p, template="judiciaire", out_dir=tmp_path / "out", case_root=tmp_path)
@@ -77,7 +77,7 @@ def test_judiciaire_cover_has_case_examiner_dates_and_device(example_doc):
     model = build_report_model(example_doc, "judiciaire", source_sha256="0" * 64)
     meta = dict(model.cover.meta)
     assert meta["N° d'affaire"] == "VT-2026-0042"
-    assert "Examinateur Exemple" in meta["Examinateur(s)"]
+    assert "Examinateur Exemple" in meta["Examinateur"]
     for k in ("Ouverture de l'affaire", "Période des opérations", "Date du rapport"):
         assert meta[k] != "—"
     row = model.cover.devices.rows[0]
@@ -97,12 +97,12 @@ def test_judiciaire_findings_separate_facts_and_interpretation(example_doc):
     f = example_doc["findings"][0]
     facts = md.index("**Faits constatés**")
     interp = md.index("**Interprétation de l'examinateur**")
-    assert facts < md.index(f["description"]) < interp < md.index(f["interpretation"])
+    assert facts < md.index(f["description"]) < interp < md.index(f["x_veritrace"]["interpretation"])
 
 
 def test_judiciaire_finding_traceable_to_hashed_evidence(example_doc):
     md = _md(example_doc, "judiciaire")
-    ev_hash = example_doc["evidence_items"][0]["sha256"]
+    ev_hash = next(i for a in example_doc["acquisitions"] for i in a["items"] if i["item_id"] == "EV-001")["sha256"]
     section = md[md.index("Constat n° 1"):md.index("Constat n° 2")]
     assert ev_hash in section                         # empreinte de la preuve
     assert "packages.xml" in section                   # fichier source
@@ -131,7 +131,7 @@ def test_entreprise_structure_and_order(example_doc):
     positions = [md.index(f"## {i}") if f"## {i}" in md else md.index(i) for i in order]
     assert positions == sorted(positions)
     summary = md[md.index("Résumé exécutif"):md.index("Criticité des constats")]
-    assert example_doc["case"]["executive_summary"] in summary
+    assert example_doc["case"]["x_veritrace"]["executive_summary"] in summary
     assert "Isoler l'appareil" in summary              # décisions immédiates
     assert "SHA-256" not in summary                    # non technique
     assert "CRITIQUE" in summary

@@ -61,31 +61,31 @@ def fact_key(category: str, data: dict[str, Any], timestamp: str | None) -> dict
     d = data or {}
     if category == "sms":
         return {"ts": ts, "addr": norm_phone(d.get("address")), "body": _s(d.get("body"))}
-    if category == "call":
+    if category == "appel":
         return {"ts": ts, "num": norm_phone(d.get("number"))}
     if category == "contact":
         nums = sorted({norm_phone(n) for n in d.get("phone_numbers") or [] if n})
         return {"name": _s(d.get("display_name")), "nums": nums}
-    if category == "browser_history":
+    if category == "navigation":
         return {"ts": ts, "url": _s(d.get("url"))}
-    if category == "location":
+    if category == "localisation":
         lat, lon = d.get("latitude"), d.get("longitude")
         return {"ts": ts, "lat": round(float(lat), 5) if lat is not None else None,
                 "lon": round(float(lon), 5) if lon is not None else None}
     if category == "exif":
         return {"file": d.get("file_sha256") or _s(d.get("file_path"))}
-    if category == "app_usage":
+    if category == "usage_app":
         return {"ts": ts, "pkg": _low(d.get("package")), "event": d.get("event")}
-    if category == "installed_app":
+    if category == "application":
         return {"pkg": _low(d.get("package"))}
     if category == "wifi":
         return {"ssid": _s(d.get("ssid"))}
     if category == "bluetooth":
         return {"mac": _s(d.get("mac")).upper()}
-    if category == "account":
+    if category == "compte":
         return {"type": _low(d.get("account_type")), "name": _low(d.get("account_name"))}
-    if category == "ioc_match":
-        return {"type": d.get("indicator_type"), "ioc": _low(d.get("indicator")), "value": _low(d.get("matched_value"))}
+    if category == "ioc":
+        return {"type": d.get("ioc_type"), "ioc": _low(d.get("ioc_value")), "value": _low(d.get("matched_value"))}
     return {"ts": ts, "data": d}
 
 

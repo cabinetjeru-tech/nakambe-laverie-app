@@ -23,7 +23,7 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Garde-fou d'autorisation légale (bloquant) | ✅ |
 | Journal d'audit horodaté, chaîné, en lecture seule | ✅ |
 | Dossier d'affaire normalisé (`case init`) | ✅ |
-| Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.3, voir plus bas)* |
+| Format pivot (draft-07) + validateur + exemple | ✅ *(bloc `case` du promoteur ; autres sections complétées, à valider)* |
 | Reporting judiciaire / entreprise, PDF + Markdown | ✅ |
 | Détection des outils externes (`doctor`) | ✅ |
 | Acquisition ADB : fiche appareil, getprop, applications, dumpsys, backup, pull ciblé, bugreport, custody automatique (`veritrace acquire`) | ✅ |
@@ -49,7 +49,7 @@ veritrace --version
 ### 2. Outils externes
 
 Ces outils sont **optionnels**. S'il en manque un, Veritrace affiche un avertissement et
-consigne l'étape comme « non exécutée » (`skipped`) dans l'affaire et dans le rapport. Il
+consigne l'étape comme « non exécutée » (`ignore`) dans l'affaire et dans le rapport. Il
 ne plante pas. Pour faire le point :
 
 ```bash
@@ -125,7 +125,7 @@ Pour relancer les tests avec les vrais outils :
 Chaque commande, sauf `--help` et `--version`, commence par cette séquence :
 
 1. nom de l'examinateur ;
-2. base légale : `consentement`, `mandat`, `requisition`, `ordonnance` ou `politique-entreprise` ;
+2. base légale : `consentement`, `mandat`, `ordre_judiciaire` ou `politique-entreprise` ;
 3. référence du document (n° de mandat, PV de consentement…) ;
 4. saisie exacte de `AUTORISATION VERIFIEE`.
 
@@ -170,27 +170,58 @@ printf 'Nom Prénom\nmandat\nCR-2026-118\nAUTORISATION VERIFIEE\n' | veritrace r
 
 ---
 
-## Contrat de données
+## Contrat de données : le format pivot
 
-- Schéma : `veritrace/schema/veritrace_case.schema.json` (JSON Schema 2020-12).
-- Exemple complet (affaire fictive) : `veritrace/schema/examples/example_case.json`.
-- Le validateur contrôle d'abord la **structure** (JSON Schema), puis la **sémantique** :
+Tous les modules passent par un **format pivot unique** :
+`veritrace/schema/veritrace_pivot.schema.json` (JSON Schema **draft-07**). Les trois
+wrappers écrivent dans ce format et les deux rapports ne lisent que lui.
+
+| Partie | Origine |
+|---|---|
+| `case` (`case_id`, `title`, `examiner`, `created_at`, `authorization{type, reference, confirmed_by, confirmed_at}`) | **Bloc du promoteur, repris tel quel**, avec la valeur `politique-entreprise` ajoutée à `authorization.type` |
+| `device`, `acquisitions`, `artifacts`, `findings`, `timeline`, `chain_of_custody` | **Complété par Veritrace** dans le même style, marqué « A VALIDER » dans le schéma (`$comment`) |
+| `x_veritrace` (à la racine et dans chaque objet) | Extensions propres à Veritrace, toujours **facultatives** : un document sans `x_veritrace` reste conforme |
+
+Structure résumée :
+
+```text
+case                 affaire + autorisation légale (bloquante)
+device               UN appareil par affaire (fabricant, modèle, os_version, IMEI, série…)
+acquisitions[]       chaque entrée de données : méthode ADB ou « import » (extraction, base Autopsy, IOC)
+  └ items[]          éléments de preuve hachés à la collecte (item_id, chemin, sha256…)
+artifacts[]          faits extraits : category, timestamp, source{tool, item_id, fichier, enregistrement},
+                     data, sha256 (contenu), corroborated, corroborated_by
+findings[]           constats : type, severity (critique/eleve/moyen/faible/info), description (faits),
+                     artifact_ids, item_ids, corroborated, ioc{type, value, source, family}
+timeline[]           événements datés, reliés aux artefacts
+chain_of_custody[]   qui, quoi (item_id, action), quand, empreinte
+```
+
+Les valeurs d'énumération sont en français ASCII, comme dans le bloc fourni (`ordre_judiciaire`) :
+- catégories : `sms`, `appel`, `contact`, `navigation`, `localisation`, `exif`, `usage_app`, `application`, `wifi`, `bluetooth`, `compte`, `ioc`, `autre` ;
+- actions de custody : `collecte`, `verification`, `copie`, `analyse`… ;
+- statuts : `succes`, `partiel`, `echec`, `ignore`.
+
+Extensions `x_veritrace` :
+- dans l'affaire : cabinet et logo, mission, synthèse, limites, fuseau d'affichage ;
+- dans les artefacts : empreinte de fait (`fact_sha256`), moteur, sources de corroboration ;
+- dans les constats : interprétation, résumé non technique, remédiation, pièces ;
+- à la racine : exécutions d'outils et intégrité.
+
+Validation, en deux temps :
+- **Structure** : draft-07.
+- **Sémantique** :
   - unicité des identifiants ;
-  - intégrité référentielle : artefact → exécution d'outil → preuve → acquisition → appareil ;
-  - empreintes de custody identiques à celle de la preuve ;
-  - `content_sha256` cohérent avec les données ;
-  - statut « corroboré » seulement si au moins deux moteurs d'analyse indépendants confirment le même fait ;
+  - intégrité référentielle (artefact → élément de preuve, constat → artefacts/éléments, custody → élément) ;
+  - empreintes de custody identiques à celle de l'élément, et une « collecte » pour chaque élément ;
+  - `sha256` de chaque artefact cohérent avec ses données ;
+  - `corroborated` vrai **si et seulement si** au moins deux moteurs indépendants ont extrait le fait ;
   - dates valides avec fuseau ;
-  - avec `--case-root`, re-hachage des fichiers sur disque.
-- **Deux empreintes par artefact** :
-  - `content_sha256` couvre le contenu exact (`{category, data}`) ;
-  - `fact_sha256` couvre l'identité du fait. C'est elle qui sert au dédoublonnage et à la
-    corroboration (voir « Analyse multi-outils »).
+  - avec `--case-root`, re-hachage des éléments sur disque.
+- **Sorties de wrappers** : un test vérifie que chacune (`parsed/<outil>/RUN-*/veritrace_normalized.json`) est conforme aux définitions `artifact` et `finding` du schéma.
 
-> **Schéma provisoire.** Le schéma de référence n'a pas encore été fourni. La v0.3 a été
-> conçue pour couvrir le cahier des charges. Pour la remplacer, déposez le schéma de
-> référence à la place du fichier ou pointez `VERITRACE_SCHEMA` dessus, puis adaptez le
-> modèle de rapport (`reporting/model.py`) aux noms de champs.
+Exemple complet (affaire fictive) : `veritrace/schema/examples/example_case.json`.
+Pour utiliser une autre version du schéma : `VERITRACE_SCHEMA=/chemin/schema.json`.
 
 ```bash
 veritrace schema validate mon_affaire.json [--case-root ./VT-2026-0042]
@@ -286,12 +317,12 @@ Pour chaque outil, Veritrace enchaîne les étapes suivantes :
 | Outil | Ce qui est normalisé |
 |---|---|
 | ALEAPP | Lit la sortie LAVA (`_lava_data.lava` + `_lava_artifacts.db`), ou les TSV pour les versions antérieures. Catégories : SMS/MMS, appels, contacts, historique web, localisations, applications installées, usage des applications (événements), comptes, Wi-Fi, Bluetooth. Les artefacts non couverts sont listés dans le rapport et restent dans la sortie brute. |
-| MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat « critique » (alerte MVT CRITICAL) ou « élevé » (autres niveaux)**, avec l'indicateur, le jeu d'IOC et la famille. Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
+| MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat de type `ioc`, de criticité `critique` (alerte MVT CRITICAL) ou `eleve` (autres niveaux)**, avec le bloc `ioc` (type, valeur, fichier d'IOC, famille). Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
 | Autopsy | Lit `autopsy.db` (cas, Portable Case ou fichier `.db`). Seuls les artefacts du **module Android** sont retenus (option `--module` pour en ajouter d'autres). |
 
 ### Corroboration et dédoublonnage
 
-- Chaque artefact porte une **empreinte de fait** (`fact_sha256`), calculée sur ses seuls
+- Chaque artefact porte une **empreinte de fait** (`x_veritrace.fact_sha256`), calculée sur ses seuls
   attributs identifiants (`schema/facts.py`). Par exemple : horodatage à la seconde,
   numéro et texte pour un SMS ; nom de paquet pour une application. Les champs
   secondaires, que chaque outil remplit différemment, n'entrent pas dans l'empreinte.
@@ -338,21 +369,22 @@ affirmation doit pouvoir être reliée à une preuve hachée.
 
 | Partie | Contenu |
 |---|---|
-| 1. Résumé exécutif (1 page, non technique) | Niveau de risque global, synthèse rédigée (`case.executive_summary`), ce qu'il faut retenir (`finding.plain_summary`), décisions immédiates |
+| 1. Résumé exécutif (1 page, non technique) | Niveau de risque global, synthèse rédigée (`case.x_veritrace.executive_summary`), ce qu'il faut retenir (`finding.x_veritrace.plain_summary`), décisions immédiates |
 | 2. Criticité des constats | Critique / Élevé / Moyen / Faible, fiabilité, impact métier, échelle de criticité |
 | 3. Recommandations et plan de remédiation | Actions triées par priorité (immédiat < 48 h, court terme < 30 j, moyen terme < 90 j), avec responsable, échéance et constat d'origine |
 | 4. Détails techniques | Faits, analyse, sources de chaque constat ; chronologie des événements clés ; périmètre et méthodologie |
 | 5. Limites | |
 | Annexe — Preuves | Éléments de preuve, chaîne de custody, pièces (captures et exports), inventaire, intégrité |
 
-### Champs du JSON utilisés par les rapports (schéma v0.3)
+### Champs du format pivot utilisés par les rapports
 
 | Champ | Utilisé par |
 |---|---|
 | `finding.description` | Les deux modèles : **faits uniquement** |
-| `finding.interpretation` | Les deux modèles : interprétation, toujours affichée à part |
-| `finding.exhibits[]` | Les deux modèles : captures et exports, avec chemin et SHA-256. Une capture PNG ou JPG présente dans le dossier d'affaire est insérée dans le rapport |
-| `finding.plain_summary`, `finding.business_impact`, `finding.remediation[]`, `case.executive_summary` | Modèle entreprise |
+| `finding.ioc` | Les deux modèles : IOC correspondant (type, valeur, fichier, famille) |
+| `finding.x_veritrace.interpretation` | Les deux modèles : interprétation, toujours affichée à part |
+| `finding.x_veritrace.exhibits[]` | Les deux modèles : captures et exports, avec chemin et SHA-256. Une capture PNG ou JPG présente dans le dossier d'affaire est insérée dans le rapport |
+| `finding.x_veritrace.plain_summary`, `.business_impact`, `.remediation[]`, `case.x_veritrace.executive_summary` | Modèle entreprise |
 
 ### Fonctionnement commun
 

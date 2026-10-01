@@ -1,0 +1,485 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://veritrace.local/schema/pivot/1.0.0",
+  "title": "Schema normalise - Agent forensique Android",
+  "description": "Format pivot unique. Chaque wrapper d'outil (ALEAPP, MVT, Autopsy) ecrit dans ce format. Les deux rapports (judiciaire / entreprise) lisent UNIQUEMENT ce format. Un seul jeu de donnees = zero divergence entre les rapports.",
+  "$comment": "Origine : bloc 'case' fourni par le promoteur (Nourou Chafikou), repris tel quel + valeur 'politique-entreprise' ajoutee a authorization.type (decision du promoteur). Sections device, acquisitions, artifacts, findings, timeline, chain_of_custody : COMPLETEES PAR VERITRACE dans le style du bloc fourni, A VALIDER par le promoteur. Toute donnee propre a Veritrace est placee sous une cle 'x_veritrace'.",
+  "type": "object",
+  "required": ["case", "device", "acquisitions", "artifacts", "findings", "timeline", "chain_of_custody"],
+  "properties": {
+
+    "case": {
+      "type": "object",
+      "description": "Identification de l'affaire et de l'autorisation legale.",
+      "required": ["case_id", "examiner", "authorization", "created_at"],
+      "properties": {
+        "case_id":     { "type": "string", "description": "Identifiant unique de l'affaire" },
+        "title":       { "type": "string" },
+        "examiner":    { "type": "string", "description": "Nom de l'examinateur" },
+        "created_at":  { "type": "string", "format": "date-time" },
+        "authorization": {
+          "type": "object",
+          "description": "Bloc BLOQUANT : rien ne s'execute sans. Sert aussi de preuve de legalite dans le rapport.",
+          "required": ["type", "reference", "confirmed_by", "confirmed_at"],
+          "properties": {
+            "type":         { "type": "string", "enum": ["consentement", "mandat", "ordre_judiciaire", "politique-entreprise"] },
+            "reference":    { "type": "string", "description": "N de dossier, nom du signataire du consentement, etc." },
+            "confirmed_by": { "type": "string" },
+            "confirmed_at": { "type": "string", "format": "date-time" },
+            "x_veritrace":  { "$ref": "#/definitions/x_authorization" }
+          }
+        },
+        "x_veritrace": { "$ref": "#/definitions/x_case" }
+      }
+    },
+
+    "device": {
+      "$comment": "A VALIDER - complete par Veritrace. Un seul appareil par affaire.",
+      "type": "object",
+      "description": "Appareil examine. Les champs sont null tant que l'appareil n'a pas ete identifie (acquisition ou saisie).",
+      "required": ["manufacturer", "model", "os_version", "imei", "serial"],
+      "additionalProperties": false,
+      "properties": {
+        "manufacturer":      { "type": ["string", "null"] },
+        "model":             { "type": ["string", "null"] },
+        "os_version":        { "type": ["string", "null"], "description": "Version d'Android" },
+        "security_patch":    { "type": ["string", "null"] },
+        "build_fingerprint": { "type": ["string", "null"] },
+        "serial":            { "type": ["string", "null"] },
+        "imei":              { "type": "array", "items": { "type": "string", "pattern": "^[0-9]{14,16}$" } },
+        "owner":             { "type": ["string", "null"] },
+        "seal_number":       { "type": ["string", "null"] },
+        "state_on_receipt":  { "type": ["string", "null"] },
+        "x_veritrace":       { "type": "object" }
+      }
+    },
+
+    "acquisitions": {
+      "$comment": "A VALIDER - complete par Veritrace. Toute donnee entrant dans l'affaire (acquisition ADB, extraction importee, base Autopsy, fichier d'IOC) provient d'une acquisition ; chaque element produit (item) est hache a la collecte.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/acquisition" }
+    },
+
+    "artifacts": {
+      "$comment": "A VALIDER - complete par Veritrace.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/artifact" }
+    },
+
+    "findings": {
+      "$comment": "A VALIDER - complete par Veritrace.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/finding" }
+    },
+
+    "timeline": {
+      "$comment": "A VALIDER - complete par Veritrace.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/timeline_event" }
+    },
+
+    "chain_of_custody": {
+      "$comment": "A VALIDER - complete par Veritrace. Qui, quoi, quand, empreinte.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/custody_event" }
+    },
+
+    "x_veritrace": { "$ref": "#/definitions/x_root" }
+  },
+
+  "definitions": {
+    "id":        { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$" },
+    "id_list":   { "type": "array", "items": { "$ref": "#/definitions/id" }, "uniqueItems": true },
+    "date_time": { "type": "string", "format": "date-time",
+                   "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?(Z|[+-]\\d{2}:\\d{2})$" },
+    "date_time_or_null": { "anyOf": [{ "$ref": "#/definitions/date_time" }, { "type": "null" }] },
+    "sha256":    { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nonempty":  { "type": "string", "minLength": 1 },
+
+    "acquisition": {
+      "type": "object",
+      "required": ["acquisition_id", "method", "tool", "operator", "started_at", "status", "items"],
+      "additionalProperties": false,
+      "properties": {
+        "acquisition_id": { "$ref": "#/definitions/id" },
+        "method": {
+          "type": "string",
+          "enum": ["adb_getprop", "adb_package_list", "adb_dumpsys", "adb_backup", "adb_pull", "adb_bugreport", "import"],
+          "description": "'import' : extraction, base Autopsy ou fichier d'IOC remis a Veritrace (non acquis par lui)."
+        },
+        "tool": {
+          "type": "object", "required": ["name"], "additionalProperties": false,
+          "properties": { "name": { "$ref": "#/definitions/nonempty" }, "version": { "type": ["string", "null"] } }
+        },
+        "operator":   { "$ref": "#/definitions/nonempty" },
+        "started_at": { "$ref": "#/definitions/date_time" },
+        "ended_at":   { "$ref": "#/definitions/date_time_or_null" },
+        "status":     { "type": "string", "enum": ["succes", "partiel", "echec"] },
+        "notes":      { "type": "string" },
+        "items":      { "type": "array", "items": { "$ref": "#/definitions/item" } },
+        "x_veritrace": { "type": "object" }
+      }
+    },
+
+    "item": {
+      "type": "object",
+      "description": "Element de preuve produit par une acquisition (fichier ou dossier), hache a la collecte.",
+      "required": ["item_id", "label", "type", "path", "sha256", "size_bytes", "collected_at", "collected_by"],
+      "additionalProperties": false,
+      "properties": {
+        "item_id":      { "$ref": "#/definitions/id" },
+        "label":        { "$ref": "#/definitions/nonempty" },
+        "type":         { "type": "string", "enum": ["extraction", "sauvegarde", "fichier", "archive", "document", "sortie_outil", "ioc"] },
+        "path":         { "$ref": "#/definitions/nonempty", "description": "Relatif a la racine du dossier d'affaire (ou absolu si hors affaire)." },
+        "device_path":  { "type": ["string", "null"] },
+        "sha256":       { "$ref": "#/definitions/sha256", "description": "Fichier : SHA-256 du contenu. Dossier : SHA-256 de son manifeste sha256sum." },
+        "size_bytes":   { "type": "integer", "minimum": 0 },
+        "collected_at": { "$ref": "#/definitions/date_time" },
+        "collected_by": { "$ref": "#/definitions/nonempty" },
+        "x_veritrace":  { "type": "object" }
+      }
+    },
+
+    "artifact": {
+      "type": "object",
+      "required": ["artifact_id", "category", "timestamp", "source", "data", "sha256", "corroborated", "corroborated_by"],
+      "additionalProperties": false,
+      "properties": {
+        "artifact_id": { "$ref": "#/definitions/id" },
+        "category": {
+          "type": "string",
+          "enum": ["sms", "appel", "contact", "navigation", "localisation", "exif", "usage_app", "application", "wifi", "bluetooth", "compte", "ioc", "autre"]
+        },
+        "timestamp": { "$ref": "#/definitions/date_time_or_null" },
+        "source": {
+          "type": "object",
+          "required": ["tool", "item_id"],
+          "additionalProperties": false,
+          "properties": {
+            "tool":         { "$ref": "#/definitions/nonempty", "description": "ALEAPP, MVT, Autopsy, ..." },
+            "tool_version": { "type": ["string", "null"] },
+            "item_id":      { "$ref": "#/definitions/id", "description": "Element de preuve analyse." },
+            "file_path":    { "type": ["string", "null"], "description": "Fichier source dans l'extraction." },
+            "record_ref":   { "type": ["string", "null"], "description": "Enregistrement precis (table, ligne, id)." }
+          }
+        },
+        "data":            { "type": "object", "description": "Contenu normalise, selon la categorie." },
+        "sha256":          { "$ref": "#/definitions/sha256", "description": "SHA-256 du JSON canonique {category, data} (dedoublonnage exact)." },
+        "corroborated":    { "type": "boolean", "description": "Vrai si au moins deux outils independants ont extrait le meme fait." },
+        "corroborated_by": { "type": "array", "items": { "type": "string" }, "description": "Outils ayant extrait le meme fait (dont celui-ci)." },
+        "x_veritrace":     { "$ref": "#/definitions/x_artifact" }
+      },
+      "allOf": [
+        { "if": { "properties": { "category": { "const": "sms" } } },          "then": { "properties": { "data": { "$ref": "#/definitions/data_sms" } } } },
+        { "if": { "properties": { "category": { "const": "appel" } } },        "then": { "properties": { "data": { "$ref": "#/definitions/data_appel" } } } },
+        { "if": { "properties": { "category": { "const": "contact" } } },      "then": { "properties": { "data": { "$ref": "#/definitions/data_contact" } } } },
+        { "if": { "properties": { "category": { "const": "navigation" } } },   "then": { "properties": { "data": { "$ref": "#/definitions/data_navigation" } } } },
+        { "if": { "properties": { "category": { "const": "localisation" } } }, "then": { "properties": { "data": { "$ref": "#/definitions/data_localisation" } } } },
+        { "if": { "properties": { "category": { "const": "exif" } } },         "then": { "properties": { "data": { "$ref": "#/definitions/data_exif" } } } },
+        { "if": { "properties": { "category": { "const": "usage_app" } } },    "then": { "properties": { "data": { "$ref": "#/definitions/data_usage_app" } } } },
+        { "if": { "properties": { "category": { "const": "application" } } },  "then": { "properties": { "data": { "$ref": "#/definitions/data_application" } } } },
+        { "if": { "properties": { "category": { "const": "wifi" } } },         "then": { "properties": { "data": { "$ref": "#/definitions/data_wifi" } } } },
+        { "if": { "properties": { "category": { "const": "bluetooth" } } },    "then": { "properties": { "data": { "$ref": "#/definitions/data_bluetooth" } } } },
+        { "if": { "properties": { "category": { "const": "compte" } } },       "then": { "properties": { "data": { "$ref": "#/definitions/data_compte" } } } },
+        { "if": { "properties": { "category": { "const": "ioc" } } },          "then": { "properties": { "data": { "$ref": "#/definitions/data_ioc" } } } }
+      ]
+    },
+
+    "direction":  { "type": "string", "enum": ["entrant", "sortant", "manque", "rejete", "bloque", "inconnu"] },
+    "data_sms": {
+      "type": "object", "required": ["direction", "address"],
+      "properties": {
+        "direction":    { "$ref": "#/definitions/direction" },
+        "address":      { "type": "string" },
+        "contact_name": { "type": ["string", "null"] },
+        "body":         { "type": ["string", "null"] },
+        "service":      { "type": "string", "enum": ["sms", "mms", "rcs", "inconnu"] },
+        "read":         { "type": ["boolean", "null"] },
+        "thread_id":    { "type": ["string", "integer", "null"] }
+      }
+    },
+    "data_appel": {
+      "type": "object", "required": ["direction", "number"],
+      "properties": {
+        "direction":    { "$ref": "#/definitions/direction" },
+        "number":       { "type": "string" },
+        "contact_name": { "type": ["string", "null"] },
+        "duration_s":   { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "data_contact": {
+      "type": "object", "required": ["display_name"],
+      "properties": {
+        "display_name":  { "type": "string" },
+        "phone_numbers": { "type": "array", "items": { "type": "string" } },
+        "emails":        { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data_navigation": {
+      "type": "object", "required": ["url"],
+      "properties": {
+        "url":         { "type": "string" },
+        "title":       { "type": ["string", "null"] },
+        "browser":     { "type": ["string", "null"] },
+        "visit_count": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "data_localisation": {
+      "type": "object", "required": ["latitude", "longitude"],
+      "properties": {
+        "latitude":   { "type": "number", "minimum": -90, "maximum": 90 },
+        "longitude":  { "type": "number", "minimum": -180, "maximum": 180 },
+        "accuracy_m": { "type": ["number", "null"], "minimum": 0 },
+        "altitude_m": { "type": ["number", "null"] },
+        "provider":   { "type": ["string", "null"] },
+        "source_app": { "type": ["string", "null"] }
+      }
+    },
+    "data_exif": {
+      "type": "object", "required": ["file_path"],
+      "properties": {
+        "file_path":   { "type": "string" },
+        "file_sha256": { "anyOf": [{ "$ref": "#/definitions/sha256" }, { "type": "null" }] },
+        "make":        { "type": ["string", "null"] },
+        "model":       { "type": ["string", "null"] },
+        "latitude":    { "type": ["number", "null"], "minimum": -90, "maximum": 90 },
+        "longitude":   { "type": ["number", "null"], "minimum": -180, "maximum": 180 }
+      }
+    },
+    "data_usage_app": {
+      "type": "object", "required": ["package", "event"],
+      "properties": {
+        "package":    { "type": "string" },
+        "event":      { "type": "string", "enum": ["premier_plan", "arriere_plan", "lancement", "notification", "ecran_allume", "ecran_eteint", "autre"] },
+        "duration_s": { "type": ["number", "null"], "minimum": 0 }
+      }
+    },
+    "data_application": {
+      "type": "object", "required": ["package"],
+      "properties": {
+        "package":       { "type": "string" },
+        "app_name":      { "type": ["string", "null"] },
+        "version_name":  { "type": ["string", "null"] },
+        "installer":     { "type": ["string", "null"], "description": "null = installateur inconnu (sideload probable)." },
+        "first_install": { "$ref": "#/definitions/date_time_or_null" },
+        "is_system":     { "type": ["boolean", "null"] },
+        "permissions":   { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "data_wifi": {
+      "type": "object", "required": ["ssid"],
+      "properties": {
+        "ssid":           { "type": "string" },
+        "bssid":          { "type": ["string", "null"] },
+        "security":       { "type": ["string", "null"] },
+        "last_connected": { "$ref": "#/definitions/date_time_or_null" }
+      }
+    },
+    "data_bluetooth": {
+      "type": "object", "required": ["mac"],
+      "properties": {
+        "mac":       { "type": "string", "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$" },
+        "name":      { "type": ["string", "null"] },
+        "paired":    { "type": ["boolean", "null"] },
+        "last_seen": { "$ref": "#/definitions/date_time_or_null" }
+      }
+    },
+    "data_compte": {
+      "type": "object", "required": ["account_type", "account_name"],
+      "properties": {
+        "account_type": { "type": "string" },
+        "account_name": { "type": "string" },
+        "package":      { "type": ["string", "null"] }
+      }
+    },
+    "data_ioc": {
+      "type": "object", "required": ["ioc_type", "ioc_value", "ioc_source"],
+      "properties": {
+        "ioc_type":       { "$ref": "#/definitions/ioc_type" },
+        "ioc_value":      { "type": "string" },
+        "matched_value":  { "type": ["string", "null"] },
+        "ioc_source":     { "type": "string", "description": "Fichier d'IOC (STIX2) utilise." },
+        "malware_family": { "type": ["string", "null"] }
+      }
+    },
+    "ioc_type": { "type": "string", "enum": ["application", "domaine", "url", "processus", "empreinte_fichier", "certificat", "chemin_fichier", "autre"] },
+
+    "finding": {
+      "type": "object",
+      "required": ["finding_id", "type", "severity", "title", "description", "artifact_ids", "corroborated"],
+      "additionalProperties": false,
+      "properties": {
+        "finding_id":   { "$ref": "#/definitions/id" },
+        "type":         { "type": "string", "enum": ["ioc", "application_suspecte", "anomalie", "observation"] },
+        "severity":     { "type": "string", "enum": ["critique", "eleve", "moyen", "faible", "info"] },
+        "title":        { "$ref": "#/definitions/nonempty" },
+        "description":  { "$ref": "#/definitions/nonempty", "description": "Faits constates uniquement." },
+        "artifact_ids": { "$ref": "#/definitions/id_list" },
+        "item_ids":     { "$ref": "#/definitions/id_list" },
+        "corroborated": { "type": "boolean" },
+        "source_tool":  { "type": ["string", "null"], "description": "Outil a l'origine du constat (MVT, regle Veritrace, examinateur)." },
+        "ioc": {
+          "type": "object",
+          "description": "IOC correspondant, pour les constats de type 'ioc'.",
+          "required": ["type", "value", "source"],
+          "additionalProperties": false,
+          "properties": {
+            "type":   { "$ref": "#/definitions/ioc_type" },
+            "value":  { "type": "string" },
+            "source": { "type": "string" },
+            "family": { "type": ["string", "null"] }
+          }
+        },
+        "x_veritrace": { "$ref": "#/definitions/x_finding" }
+      }
+    },
+
+    "timeline_event": {
+      "type": "object",
+      "required": ["event_id", "timestamp", "category", "description", "artifact_ids", "corroborated"],
+      "additionalProperties": false,
+      "properties": {
+        "event_id":     { "$ref": "#/definitions/id" },
+        "timestamp":    { "$ref": "#/definitions/date_time" },
+        "category":     { "type": "string" },
+        "description":  { "$ref": "#/definitions/nonempty" },
+        "artifact_ids": { "allOf": [{ "$ref": "#/definitions/id_list" }, { "minItems": 1 }] },
+        "corroborated": { "type": "boolean" },
+        "sources":      { "type": "array", "items": { "type": "string" } },
+        "x_veritrace":  {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "generated": { "type": "boolean", "description": "Evenement genere par la correlation (regenere a chaque passage)." },
+            "flags": { "type": "array", "items": { "type": "string", "enum": ["ioc", "application_suspecte", "anomalie", "notable"] } }
+          }
+        }
+      }
+    },
+
+    "custody_event": {
+      "type": "object",
+      "required": ["event_id", "timestamp", "item_id", "action", "actor", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "event_id":  { "$ref": "#/definitions/id" },
+        "timestamp": { "$ref": "#/definitions/date_time" },
+        "item_id":   { "$ref": "#/definitions/id" },
+        "action":    { "type": "string", "enum": ["collecte", "verification", "copie", "transfert", "stockage", "analyse", "rapport", "scelle", "restitution"] },
+        "actor":     { "$ref": "#/definitions/nonempty" },
+        "sha256":    { "$ref": "#/definitions/sha256" },
+        "location":  { "type": ["string", "null"] },
+        "notes":     { "type": ["string", "null"] }
+      }
+    },
+
+    "x_authorization": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "issued_by":       { "type": ["string", "null"] },
+        "issued_at":       { "$ref": "#/definitions/date_time_or_null" },
+        "scope":           { "type": ["string", "null"] },
+        "document_sha256": { "anyOf": [{ "$ref": "#/definitions/sha256" }, { "type": "null" }] }
+      }
+    },
+
+    "x_case": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "report_type":       { "type": "string", "enum": ["judiciaire", "entreprise"] },
+        "display_timezone":  { "type": "string" },
+        "mission":           { "type": "string" },
+        "executive_summary": { "type": "string" },
+        "limitations":       { "type": "array", "items": { "type": "string" } },
+        "examiner_role":     { "type": ["string", "null"] },
+        "examiner_qualification": { "type": ["string", "null"] },
+        "requesting_party": {
+          "type": "object", "required": ["name"], "additionalProperties": false,
+          "properties": { "name": { "type": "string" }, "role": { "type": ["string", "null"] }, "reference": { "type": ["string", "null"] } }
+        },
+        "organization": {
+          "type": "object", "required": ["name"], "additionalProperties": false,
+          "description": "Cabinet : page de garde (logo + coordonnees).",
+          "properties": {
+            "name": { "type": "string" }, "address": { "type": ["string", "null"] }, "phone": { "type": ["string", "null"] },
+            "email": { "type": ["string", "null"] }, "website": { "type": ["string", "null"] },
+            "registration": { "type": ["string", "null"] }, "logo_path": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+
+    "x_artifact": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "fact_sha256": { "$ref": "#/definitions/sha256", "description": "Empreinte du FAIT (attributs identifiants) : dedoublonnage et corroboration inter-outils." },
+        "engine":      { "type": "string", "description": "Moteur d'analyse reel (Autopsy via son module aLEAPP = ALEAPP)." },
+        "run_id":      { "$ref": "#/definitions/id" },
+        "sources": {
+          "type": "array",
+          "items": { "type": "object", "required": ["artifact_id", "tool"], "additionalProperties": false,
+                     "properties": { "artifact_id": { "$ref": "#/definitions/id" }, "tool": { "type": "string" }, "engine": { "type": "string" } } }
+        },
+        "tags": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "x_finding": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "interpretation":  { "type": "string", "description": "Interpretation de l'examinateur, distincte des faits." },
+        "plain_summary":   { "type": "string", "description": "Resume non technique (rapport entreprise)." },
+        "business_impact": { "type": "string" },
+        "confidence":      { "type": "string", "enum": ["elevee", "moyenne", "faible"] },
+        "remediation": {
+          "type": "array",
+          "items": { "type": "object", "required": ["action", "priority"], "additionalProperties": false,
+                     "properties": { "action": { "type": "string", "minLength": 1 },
+                                     "priority": { "type": "string", "enum": ["immediat", "court_terme", "moyen_terme"] },
+                                     "owner": { "type": ["string", "null"] },
+                                     "due_date": { "type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$" } } }
+        },
+        "exhibits": {
+          "type": "array",
+          "items": { "type": "object", "required": ["exhibit_id", "type", "path", "sha256", "description"], "additionalProperties": false,
+                     "properties": { "exhibit_id": { "$ref": "#/definitions/id" },
+                                     "type": { "type": "string", "enum": ["capture", "export", "document", "autre"] },
+                                     "path": { "type": "string", "minLength": 1 }, "sha256": { "$ref": "#/definitions/sha256" },
+                                     "description": { "type": "string", "minLength": 1 },
+                                     "artifact_id": { "anyOf": [{ "$ref": "#/definitions/id" }, { "type": "null" }] },
+                                     "captured_at": { "$ref": "#/definitions/date_time_or_null" } } }
+        }
+      }
+    },
+
+    "x_root": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "schema_version": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "tool_runs": {
+          "type": "array",
+          "items": { "type": "object", "required": ["run_id", "tool", "started_at", "status"], "additionalProperties": false,
+                     "properties": { "run_id": { "$ref": "#/definitions/id" },
+                                     "tool": { "type": "string", "minLength": 1 }, "tool_version": { "type": ["string", "null"] },
+                                     "mode": { "type": ["string", "null"], "enum": ["execute", "importe", null] },
+                                     "command": { "type": "array", "items": { "type": "string" } },
+                                     "started_at": { "$ref": "#/definitions/date_time" }, "ended_at": { "$ref": "#/definitions/date_time_or_null" },
+                                     "status": { "type": "string", "enum": ["succes", "avertissement", "echec", "ignore"] },
+                                     "message": { "type": "string" }, "input_item_ids": { "$ref": "#/definitions/id_list" },
+                                     "output_path": { "type": ["string", "null"] },
+                                     "output_sha256": { "anyOf": [{ "$ref": "#/definitions/sha256" }, { "type": "null" }] },
+                                     "artifacts_produced": { "type": "integer", "minimum": 0 } } }
+        },
+        "integrity": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "generated_at": { "$ref": "#/definitions/date_time" },
+            "generator": { "type": "object", "properties": { "name": { "type": "string" }, "version": { "type": "string" }, "author": { "type": "string" } } },
+            "audit": { "type": "object", "additionalProperties": false,
+                       "properties": { "entries": { "type": "integer", "minimum": 0 }, "head_hash": { "$ref": "#/definitions/sha256" },
+                                       "verified": { "type": "boolean" }, "verified_at": { "$ref": "#/definitions/date_time_or_null" } } }
+          }
+        }
+      }
+    }
+  }
+}

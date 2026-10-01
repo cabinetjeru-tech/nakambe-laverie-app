@@ -11,11 +11,12 @@ indique précisément quels indicateurs ont été utilisés.
 
 Normalisation :
 - `alerts.json` (MVT ≥ 2025) ou, à défaut, `*_detected.json` (versions antérieures) ;
-- chaque alerte portant un `matched_indicator` → artefact `ioc_match` + **constat de
-  criticité « critique » (alerte MVT CRITICAL) ou « élevé » (toute autre détection IOC)** ;
+- chaque alerte portant un `matched_indicator` → artefact `ioc` + **constat de type
+  « ioc », criticité « critique » (alerte MVT CRITICAL) ou « eleve » (toute autre détection
+  IOC)**, avec le bloc `ioc` (type, valeur, fichier d'IOC, famille) ;
 - alertes heuristiques sans IOC (ex. application installée hors magasin) de niveau
-  MEDIUM ou plus → constat « suspicious_app » / « anomaly » de même niveau ;
-- `*packages.json` → artefacts `installed_app` (servent à corroborer ALEAPP/Autopsy).
+  MEDIUM ou plus → constat « application_suspecte » / « anomalie » de même niveau ;
+- `*packages.json` → artefacts `application` (servent à corroborer ALEAPP/Autopsy).
 
 Testé avec MVT 2026.9.28 (sortie réelle, voir tests/fixtures/mvt_2026.9.28).
 """
@@ -40,17 +41,19 @@ log = get_logger("parsing.mvt")
 MODES = ("androidqf", "backup", "bugreport")
 
 #: type de collection MVT → type d'indicateur du schéma
+#: type de collection MVT → `ioc_type` du format pivot
 IOC_TYPES = {
-    "app_ids": "package", "domains": "domain", "urls": "url", "processes": "process",
-    "files_sha256": "file_hash", "files_sha1": "file_hash", "files_md5": "file_hash",
-    "app_cert_hashes": "certificate", "file_names": "file_path", "file_paths": "file_path",
+    "app_ids": "application", "domains": "domaine", "urls": "url", "processes": "processus",
+    "files_sha256": "empreinte_fichier", "files_sha1": "empreinte_fichier", "files_md5": "empreinte_fichier",
+    "app_cert_hashes": "certificat", "file_names": "chemin_fichier", "file_paths": "chemin_fichier",
 }
-IOC_TYPE_FR = {"package": "application", "domain": "domaine", "url": "URL", "process": "processus",
-               "file_hash": "empreinte de fichier", "certificate": "certificat d'application",
-               "file_path": "fichier", "other": "indicateur"}
+IOC_TYPE_FR = {"application": "application", "domaine": "domaine", "url": "URL", "processus": "processus",
+               "empreinte_fichier": "empreinte de fichier", "certificat": "certificat d'application",
+               "chemin_fichier": "fichier", "autre": "indicateur"}
 #: indicateurs désignant sans ambiguïté un composant installé → confiance élevée
-STRONG_IOC = {"package", "file_hash", "certificate", "process"}
-LEVELS = {"CRITICAL": "critical", "HIGH": "high", "MEDIUM": "medium", "LOW": "low", "INFO": "info"}
+STRONG_IOC = {"application", "empreinte_fichier", "certificat", "processus"}
+#: niveau d'alerte MVT → criticité du format pivot
+LEVELS = {"CRITICAL": "critique", "HIGH": "eleve", "MEDIUM": "moyen", "LOW": "faible", "INFO": "info"}
 
 
 class IocFileError(ValueError):
@@ -138,9 +141,8 @@ def mvt_version(out: Path) -> str | None:
 
 
 def normalize(out: Path, builder: ArtifactBuilder, tool: dict[str, Any]) -> tuple[list[dict], list[str]]:
-    """Renvoie (constats à identifiants locaux, remarques)."""
+    """Renvoie (constats au format pivot, à identifiants locaux ; remarques)."""
     notes: list[str] = []
-    # Applications installées (pour corroboration)
     pkg_ids: dict[str, str] = {}
     for f in sorted(out.glob("*packages.json")):
         data = _load_json(f)
@@ -151,13 +153,14 @@ def normalize(out: Path, builder: ArtifactBuilder, tool: dict[str, Any]) -> tupl
             installer = clean(rec.get("installer"))
             first = to_iso(rec.get("first_install_time") or rec.get("timestamp"))
             pkg_ids[pkg.lower()] = builder.add(
-                category="installed_app", timestamp=first, tool=tool,
+                category="application", timestamp=first, tool=tool,
                 data={"package": pkg, "installer": None if installer in (None, "null") else installer,
                       "first_install": first, "is_system": rec.get("system")},
                 file_path=f.name, record_ref=f"MVT {f.name} entrée {i}")
 
     findings: "OrderedDict[tuple, dict]" = OrderedDict()
     skipped_low = 0
+    version = tool.get("version") or ""
     for i, alert in enumerate(load_alerts(out), start=1):
         level = LEVELS.get(str(alert.get("level") or "").upper(), "info")
         ind = alert.get("matched_indicator") or None
@@ -167,76 +170,84 @@ def normalize(out: Path, builder: ArtifactBuilder, tool: dict[str, Any]) -> tupl
         module = alert.get("module") or "?"
         ref = f"MVT alerts.json entrée {i} (module {module})"
         if ind:
-            itype = IOC_TYPES.get(ind.get("type"), "other")
+            itype = IOC_TYPES.get(ind.get("type"), "autre")
             value = str(ind.get("value") or "")
             family = ind.get("name") or None
             src = ind.get("stix2_file_name") or "IOC"
-            aid = builder.add(category="ioc_match", timestamp=ts, tool=tool, tags=["ioc"],
-                              data={"indicator_type": itype, "indicator": value, "matched_value": subject or value,
+            aid = builder.add(category="ioc", timestamp=ts, tool=tool, tags=["ioc"],
+                              data={"ioc_type": itype, "ioc_value": value, "matched_value": subject or value,
                                     "ioc_source": src, "malware_family": family},
-                              file_path=f"{module}", record_ref=ref)
+                              file_path=module, record_ref=ref)
             key = ("ioc", itype, value.lower())
-            sev = "critical" if level == "critical" else "high"
+            # Toute détection IOC est au moins « élevé » ; « critique » si MVT la classe CRITICAL.
+            sev = "critique" if level == "critique" else "eleve"
             f = findings.get(key)
             if f is None:
                 findings[key] = f = {
-                    "type": "ioc_match", "severity": sev, "artifact_ids": [], "evidence_ids": [],
-                    "corroborated": False, "confidence": "high" if itype in STRONG_IOC else "medium",
+                    "type": "ioc", "severity": sev, "source_tool": "MVT",
                     "title": f"Détection d'IOC — {IOC_TYPE_FR[itype]} « {value} »" + (f" ({family})" if family else ""),
-                    "description": (f"MVT {tool.get('version') or ''} (module {module}) signale une correspondance entre "
-                                    f"l'élément « {subject or value} » de l'extraction et l'indicateur de type "
-                                    f"{IOC_TYPE_FR[itype]} « {value} » du jeu d'IOC « {src} »"
+                    "description": (f"MVT {version} (module {module}) signale une correspondance entre l'élément "
+                                    f"« {subject or value} » de l'extraction et l'indicateur de type "
+                                    f"{IOC_TYPE_FR[itype]} « {value} » du fichier d'IOC « {src} »"
                                     + (f", associé à la famille « {family} »" if family else "") + "."),
-                    "interpretation": ("Correspondance automatique avec un indicateur de compromission publié. "
-                                       "Elle signale très probablement la présence du logiciel concerné, mais doit "
-                                       "être confirmée par l'examinateur (contexte d'installation, activité)."),
-                    "plain_summary": (f"Un élément correspondant à un logiciel malveillant connu"
-                                      + (f" ({family})" if family else "") + " a été détecté sur l'appareil."),
-                    "business_impact": "Compromission possible de la confidentialité des communications et de la localisation.",
-                    "remediation": [
-                        {"action": "Isoler l'appareil (mode avion) et le conserver en l'état jusqu'à la fin des constatations.",
-                         "priority": "immediate", "owner": "Responsable sécurité"},
-                        {"action": "Après constatations : supprimer l'élément détecté ou réinitialiser l'appareil, puis "
-                                   "changer les mots de passe des comptes depuis un appareil sain.",
-                         "priority": "short_term", "owner": "Support informatique"}],
+                    "artifact_ids": [], "item_ids": [], "corroborated": False,
+                    "ioc": {"type": itype, "value": value, "source": src, "family": family},
+                    "x_veritrace": {
+                        "confidence": "elevee" if itype in STRONG_IOC else "moyenne",
+                        "interpretation": ("Correspondance automatique avec un indicateur de compromission publié. "
+                                           "Elle signale très probablement la présence du logiciel concerné, mais "
+                                           "doit être confirmée par l'examinateur (contexte d'installation, activité)."),
+                        "plain_summary": ("Un élément correspondant à un logiciel malveillant connu"
+                                          + (f" ({family})" if family else "") + " a été détecté sur l'appareil."),
+                        "business_impact": "Compromission possible de la confidentialité des communications et de la localisation.",
+                        "remediation": [
+                            {"action": "Isoler l'appareil (mode avion) et le conserver en l'état jusqu'à la fin des constatations.",
+                             "priority": "immediat", "owner": "Responsable sécurité"},
+                            {"action": "Après constatations : supprimer l'élément détecté ou réinitialiser l'appareil, puis "
+                                       "changer les mots de passe des comptes depuis un appareil sain.",
+                             "priority": "court_terme", "owner": "Support informatique"}]},
                 }
-            if sev == "critical":
-                f["severity"] = "critical"
+            if sev == "critique":
+                f["severity"] = "critique"
             if aid not in f["artifact_ids"]:
                 f["artifact_ids"].append(aid)
-            if itype == "package" and value.lower() in pkg_ids and pkg_ids[value.lower()] not in f["artifact_ids"]:
+            if itype == "application" and value.lower() in pkg_ids and pkg_ids[value.lower()] not in f["artifact_ids"]:
                 f["artifact_ids"].append(pkg_ids[value.lower()])
             continue
 
-        if level not in ("critical", "high", "medium"):
+        if level not in ("critique", "eleve", "moyen"):
             skipped_low += 1
             continue
         msg = clean(alert.get("message")) or "alerte MVT"
-        ids = []
         if subject and subject.lower() in pkg_ids:
-            ids.append(pkg_ids[subject.lower()])
+            ids = [pkg_ids[subject.lower()]]
         else:
-            ids.append(builder.add(category="other", timestamp=ts, tool=tool,
-                                   data={"mvt_module": module, "level": level, "message": msg, "subject": subject},
-                                   file_path=module, record_ref=ref))
+            ids = [builder.add(category="autre", timestamp=ts, tool=tool,
+                               data={"mvt_module": module, "level": level, "message": msg, "subject": subject},
+                               file_path=module, record_ref=ref)]
         key = ("heur", module, msg)
         if key not in findings:
             findings[key] = {
-                "type": "suspicious_app" if "package" in module else "anomaly", "severity": level,
+                "type": "application_suspecte" if "package" in module else "anomalie", "severity": level,
+                "source_tool": "MVT",
                 "title": (f"Alerte heuristique MVT ({module})" + (f" — {subject}" if subject else ""))[:200],
-                "artifact_ids": ids, "evidence_ids": [], "corroborated": False,
-                "confidence": "medium",
-                "description": f"MVT {tool.get('version') or ''} (module {module}) émet une alerte de niveau "
-                               f"{alert.get('level')} : « {msg} ».",
-                "interpretation": "Alerte heuristique (sans correspondance d'IOC) : elle signale une configuration "
-                                  "inhabituelle qui doit être expliquée, sans constituer une preuve de compromission.",
-                "plain_summary": msg,
-                "remediation": [{"action": "Vérifier la légitimité de l'élément signalé auprès de l'utilisateur.",
-                                 "priority": "short_term", "owner": "Responsable sécurité"}],
+                "description": f"MVT {version} (module {module}) émet une alerte de niveau {alert.get('level')} : « {msg} ».",
+                "artifact_ids": ids, "item_ids": [], "corroborated": False,
+                "x_veritrace": {
+                    "confidence": "moyenne",
+                    "interpretation": "Alerte heuristique (sans correspondance d'IOC) : elle signale une configuration "
+                                      "inhabituelle qui doit être expliquée, sans constituer une preuve de compromission.",
+                    "plain_summary": msg,
+                    "remediation": [{"action": "Vérifier la légitimité de l'élément signalé auprès de l'utilisateur.",
+                                     "priority": "court_terme", "owner": "Responsable sécurité"}]},
             }
     if skipped_low:
         notes.append(f"{skipped_low} alerte(s) MVT de niveau LOW/INFO non retenue(s) comme constat.")
-    return list(findings.values()), notes
+    out_findings = list(findings.values())
+    for i, f in enumerate(out_findings, start=1):  # identifiants locaux, remplacés à la fusion
+        f = {"finding_id": f"LF{i}", **f}
+        out_findings[i - 1] = f
+    return out_findings, notes
 
 
 class MvtWrapper(ToolWrapper):
@@ -263,7 +274,7 @@ class MvtWrapper(ToolWrapper):
         command: list[str] = []
         if imported:
             out = Path(imported)
-            mode = "imported"
+            mode = "importe"
         else:
             status = detect("mvt")
             if not status.available:
@@ -284,17 +295,17 @@ class MvtWrapper(ToolWrapper):
             command.append(str(extraction.resolve()))
             run_tool(command, out_dir / "mvt.log", timeout=int(ctx.options.get("timeout") or 3600))
             notes.insert(0, f"Mode MVT : check-{mvt_mode}.")
-            mode = "executed"
+            mode = "execute"
 
         version = mvt_version(out)
         if not version and not imported:
             version = (detect("mvt").version or None)
         tool = {"name": "MVT", "version": version}
-        builder = ArtifactBuilder(ctx.run_id, ctx.evidence_id)
+        builder = ArtifactBuilder(ctx.run_id, ctx.item_id)
         findings, more = normalize(out, builder, tool)
         notes += more
-        n_ioc = sum(1 for f in findings if f["type"] == "ioc_match")
+        n_ioc = sum(1 for f in findings if f["type"] == "ioc")
         notes.append(f"{n_ioc} détection(s) IOC, {len(findings) - n_ioc} alerte(s) heuristique(s) retenue(s).")
         return WrapperResult(tool=tool, mode=mode, command=command, started_at=started, ended_at=utc_now_iso(),
                              output_path=out, artifacts=builder.items, findings=findings, notes=notes,
-                             extra_evidence=iocs)
+                             extra_items=iocs)

@@ -207,9 +207,15 @@ def case_info(c: Ctx, directory: Path) -> None:
     doc = k.load()
     v = k.audit.verify()
     click.echo(f"Affaire     : {doc['case']['case_id']} — {doc['case']['title']}")
-    for key in ("devices", "acquisitions", "evidence_items", "custody_chain", "tool_runs", "artifacts",
-                "timeline", "findings"):
-        click.echo(f"  {key:<15} {len(doc[key])}")
+    from veritrace.schema.pivot import iter_items, tool_runs
+
+    dev = doc["device"]
+    click.echo(f"Appareil    : {dev.get('manufacturer') or '—'} {dev.get('model') or ''} (n° {dev.get('serial') or '—'})")
+    counts = {"acquisitions": len(doc["acquisitions"]), "éléments de preuve": sum(1 for _ in iter_items(doc)),
+              "chaîne de custody": len(doc["chain_of_custody"]), "exécutions d'outils": len(tool_runs(doc)),
+              "artefacts": len(doc["artifacts"]), "timeline": len(doc["timeline"]), "constats": len(doc["findings"])}
+    for key, n in counts.items():
+        click.echo(f"  {key:<20} {n}")
     click.secho(f"Audit       : {v.entries} entrées, chaîne {'intègre' if v.ok else 'ROMPUE'}",
                 fg="green" if v.ok else "red")
 
@@ -334,9 +340,10 @@ def acquire_run(c: Ctx, case_dir: Path, serial: str | None, methods: tuple[str, 
                        ("Android", "ro.build.version.release"), ("Correctif sécurité", "ro.build.version.security_patch"),
                        ("N° de série", "ro.serialno")):
         click.echo(f"  {label:<20} {props.get(key, '—')}")
-    auth = k.load()["case"]["legal_authorization"]
-    click.echo(f"  Autorisation         {auth['basis']} — réf. {auth['reference']}"
-               + (f" — périmètre : {auth['scope']}" if auth.get("scope") else ""))
+    auth = k.load()["case"]["authorization"]
+    scope = (auth.get("x_veritrace") or {}).get("scope")
+    click.echo(f"  Autorisation         {auth['type']} — réf. {auth['reference']}"
+               + (f" — périmètre : {scope}" if scope else ""))
     answer = click.prompt("Cet appareil est-il bien celui visé par l'autorisation ? (oui/non)", err=True,
                           type=click.Choice(["oui", "o", "non", "n"], case_sensitive=False), default="non",
                           show_choices=False)
@@ -347,7 +354,7 @@ def acquire_run(c: Ctx, case_dir: Path, serial: str | None, methods: tuple[str, 
 
     session = AcquisitionSession(k, adb, adb_version=version, notify=lambda m: click.secho(f"  ➜ {m}", fg="cyan"))
     results = [session.identify(dev, DeviceMeta(list(imei), owner, seal_number, state_on_receipt))]
-    if results[0].status != "failed":
+    if results[0].status != "echec":
         for m in methods or DEFAULT_METHODS[1:]:
             if m == "backup":
                 results.append(session.backup(shared=shared))
@@ -356,9 +363,9 @@ def acquire_run(c: Ctx, case_dir: Path, serial: str | None, methods: tuple[str, 
             else:
                 results.append(getattr(session, m)())
     for r in results:
-        color = {"success": "green", "partial": "yellow", "failed": "red"}[r.status]
-        click.secho(f"{'✔' if r.status == 'success' else '⚠' if r.status == 'partial' else '✖'} {r.acquisition_id} "
-                    f"{r.method:<10} {r.status:<8} preuves : {', '.join(r.evidence_ids) or '—'}", fg=color)
+        color = {"succes": "green", "partiel": "yellow", "echec": "red"}[r.status]
+        click.secho(f"{'✔' if r.status == 'succes' else '⚠' if r.status == 'partiel' else '✖'} {r.acquisition_id} "
+                    f"{r.method:<10} {r.status:<8} éléments : {', '.join(r.item_ids) or '—'}", fg=color)
         for n in r.notes:
             click.echo(f"      {n}")
 
@@ -372,10 +379,10 @@ def _open_case(c: Ctx, case_dir: Path) -> Case:
 
 
 def _print_outcome(label: str, o) -> None:
-    color = {"success": "green", "skipped": "yellow", "failed": "red"}[o.status]
-    click.secho(f"{'✔' if o.status == 'success' else '⚠' if o.status == 'skipped' else '✖'} {label} "
+    color = {"succes": "green", "ignore": "yellow", "echec": "red"}[o.status]
+    click.secho(f"{'✔' if o.status == 'succes' else '⚠' if o.status == 'ignore' else '✖'} {label} "
                 f"[{o.run_id}] {o.status}", fg=color)
-    if o.status == "success":
+    if o.status == "succes":
         click.echo(f"    {o.artifacts_added} artefact(s) ajouté(s), {o.findings_added} constat(s) ; "
                    f"faits uniques : {o.correlation.get('facts')}, corroborés : {o.correlation.get('corroborated_facts')}, "
                    f"doublons inter-outils fusionnés : {o.correlation.get('merged_duplicates')}")
@@ -465,7 +472,7 @@ def parse_autopsy(c: Ctx, case_dir: Path, autopsy_case: Path, modules: tuple[str
     o = _run(c, case_dir, AutopsyWrapper(), autopsy_case,
              {"modules": list(modules) or None, "version": autopsy_version},
              evidence_path=db, evidence_label=f"Base de cas Autopsy ({db.parent.name}/{db.name})",
-             evidence_type="tool_output")
+             evidence_type="sortie_outil")
     _print_outcome("Autopsy", o)
 
 
@@ -490,7 +497,7 @@ def parse_all(c: Ctx, case_dir: Path, extraction: Path, iocs: tuple[Path, ...], 
     if autopsy_case:
         db = find_case_db(autopsy_case)
         _print_outcome("Autopsy", _run(c, case_dir, AutopsyWrapper(), autopsy_case, {}, evidence_path=db,
-                                       evidence_label=f"Base de cas Autopsy ({db.name})", evidence_type="tool_output"))
+                                       evidence_label=f"Base de cas Autopsy ({db.name})", evidence_type="sortie_outil"))
     else:
         click.echo("  Autopsy : aucun cas fourni (--autopsy-case) — étape non exécutée.")
 
