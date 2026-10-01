@@ -15,14 +15,14 @@ export function messagesCampagne(lien: string, promo?: { code: string; remise_pc
     {
       titre: "Invitation courte (groupes WhatsApp d'enseignants)",
       texte: `📚 *PÉDAGOGUE.IA* — l'assistant pédagogique des enseignants du Burkina Faso 🇧🇫
-Fiches de cours, devoirs avec corrigés et barèmes, remédiation, progressions : prêts en quelques minutes, de la 6e à la Terminale.
+Fiches de cours, devoirs avec corrigés et barèmes, remédiation, progressions : prêts en quelques minutes, du préscolaire à la Terminale.
 🎁 24 h d'essai gratuit, sans paiement.${offre}
 👉 ${lien}`,
     },
     {
       titre: "Message détaillé (collègues, direction, CAP)",
       texte: `Chers collègues,
-Je vous recommande *PÉDAGOGUE.IA*, un assistant conçu pour les enseignants du secondaire au Burkina Faso :
+Je vous recommande *PÉDAGOGUE.IA*, un assistant conçu pour les enseignants du Burkina Faso, du préscolaire au secondaire :
 ✅ fiches pédagogiques complètes avec déroulement minuté ;
 ✅ devoirs et interrogations avec sujet, corrigé et barème (versions A/B/C) ;
 ✅ activités de remédiation et progressions annuelles ;
@@ -39,7 +39,7 @@ Votre lien est dans « Mon compte ». Découvrir : ${lien}`,
     {
       titre: "Statut / publication Facebook",
       texte: `🇧🇫 Enseignants du Burkina Faso : gagnez des heures chaque semaine !
-PÉDAGOGUE.IA prépare vos fiches, devoirs corrigés, remédiations et progressions, de la 6e à la Terminale.
+PÉDAGOGUE.IA prépare vos fiches, devoirs corrigés, remédiations et progressions, du préscolaire à la Terminale.
 24 h gratuites pour essayer 👉 ${lien}${offre}
 #Enseignants #BurkinaFaso #Éducation #PédagogueIA`,
     },

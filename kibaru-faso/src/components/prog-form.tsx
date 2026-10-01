@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
 import { buildProgRequest, emptyProg, PERIODES, progMissing, type ProgForm } from "@/lib/progression";
-import { CLASSES } from "@/lib/search";
-import { DISCIPLINES } from "@/lib/templates";
+import { OptionsClasses } from "./options-classes";
+import { disciplinesPour } from "@/lib/templates";
 
 /** Module 04 — formulaire du générateur de progressions. Requis : classe, discipline, volume horaire hebdomadaire. */
 
@@ -49,16 +49,14 @@ export function ProgFormDialog({ context, onClose, onSubmit }: { context: Teache
             Classe *
             <select value={f.classe} onChange={(e) => set({ classe: e.target.value })} className={inputCls}>
               <option value="">—</option>
-              {CLASSES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
+              <OptionsClasses />
             </select>
           </label>
           <label className="text-xs font-medium text-muted sm:col-span-2">
             Discipline *
             <input list="prog-disciplines" value={f.discipline} onChange={(e) => set({ discipline: e.target.value })} className={inputCls} placeholder="Mathématiques" />
             <datalist id="prog-disciplines">
-              {DISCIPLINES.map((d) => (
+              {disciplinesPour(f.classe).map((d) => (
                 <option key={d} value={d} />
               ))}
             </datalist>

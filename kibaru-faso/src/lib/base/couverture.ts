@@ -1,26 +1,49 @@
-import { CLASS_INFO, CONSULTED, subjectCodes, type Statut } from "./structure";
+import { canonicalClasse, CLASSES, CYCLES } from "../search";
+import { CONSULTED, subjectCodes, type Statut } from "./structure";
 
 /**
  * Couverture de la base documentaire : pour chaque classe et chaque matière, y a-t-il un guide et un programme consultables ?
  * Sert au tableau de l'espace admin pour repérer d'un coup d'œil ce qui manque. Module pur.
  */
 
-/** Matières suivies dans le tableau, dans l'ordre d'affichage. */
-export const MATIERES_COUVERTURE = [
+type Col = { code: string; label: string };
+const TOUT: Col = { code: "TOUT", label: "Toutes" };
+const COLLEGE_LYCEE: Col[] = [
+  TOUT,
   { code: "FR", label: "Français" },
   { code: "MATH", label: "Maths" },
   { code: "ANG", label: "Anglais" },
   { code: "HIST", label: "Histoire" },
-  { code: "GEO", label: "Géographie" },
+  { code: "GEO", label: "Géo." },
   { code: "SVT", label: "SVT" },
   { code: "PHYS", label: "PC" },
   { code: "EPS", label: "EPS" },
   { code: "ALL", label: "Allemand" },
   { code: "ESP", label: "Espagnol" },
   { code: "PHILO", label: "Philo" },
-] as const;
+];
+const PRIMAIRE: Col[] = [
+  TOUT,
+  { code: "FR", label: "Français" },
+  { code: "MATH", label: "Maths" },
+  { code: "SCI", label: "Sc. d'obs." },
+  { code: "HIST", label: "Histoire" },
+  { code: "GEO", label: "Géo." },
+  { code: "ECM", label: "ECM" },
+  { code: "EPS", label: "EPS/APE" },
+  { code: "APA", label: "Act. prat." },
+];
 
-export const CLASSES_COUVERTURE = CLASS_INFO.map((c) => c.classe);
+/** Colonnes du tableau pour chaque cycle. « Toutes » : document couvrant toutes les matières de la classe (curricula du primaire, préscolaire). */
+export const MATIERES_PAR_CYCLE: Record<string, Col[]> = {
+  PRESCOLAIRE: [TOUT],
+  PRIMAIRE,
+  PRIMAIRE_BILINGUE: [TOUT, { code: "LN", label: "Langue nat." }, ...PRIMAIRE.slice(1)],
+  POST_PRIMAIRE: COLLEGE_LYCEE,
+  SECONDAIRE: COLLEGE_LYCEE,
+};
+
+export const CYCLES_COUVERTURE = CYCLES.map((c) => ({ code: c.code, label: c.label, classes: [...c.classes] as string[], matieres: MATIERES_PAR_CYCLE[c.code]! }));
 
 export type EntreeCouverture = { classes: string[]; disciplines: string[]; type?: string | null; statut?: Statut | null };
 export type CaseCouverture = { guide: boolean; programme: boolean; attendu: boolean };
@@ -28,31 +51,30 @@ export type Couverture = Record<string, Record<string, CaseCouverture>>;
 
 const TYPES_PROGRAMME = new Set(["PROGRAMME", "CURRICULUM", "REFERENTIEL"]);
 
-function classeNormalisee(c: string): string | undefined {
-  const n = c.trim().toLowerCase().replace(/è/g, "e");
-  if (/^(tle|term|terminale)/.test(n)) return "Terminale";
-  if (/^(1ere|1re|premiere)$/.test(n)) return "1ère";
-  if (/^(2nde|2de|seconde)$/.test(n)) return "2nde";
-  return CLASSES_COUVERTURE.find((x) => x === n);
-}
+const CONNUES = new Set<string>(CLASSES);
 
-/** « 6e-5e », « 4e et 3e » → ["6e", "5e"] / ["4e", "3e"]. */
+/** « 6e-5e », « 4e et 3e », « CP1, CP2 » → classes officielles. */
 function classesDe(classes: string[]): string[] {
-  return classes.flatMap((c) => c.split(/\s*(?:-|–|,|\/|\bet\b)\s*/i)).map(classeNormalisee).filter((c): c is string => !!c);
+  return classes
+    .flatMap((c) => c.split(/\s*[,;\/]\s*/))
+    .flatMap((c) => (/bilingue|blg/i.test(c) ? [c] : c.split(/\s*(?:-|–|\bet\b)\s*/i)))
+    .map((c) => canonicalClasse(c))
+    .filter((c) => CONNUES.has(c));
 }
 
 /**
  * `docs` : documents consultables (déposés ou fichiers) ; `attendus` : ressources du registre encore à déposer.
- * Un document sans classe ni matière précise (texte général) ne remplit aucune case.
+ * Un document sans classe précise (texte général) ne remplit aucune case ; un document sans matière remplit la colonne « Toutes ».
  */
 export function couverture(docs: EntreeCouverture[], attendus: EntreeCouverture[] = []): Couverture {
   const out: Couverture = {};
-  for (const c of CLASSES_COUVERTURE) {
-    out[c] = {};
-    for (const m of MATIERES_COUVERTURE) out[c][m.code] = { guide: false, programme: false, attendu: false };
-  }
+  for (const cy of CYCLES_COUVERTURE)
+    for (const c of cy.classes) {
+      out[c] = {};
+      for (const m of cy.matieres) out[c][m.code] = { guide: false, programme: false, attendu: false };
+    }
   const marquer = (e: EntreeCouverture, f: (k: CaseCouverture) => void) => {
-    const codes = new Set(e.disciplines.flatMap((d) => [...subjectCodes(d)]));
+    const codes = e.disciplines.length ? new Set(e.disciplines.flatMap((d) => [...subjectCodes(d)])) : new Set(["TOUT"]);
     for (const c of classesDe(e.classes)) for (const code of codes) if (out[c]?.[code]) f(out[c][code]);
   };
   for (const d of docs) {

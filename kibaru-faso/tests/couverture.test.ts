@@ -30,6 +30,23 @@ describe("couverture de la base documentaire", () => {
     );
     expect(c.Terminale.PHILO.programme).toBe(true);
     expect(c["2nde"].SVT).toEqual({ guide: false, programme: false, attendu: true });
-    expect(casesCouvertes(c)).toEqual({ couvertes: 1, total: 77 });
+    expect(casesCouvertes(c).couvertes).toBe(1);
+  });
+});
+
+describe("couverture du préscolaire et du primaire", () => {
+  it("remplit la colonne « Toutes » pour un curriculum sans matière et gère les classes bilingues", () => {
+    const c = couverture([
+      { classes: ["CE1", "CE2"], disciplines: [], type: "CURRICULUM", statut: "A_VERIFIER" },
+      { classes: ["Grande section"], disciplines: [], type: "CURRICULUM", statut: "A_VERIFIER" },
+      { classes: ["Bilingue 2e année, Bilingue 3e année"], disciplines: ["Géographie"], type: "GUIDE_PEDAGOGIQUE", statut: "A_VERIFIER" },
+      { classes: ["CP1"], disciplines: ["Exercices sensoriels"], type: "GUIDE_PEDAGOGIQUE", statut: "A_VERIFIER" },
+    ]);
+    expect(c.CE2.TOUT.programme).toBe(true);
+    expect(c["Grande section"].TOUT.programme).toBe(true);
+    expect(c["Bilingue 3e année"].GEO.guide).toBe(true);
+    expect(c["Bilingue 2e année"].LN).toBeDefined();
+    expect(c.CP1.SCI.guide).toBe(true);
+    expect(c["3e"].GEO.guide).toBe(false);
   });
 });

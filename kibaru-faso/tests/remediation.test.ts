@@ -36,7 +36,7 @@ describe("Module 03 — identification", () => {
       "Quelle difficulté avez-vous observée chez vos élèves (notion concernée et erreurs typiques) ?",
     );
     expect(identifyRequest("Propose une remédiation", {}).question).toBe(
-      "Pour quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale) et quelle matière souhaitez-vous cette remédiation ? Précisez aussi la difficulté observée (notion concernée et erreurs typiques).",
+      "Pour quelle classe (du préscolaire à la Terminale : CP1, CM2, 6e, Terminale…) et quelle matière souhaitez-vous cette remédiation ? Précisez aussi la difficulté observée (notion concernée et erreurs typiques).",
     );
   });
   it("« Mes élèves ne comprennent pas les fractions » : difficulté décrite, matière déduite, classe demandée", () => {

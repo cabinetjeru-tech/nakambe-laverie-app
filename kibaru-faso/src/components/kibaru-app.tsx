@@ -6,9 +6,10 @@ import { CATEGORIES, classify, conversationTitle, isStudentCopy, splitDocuments,
 import { downloadPdf, downloadWord, printHtml, type OptionsDocument } from "@/lib/export";
 import type { DecisionSummary } from "@/lib/base/decision";
 import { STATUT_LABELS, typeLabel, type Statut } from "@/lib/base/structure";
-import { CLASSES } from "@/lib/search";
+import { CYCLES } from "@/lib/search";
+import { OptionsClasses } from "./options-classes";
 import { newId, store, type Conversation, type Source, type StoredMessage, type TeacherDoc } from "@/lib/store";
-import { DISCIPLINES, EVAL_COMMANDS, FICHE_COMMANDS, MODIFICATIONS, PROG_COMMANDS, REMED_COMMANDS, TEMPLATES, type Template } from "@/lib/templates";
+import { disciplinesPour, EVAL_COMMANDS, FICHE_COMMANDS, MODIFICATIONS, PROG_COMMANDS, REMED_COMMANDS, TEMPLATES, type Template } from "@/lib/templates";
 import { RemedFormDialog } from "./remed-form";
 import { ProgFormDialog } from "./prog-form";
 import { EvalFormDialog } from "./eval-form";
@@ -671,19 +672,24 @@ export function KibaruApp() {
                   {!busy && last?.role === "assistant" && !last.error && last.decision?.missing?.includes("classe") && (
                     <div>
                       <div className="mb-1.5 text-xs font-semibold text-muted">Choisir la classe</div>
-                      <div className="flex flex-wrap gap-2">
-                        {CLASSES.map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={() => {
-                              updateContext({ classe: c });
-                              void send(`Classe : ${c}.`, { ...context, classe: c });
-                            }}
-                            className="rounded-full border border-faso bg-white px-3 py-1 text-sm font-semibold text-faso hover:bg-faso-50"
-                          >
-                            {c}
-                          </button>
+                      <div className="space-y-1.5">
+                        {CYCLES.map((cy) => (
+                          <div key={cy.code} className="flex flex-wrap items-center gap-1.5">
+                            <span className="w-full text-[11px] font-semibold uppercase tracking-wide text-muted sm:w-28">{cy.label}</span>
+                            {cy.classes.map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => {
+                                  updateContext({ classe: c });
+                                  void send(`Classe : ${c}.`, { ...context, classe: c });
+                                }}
+                                className="rounded-full border border-faso bg-white px-3 py-1 text-sm font-semibold text-faso hover:bg-faso-50"
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -692,7 +698,7 @@ export function KibaruApp() {
                     <div>
                       <div className="mb-1.5 text-xs font-semibold text-muted">Choisir la matière</div>
                       <div className="flex flex-wrap gap-2">
-                        {[...new Set([last.decision?.matiereSuggeree, ...DISCIPLINES.slice(0, 10)].filter((x): x is string => !!x))].map((m) => (
+                        {[...new Set([last.decision?.matiereSuggeree, ...disciplinesPour(context.classe ?? last.decision?.classe).slice(0, 10)].filter((x): x is string => !!x))].map((m) => (
                           <button
                             key={m}
                             type="button"
@@ -1249,11 +1255,7 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
           Classe
           <select value={context.classe ?? ""} onChange={(e) => onChange({ classe: e.target.value || undefined })} className={inputCls}>
             <option value="">—</option>
-            {CLASSES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
+            <OptionsClasses />
           </select>
         </label>
         <label className="text-xs font-medium text-muted">
@@ -1265,7 +1267,7 @@ function ContextPanel({ context, onChange }: { context: TeacherContext; onChange
         Discipline
         <input list="disciplines" value={context.discipline ?? ""} onChange={(e) => onChange({ discipline: e.target.value })} placeholder="Mathématiques" className={inputCls} />
         <datalist id="disciplines">
-          {DISCIPLINES.map((d) => (
+          {disciplinesPour(context.classe).map((d) => (
             <option key={d} value={d} />
           ))}
         </datalist>

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
 import { buildRemedRequest, emptyRemed, PUBLICS, remedMissing, type RemedForm } from "@/lib/remediation";
-import { CLASSES } from "@/lib/search";
-import { DISCIPLINES } from "@/lib/templates";
+import { OptionsClasses } from "./options-classes";
+import { disciplinesPour } from "@/lib/templates";
 
 /** Module 03 — formulaire du générateur de remédiation. Requis : classe, discipline, notion, difficulté observée. */
 
@@ -46,16 +46,14 @@ export function RemedFormDialog({ context, onClose, onSubmit }: { context: Teach
             Classe *
             <select value={f.classe} onChange={(e) => set({ classe: e.target.value })} className={inputCls}>
               <option value="">—</option>
-              {CLASSES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
+              <OptionsClasses />
             </select>
           </label>
           <label className="text-xs font-medium text-muted sm:col-span-2">
             Discipline *
             <input list="remed-disciplines" value={f.discipline} onChange={(e) => set({ discipline: e.target.value })} className={inputCls} placeholder="Mathématiques" />
             <datalist id="remed-disciplines">
-              {DISCIPLINES.map((d) => (
+              {disciplinesPour(f.classe).map((d) => (
                 <option key={d} value={d} />
               ))}
             </datalist>

@@ -3,8 +3,8 @@
 import { useState } from "react";
 import type { TeacherContext } from "@/lib/conversation";
 import { buildEvalRequest, emptyEval, EVAL_TYPES, evalMissing, QUESTION_TYPES, type EvalForm } from "@/lib/evaluation";
-import { CLASSES } from "@/lib/search";
-import { DISCIPLINES } from "@/lib/templates";
+import { OptionsClasses } from "./options-classes";
+import { disciplinesPour } from "@/lib/templates";
 
 /** Module 02 — formulaire du générateur de devoirs et évaluations. Requis : classe, discipline, notions évaluées. */
 
@@ -56,16 +56,14 @@ export function EvalFormDialog({
             Classe *
             <select value={f.classe} onChange={(e) => set({ classe: e.target.value })} className={inputCls}>
               <option value="">—</option>
-              {CLASSES.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
+              <OptionsClasses />
             </select>
           </label>
           <label className="text-xs font-medium text-muted sm:col-span-2">
             Discipline *
             <input list="eval-disciplines" value={f.discipline} onChange={(e) => set({ discipline: e.target.value })} className={inputCls} placeholder="Mathématiques" />
             <datalist id="eval-disciplines">
-              {DISCIPLINES.map((d) => (
+              {disciplinesPour(f.classe).map((d) => (
                 <option key={d} value={d} />
               ))}
             </datalist>

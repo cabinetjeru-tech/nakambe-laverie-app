@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { TYPES_SEANCE, type TeacherContext } from "@/lib/conversation";
 import { buildFicheRequest, emptyFiche, ficheMissing, type FicheForm } from "@/lib/fiche";
-import { CLASSES } from "@/lib/search";
-import { DISCIPLINES } from "@/lib/templates";
+import { OptionsClasses } from "./options-classes";
+import { disciplinesPour } from "@/lib/templates";
 
 /**
  * Module 01 — formulaire structuré du générateur de fiches pédagogiques (sections 3 et 4).
@@ -51,16 +51,14 @@ export function FicheFormDialog({ context, onClose, onSubmit }: { context: Teach
               Classe *
               <select value={f.classe} onChange={(e) => set({ classe: e.target.value })} className={inputCls} aria-invalid={tried && !f.classe}>
                 <option value="">—</option>
-                {CLASSES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
+                <OptionsClasses />
               </select>
             </label>
             <label className="col-span-1 text-xs font-medium text-muted sm:col-span-2">
               Discipline *
               <input list="fiche-disciplines" value={f.discipline} onChange={(e) => set({ discipline: e.target.value })} className={inputCls} placeholder="Mathématiques" />
               <datalist id="fiche-disciplines">
-                {DISCIPLINES.map((d) => (
+                {disciplinesPour(f.classe).map((d) => (
                   <option key={d} value={d} />
                 ))}
               </datalist>

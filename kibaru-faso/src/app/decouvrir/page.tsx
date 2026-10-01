@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const TITRE = "PÉDAGOGUE.IA — Préparez vos cours en quelques minutes";
 const DESCRIPTION =
-  "L'assistant pédagogique des enseignants du Burkina Faso, de la 6e à la Terminale : fiches, devoirs avec corrigés et barèmes, remédiation, progressions. 24 h d'essai gratuit.";
+  "L'assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale : fiches, devoirs avec corrigés et barèmes, remédiation, progressions. 24 h d'essai gratuit.";
 
 export const metadata: Metadata = {
   title: TITRE,
@@ -44,7 +44,7 @@ const GENERATEURS = [
 ] as const;
 
 const ATOUTS = [
-  ["🇧🇫", "Pensé pour le Burkina Faso", "Classes de la 6e à la Terminale, exemples de la vie quotidienne, grandes classes."],
+  ["🇧🇫", "Pensé pour le Burkina Faso", "Classes du préscolaire à la Terminale, exemples de la vie quotidienne, grandes classes."],
   ["🔎", "Transparent", "Ce qui vient des documents officiels est distingué de ce qui est une proposition."],
   ["✅", "Contrôlé", "Durées, totaux de points et calculs du corrigé sont vérifiés automatiquement."],
   ["🖨️", "Prêt à imprimer", "Téléchargement en PDF ou Word, sujet élève sans mention publicitaire."],
@@ -87,7 +87,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           </div>
           <h1 className="mt-10 max-w-3xl text-3xl font-extrabold leading-tight sm:text-5xl">Préparez vos cours, devoirs et corrigés en quelques minutes.</h1>
           <p className="mt-4 max-w-2xl text-lg text-white/90">
-            L&apos;assistant pédagogique des enseignants du Burkina Faso, de la 6e à la Terminale. Gagnez des heures chaque semaine et consacrez-les à vos élèves.
+            L&apos;assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale. Gagnez des heures chaque semaine et consacrez-les à vos élèves.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
             <Cta />

@@ -6,7 +6,7 @@ export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "Fiches pédagogiques gratuites — 6e à Terminale | PÉDAGOGUE.IA",
-  description: "Fiches de cours, devoirs et corrigés gratuits pour les enseignants du secondaire au Burkina Faso, de la 6e à la Terminale.",
+  description: "Fiches de cours, devoirs et corrigés gratuits pour les enseignants du Burkina Faso, du préscolaire au secondaire, du préscolaire à la Terminale.",
   alternates: { canonical: "/fiches" },
 };
 
