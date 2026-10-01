@@ -90,3 +90,30 @@ def register_or_verify(doc: dict[str, Any], case_root: Path, path: Path, *, labe
 def record_parsed(doc: dict[str, Any], evidence_id: str, actor: str, tool_label: str) -> None:
     ev = next(e for e in doc["evidence_items"] if e["evidence_id"] == evidence_id)
     _custody(doc, evidence_id, "parsed", actor, ev["sha256"], f"Analyse par {tool_label}.")
+
+
+def make_read_only(path: Path) -> None:
+    """Fichiers collectés en lecture seule (0444) : protection contre la modification accidentelle."""
+    files = [path] if path.is_file() else [p for p in path.rglob("*") if p.is_file()]
+    for f in files:
+        f.chmod(0o444)
+
+
+def register_collected(doc: dict[str, Any], case_root: Path, path: Path, *, acquisition_id: str | None,
+                       label: str, etype: str, actor: str, device_path: str | None, location: str,
+                       notes: str) -> str:
+    """Enregistre un élément collecté : hachage immédiat, lecture seule, custody « collected »."""
+    evidence_id = next_id(doc["evidence_items"], "evidence_id", "EV-", 3)
+    manifest = case_root / "custody" / "manifests" / f"{evidence_id}.sha256sum" if path.is_dir() else None
+    sha, size = hash_evidence(path, manifest)
+    make_read_only(path)
+    doc["evidence_items"].append({
+        "evidence_id": evidence_id, "acquisition_id": acquisition_id, "label": label, "type": etype,
+        "local_path": _rel(case_root, path), "device_path": device_path, "sha256": sha, "size_bytes": size,
+        "collected_at": utc_now_iso(), "collected_by": actor,
+    })
+    if manifest:
+        notes += f" Dossier : empreinte = SHA-256 du manifeste {_rel(case_root, manifest)} (une ligne par fichier)."
+    ev = _custody(doc, evidence_id, "collected", actor, sha, notes)
+    ev["location"] = location
+    return evidence_id

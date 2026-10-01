@@ -1,10 +1,5 @@
-"""Acquisition logique via ADB — PROCHAINE ITÉRATION.
+"""Acquisition logique via ADB (adb.py : client sûr ; session.py : collecte + custody ; backup.py : format .ab).
 
-Interface prévue :
-- `adb devices` / `getprop` → fiche appareil (`devices[]`) ; refus si l'appareil n'est pas
-  autorisé (« unauthorized ») : aucune tentative de contournement.
-- `adb backup` et `adb pull` ciblé → `acquisition/raw/<ACQ-ID>/`.
-- Chaque fichier : SHA-256 à la collecte → `evidence_items[]` + événement de custody
-  « collected » (qui, quoi, quand, empreinte) + entrée d'audit.
-ADB absent → avertissement (voir core.tools.require), jamais de crash.
+Aucune fonction de contournement d'écran de verrouillage ou d'authentification : un
+appareil non autorisé est refusé avec l'explication de ce que le titulaire doit faire.
 """

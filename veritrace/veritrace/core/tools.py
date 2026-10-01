@@ -66,8 +66,8 @@ def _probe_version(path: str, args: tuple[str, ...]) -> str | None:
         log.debug("Version de %s non lisible : %s", path, exc)
         return None
     lines = [l.strip() for l in (out.stdout + "\n" + out.stderr).splitlines() if l.strip()]
-    for l in lines:  # MVT affiche une bannière puis « Version: x »
-        m = re.search(r"Version:\s*(\S+)", l)
+    for l in lines:
+        m = re.search(r"Version:?\s+(\d\S*)", l)  # MVT « Version: x », adb « Version 35.0.2-… »
         if m:
             return m.group(1)
     for l in lines:

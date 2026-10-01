@@ -26,7 +26,7 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.3, voir plus bas)* |
 | Reporting judiciaire / entreprise, PDF + Markdown | ✅ |
 | Détection des outils externes (`doctor`) | ✅ |
-| Acquisition ADB (backup, pull ciblé, custody automatique) | ⏳ prochaine itération |
+| Acquisition ADB : fiche appareil, getprop, applications, dumpsys, backup, pull ciblé, bugreport, custody automatique (`veritrace acquire`) | ✅ |
 | Wrappers ALEAPP / MVT / Autopsy (`veritrace parse …`) | ✅ |
 | Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
 | Parseurs SQLite natifs Veritrace, règles de détection d'anomalies | ⏳ |
@@ -61,7 +61,7 @@ d'environnement indiquée. Il est conseillé d'installer **chaque outil dans son
 environnement virtuel**, car leurs dépendances entrent en conflit entre elles.
 
 #### ADB (Android SDK Platform-Tools)
-Rôle : acquisition logique (module à venir).
+Rôle : acquisition logique (`veritrace acquire`).
 1. Télécharger *SDK Platform-Tools* sur developer.android.com/tools/releases/platform-tools.
 2. Décompresser l'archive et ajouter le dossier au `PATH`.
 3. Sous Linux, installer aussi les règles udev Android (Debian/Ubuntu : paquet `android-sdk-platform-tools-common`).
@@ -112,7 +112,7 @@ Rôle : intégration du résultat de l'ingest Android.
 | **ALEAPP** | **2026.4.2** (commit `82aec26`) | Exécuté par Veritrace sur une extraction Android synthétique. La sortie réelle (LAVA + TSV) est conservée dans `tests/fixtures/aleapp_2026.4.2`. |
 | **MVT** | **2026.9.28** | Exécuté par Veritrace (`check-androidqf`, IOC STIX2). La sortie réelle est conservée dans `tests/fixtures/mvt_2026.9.28`. |
 | **Autopsy** | **non testé avec une installation réelle** | Lecteur écrit d'après le schéma de base Sleuth Kit (tables *blackboard*) et testé sur une base synthétique conforme (schéma 9.4). **À valider sur un cas produit par Autopsy 4.21+ avant usage en production.** |
-| ADB | non testé | Le module d'acquisition reste à faire. |
+| ADB | **non testé avec un appareil réel** | Module testé avec un `adb` simulé qui reproduit les sorties réelles (`tests/fixtures/fake_adb.py`) : appareil autorisé, non autorisé, absent, multiple, sauvegarde refusée ou chiffrée. **À valider sur un appareil réel (Platform-Tools 35+) avant usage en production.** |
 
 Pour relancer les tests avec les vrais outils :
 `VERITRACE_ALEAPP=… VERITRACE_ALEAPP_PYTHON=… VERITRACE_MVT=… python -m pytest -k real`
@@ -196,6 +196,63 @@ printf 'Nom Prénom\nmandat\nCR-2026-118\nAUTORISATION VERIFIEE\n' | veritrace r
 veritrace schema validate mon_affaire.json [--case-root ./VT-2026-0042]
 veritrace schema example -o exemple.json
 ```
+
+---
+
+## Acquisition ADB
+
+Prérequis côté appareil, **tous réalisés par le titulaire** :
+- appareil allumé et déverrouillé par lui ;
+- débogage USB activé ;
+- demande « Autoriser le débogage USB ? » acceptée pour le poste.
+
+```bash
+veritrace acquire devices                                   # appareils vus et leur état
+veritrace acquire run --case ./VT --imei 35xxxxxxxxxxxxx --seal SC-0042 --owner "…" \
+                      --method packages --method dumpsys --method backup     # défaut
+veritrace acquire run --case ./VT --method pull --path /sdcard/DCIM --path /sdcard/Download
+veritrace acquire run --case ./VT --method bugreport        # pour MVT check-bugreport
+```
+
+Déroulé :
+1. Veritrace vérifie l'état ADB de l'appareil. Si l'appareil est `unauthorized`,
+   `offline`, en recovery, ou si plusieurs appareils sont branchés, il **s'arrête** et
+   explique ce que le titulaire doit faire. Aucun contournement n'est tenté.
+2. Il affiche le profil de l'appareil (fabricant, modèle, Android, correctif, n° de série)
+   à côté de l'autorisation, et l'examinateur doit confirmer **« oui »** que c'est bien
+   l'appareil visé.
+3. Chaque méthode produit une acquisition `ACQ-nn` :
+
+| Méthode | Commande ADB | Collecté |
+|---|---|---|
+| (toujours) | `shell getprop` | `getprop.txt` + fiche appareil |
+| `packages` | `shell pm list packages -f -i -U` | `packages.txt` |
+| `dumpsys` | `shell dumpsys <service>` (package, usagestats, account, wifi, bluetooth_manager, location, appops) | un fichier par service |
+| `backup` | `backup -all -noapk [-shared]` | `backup.ab` + `backup.tar` dérivé (si non chiffré) |
+| `pull` | `pull -a <chemin>` | un dossier par chemin, avec un manifeste `sha256sum` |
+| `bugreport` | `bugreport` | `bugreport-*.zip` |
+
+4. Chaque élément est **haché (SHA-256) dès son écriture** et passé en lecture seule. Un
+   événement de custody « collected » consigne qui, quoi, quand, où et l'empreinte. Le
+   journal des commandes ADB (`adb.log`) est lui aussi collecté comme preuve. L'affaire est
+   sauvegardée après chaque méthode, si bien qu'une interruption ne fait rien perdre.
+
+Garde-fous techniques :
+- Le client ADB refuse, avant tout envoi, les commandes `su`, `root`, `input`/`keyevent`,
+  `locksettings`, `setprop`, `reboot`, `remount`, `install`… Un test vérifie qu'elles
+  n'atteignent jamais `adb`.
+- L'IMEI n'est **pas** extrait par des moyens détournés : l'examinateur le relève
+  (étiquette, `*#06#` affiché par le titulaire) et le saisit avec `--imei`.
+- Pour une sauvegarde chiffrée, Veritrace ne tente aucune récupération de mot de passe.
+  Si le titulaire a communiqué le mot de passe, il se donne à MVT (`check-backup -p`).
+
+Limites :
+- Depuis Android 12, `adb backup` ne couvre que les applications qui l'autorisent ;
+  Veritrace le signale dans l'acquisition.
+- `pull` n'accède qu'au stockage partagé (`/sdcard`) : les fichiers protégés sont
+  signalés comme une copie partielle.
+- Les sauvegardes `.ab` s'analysent avec `veritrace parse mvt --input …/backup.ab`. La
+  couverture d'ALEAPP sur l'arborescence d'une sauvegarde (`apps/<paquet>/…`) est limitée.
 
 ---
 
@@ -325,7 +382,9 @@ veritrace case init ./VT-2026-0042 --case-id VT-2026-0042 \
   --org-address "…" --org-phone "…" --org-email "…" --logo logo.png \
   --report-type judiciaire --tz Africa/Ouagadougou
 
-# 2. Acquisition ADB          (prochaine itération : veritrace acquire …)
+# 2. Acquisition ADB (appareil déverrouillé par le titulaire, débogage USB autorisé)
+veritrace acquire run --case ./VT-2026-0042 --imei 35xxxxxxxxxxxxx --seal SC-0042 \
+  --method packages --method dumpsys --method backup --method bugreport
 
 # 3. Analyse multi-outils + corrélation (automatique après chaque outil)
 veritrace parse all --case ./VT-2026-0042 --input ./extraction --mvt-input ./androidqf \
@@ -376,7 +435,7 @@ veritrace/
 │   └── timeutil.py
 ├── schema/                schéma, validateur, exemple
 ├── reporting/             modèle → Markdown / PDF
-├── acquisition/           (à venir)
+├── acquisition/           adb.py (client sûr), session.py (collecte + custody), backup.py (.ab → .tar)
 ├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, runner.py
 └── correlation/           engine.py : corroboration, dédoublonnage, timeline
 ```

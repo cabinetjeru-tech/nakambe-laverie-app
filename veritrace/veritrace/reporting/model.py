@@ -73,6 +73,8 @@ METHOD_FR = {
                       "Archive de diagnostic générée par Android (journaux, état des services, paquets)."),
     "adb_dumpsys": ("État des services (adb shell dumpsys)",
                     "Sortie texte de l'état des services système (paquets installés, permissions, usage)."),
+    "adb_package_list": ("Liste des applications (adb shell pm list packages)",
+                         "Inventaire des paquets installés avec leur chemin, leur installateur et leur UID."),
     "adb_getprop": ("Propriétés système (adb shell getprop)",
                     "Lecture des propriétés d'identification de l'appareil (modèle, version, empreinte de build)."),
     "import_external": ("Import externe", "Données remises par un tiers et importées telles quelles."),

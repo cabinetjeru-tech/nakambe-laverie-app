@@ -256,6 +256,113 @@ def audit_show(c: Ctx, case_dir: Path | None, last: int) -> None:
                    f"{json.dumps(e['details'], ensure_ascii=False)[:100]}")
 
 
+# --------------------------------------------------------------------------- acquisition
+@cli.group()
+def acquire() -> None:
+    """Acquisition logique via ADB (appareil déverrouillé par son titulaire, débogage USB autorisé)."""
+
+
+def _adb_or_fail(c: Ctx):
+    from veritrace.acquisition.adb import Adb
+    from veritrace.core.tools import detect
+
+    status = detect("adb")
+    if not status.available:
+        click.secho(f"⚠ {status.message}", fg="yellow", err=True)
+        click.echo("  Installer Android SDK Platform-Tools (voir README § Installation) puis relancer.", err=True)
+        c.audit.append("acquisition_impossible", {"reason": status.message})
+        sys.exit(1)
+    return Adb(status.path), status.version
+
+
+@acquire.command("devices")
+@pass_ctx
+def acquire_devices(c: Ctx) -> None:
+    """Liste les appareils vus par ADB et leur état."""
+    from veritrace.acquisition.adb import AdbError
+
+    adb, _ = _adb_or_fail(c)
+    try:
+        devs = adb.devices()
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+    if not devs:
+        click.echo("Aucun appareil détecté.")
+    for d in devs:
+        click.secho(f"  {d.serial:<20} {d.state:<14} {d.attrs.get('model', '')}", fg="green" if d.ready else "yellow")
+        if not d.ready:
+            click.echo(f"      → {d.help}")
+    c.audit.append("adb_devices_listed", {"devices": [{"serial": d.serial, "state": d.state} for d in devs]})
+
+
+@acquire.command("run")
+@click.option("--case", "case_dir", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Dossier d'affaire.")
+@click.option("--serial", help="Numéro de série ADB de l'appareil (si plusieurs sont branchés).")
+@click.option("--method", "methods", multiple=True,
+              type=click.Choice(["packages", "dumpsys", "backup", "pull", "bugreport"]),
+              help="Méthode(s) en plus de getprop (répétable). Défaut : packages, dumpsys, backup.")
+@click.option("--path", "paths", multiple=True, help="Chemin à copier (méthode pull ; répétable). "
+              "Défaut : /sdcard/DCIM, /sdcard/Pictures, /sdcard/Download, /sdcard/Documents.")
+@click.option("--shared", is_flag=True, help="Inclure le stockage partagé dans la sauvegarde ADB.")
+@click.option("--imei", multiple=True, help="IMEI relevé par l'examinateur (étiquette, *#06# affiché par le titulaire).")
+@click.option("--owner", help="Titulaire de l'appareil.")
+@click.option("--seal", "seal_number", help="Numéro de scellé.")
+@click.option("--state", "state_on_receipt", help="État de l'appareil à réception.")
+@pass_ctx
+def acquire_run(c: Ctx, case_dir: Path, serial: str | None, methods: tuple[str, ...], paths: tuple[str, ...],
+                shared: bool, imei: tuple[str, ...], owner: str | None, seal_number: str | None,
+                state_on_receipt: str | None) -> None:
+    """Acquisition logique : identification, puis collecte hachée avec chaîne de custody."""
+    from veritrace.acquisition.adb import AdbError, DeviceNotReady
+    from veritrace.acquisition.session import DEFAULT_METHODS, DEFAULT_PULL, AcquisitionSession, DeviceMeta
+
+    adb, version = _adb_or_fail(c)
+    k = _open_case(c, case_dir)
+    try:
+        dev = adb.select(serial)
+        props, _ = adb.getprop()
+    except DeviceNotReady as exc:
+        k.audit.append("acquisition_refused", {"reason": str(exc)})
+        raise click.ClickException(f"Acquisition impossible — {exc}\n  Veritrace ne contourne aucun "
+                                   "verrouillage : seule une action du titulaire peut débloquer la situation.") from exc
+    except AdbError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.secho("\nAppareil détecté :", bold=True)
+    for label, key in (("Fabricant", "ro.product.manufacturer"), ("Modèle", "ro.product.model"),
+                       ("Android", "ro.build.version.release"), ("Correctif sécurité", "ro.build.version.security_patch"),
+                       ("N° de série", "ro.serialno")):
+        click.echo(f"  {label:<20} {props.get(key, '—')}")
+    auth = k.load()["case"]["legal_authorization"]
+    click.echo(f"  Autorisation         {auth['basis']} — réf. {auth['reference']}"
+               + (f" — périmètre : {auth['scope']}" if auth.get("scope") else ""))
+    answer = click.prompt("Cet appareil est-il bien celui visé par l'autorisation ? (oui/non)", err=True,
+                          type=click.Choice(["oui", "o", "non", "n"], case_sensitive=False), default="non",
+                          show_choices=False)
+    if answer.lower() not in ("oui", "o"):
+        k.audit.append("acquisition_aborted", {"serial": dev.serial, "reason": "appareil non confirmé par l'examinateur"})
+        raise click.ClickException("Acquisition annulée : appareil non confirmé.")
+    k.audit.append("device_confirmed", {"serial": dev.serial, "model": props.get("ro.product.model")})
+
+    session = AcquisitionSession(k, adb, adb_version=version, notify=lambda m: click.secho(f"  ➜ {m}", fg="cyan"))
+    results = [session.identify(dev, DeviceMeta(list(imei), owner, seal_number, state_on_receipt))]
+    if results[0].status != "failed":
+        for m in methods or DEFAULT_METHODS[1:]:
+            if m == "backup":
+                results.append(session.backup(shared=shared))
+            elif m == "pull":
+                results.append(session.pull(tuple(paths) or DEFAULT_PULL))
+            else:
+                results.append(getattr(session, m)())
+    for r in results:
+        color = {"success": "green", "partial": "yellow", "failed": "red"}[r.status]
+        click.secho(f"{'✔' if r.status == 'success' else '⚠' if r.status == 'partial' else '✖'} {r.acquisition_id} "
+                    f"{r.method:<10} {r.status:<8} preuves : {', '.join(r.evidence_ids) or '—'}", fg=color)
+        for n in r.notes:
+            click.echo(f"      {n}")
+
+
 # --------------------------------------------------------------------------- parse / correlate
 def _open_case(c: Ctx, case_dir: Path) -> Case:
     try:

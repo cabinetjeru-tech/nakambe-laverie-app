@@ -420,6 +420,7 @@
             "adb_pull",
             "adb_bugreport",
             "adb_dumpsys",
+            "adb_package_list",
             "adb_getprop",
             "import_external"
           ]
