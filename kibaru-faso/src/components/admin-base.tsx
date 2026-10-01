@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { casesCouvertes, CLASSES_COUVERTURE, MATIERES_COUVERTURE, type Couverture } from "@/lib/base/couverture";
 import { prochainId } from "@/lib/base/en-ligne";
 import { CLASS_INFO, DOC_TYPES, STATUT_LABELS, SUBJECTS, type Statut } from "@/lib/base/structure";
 import { hoteOfficiel } from "@/lib/base/sources-officielles";
@@ -42,7 +43,7 @@ type EnAttente = {
   niveauSource: number | null;
   priorite: string | null;
 };
-type Donnees = { documents: DocEnLigne[]; enAttente: EnAttente[]; fichiers: { documentId: string | null; titre: string; statut: string | null }[] };
+type Donnees = { documents: DocEnLigne[]; enAttente: EnAttente[]; couverture?: Couverture; fichiers: { documentId: string | null; titre: string; statut: string | null }[] };
 
 type Formulaire = {
   id: string;
@@ -163,13 +164,13 @@ export function BaseDocumentaire() {
     setBusy(true);
     setMessage(null);
     const r = await fetch("/api/admin/base", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corps) }).catch(() => null);
-    const j = (await r?.json().catch(() => ({}))) as { error?: string };
+    const j = (await r?.json().catch(() => ({}))) as { error?: string; message?: string };
     setBusy(false);
     if (!r?.ok) {
       setMessage(`Erreur : ${j?.error ?? "réseau indisponible"}`);
       return false;
     }
-    setMessage(ok);
+    setMessage(j?.message ?? ok);
     await charger();
     return true;
   }
@@ -255,6 +256,7 @@ export function BaseDocumentaire() {
   const importables = d.enAttente.filter((p) => p.url && p.documentId).map((p) => p.documentId!);
   const idsRegistre = new Set(importables.map((x) => x.toUpperCase()));
   const actifs = d.documents.filter((x) => x.statut === "ACTIF").length;
+  const aVerifier = d.documents.filter((x) => x.statut === "A_VERIFIER").length;
 
   return (
     <div className="space-y-4">
@@ -281,7 +283,29 @@ export function BaseDocumentaire() {
             <div className="text-xs text-muted">du registre à déposer</div>
           </div>
         </div>
+        {aVerifier > 0 && (
+          <div className="mt-3 rounded-lg border border-or/40 bg-or-50 p-3 text-xs">
+            <p>
+              <strong>{aVerifier} document(s) « À vérifier ».</strong> Ils sont consultés, mais l'assistant les présente comme non confirmés. Une fois relus
+              (bon document, bonne classe, texte lisible), passez-les en « Provisoire » : l'assistant les citera comme documents en vigueur susceptibles
+              d'évoluer.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                confirm(`Passer les ${aVerifier} documents « À vérifier » au statut « Provisoire » ?`) &&
+                void envoyer({ action: "statut_groupe", de: "A_VERIFIER", vers: "PROVISOIRE" }, "Statuts mis à jour.")
+              }
+              className="mt-2 rounded-lg bg-faso px-3 py-1.5 font-semibold text-white disabled:opacity-50"
+            >
+              Tout passer en « Provisoire »
+            </button>
+          </div>
+        )}
       </section>
+
+      {d.couverture && <TableauCouverture c={d.couverture} />}
 
       <form ref={formRef} onSubmit={deposer} className="space-y-3 rounded-xl border-2 border-faso/30 bg-white p-4 text-sm">
         <h2 className="font-bold text-faso-dark">Déposer un document</h2>
@@ -585,5 +609,51 @@ export function BaseDocumentaire() {
         </ul>
       </section>
     </div>
+  );
+}
+
+/** Tableau classe × matière : G = guide, P = programme ou curriculum, ○ = inscrit au registre mais pas encore déposé. */
+function TableauCouverture({ c }: { c: Couverture }) {
+  const { couvertes, total } = casesCouvertes(c);
+  return (
+    <section className="rounded-xl border border-line bg-white p-4 text-sm">
+      <h2 className="font-bold text-faso-dark">
+        Couverture par classe et matière ({couvertes}/{total})
+      </h2>
+      <p className="mt-1 text-xs text-muted">
+        <strong className="text-faso-dark">G</strong> guide pédagogique · <strong className="text-faso-dark">P</strong> programme ou curriculum ·{" "}
+        <span className="text-[#7a5a00]">○</span> inscrit au registre, à déposer · case vide : aucun document, l'assistant répond alors sans source officielle.
+      </p>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full border-collapse text-center text-xs">
+          <thead>
+            <tr>
+              <th className="p-1 text-left">Classe</th>
+              {MATIERES_COUVERTURE.map((m) => (
+                <th key={m.code} className="p-1 font-semibold">
+                  {m.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {CLASSES_COUVERTURE.map((cl) => (
+              <tr key={cl} className="border-t border-line">
+                <th className="p-1 text-left font-semibold">{cl}</th>
+                {MATIERES_COUVERTURE.map((m) => {
+                  const k = c[cl]?.[m.code];
+                  const plein = k && (k.guide || k.programme);
+                  return (
+                    <td key={m.code} className={`p-1 ${plein ? "bg-faso-50 font-bold text-faso-dark" : k?.attendu ? "bg-or-50 text-[#7a5a00]" : "text-muted"}`}>
+                      {plein ? [k.guide && "G", k.programme && "P"].filter(Boolean).join("+") : k?.attendu ? "○" : "·"}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DOC_TYPES, STATUTS } from "@/lib/base/structure";
+import { couverture } from "@/lib/base/couverture";
 import { ImportError, ligneDepuisRegistre, telechargerEtExtraire } from "@/lib/base/import-officiel";
 import { exigerAdmin } from "@/lib/garde-admin";
 import { journaliserErreur } from "@/lib/journal";
@@ -41,6 +42,7 @@ export async function GET() {
       niveauSource: p.niveauSource ?? null,
       priorite: p.priorite ?? null,
     })),
+    couverture: couverture(base?.docs ?? [], base?.pending ?? []),
     fichiers: (base?.docs ?? []).filter((d) => !d.id.startsWith("db:")).map((d) => ({ documentId: d.documentId ?? null, titre: d.title, statut: d.statut ?? null })),
   });
 }
@@ -78,6 +80,7 @@ const schema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("modifier"), id: idSchema, ...champs }),
   z.object({ action: z.literal("supprimer"), id: idSchema }),
   z.object({ action: z.literal("importer"), id: idSchema }),
+  z.object({ action: z.literal("statut_groupe"), de: z.enum(STATUTS), vers: z.enum(STATUTS) }),
   z.object({ action: z.literal("importer_lien"), id: idSchema, ...champs, url: z.string().trim().url("Lien invalide.").max(500) }),
 ]);
 
@@ -121,6 +124,13 @@ export async function POST(req: Request) {
       const msg = e instanceof ImportError ? e.message : `Import impossible : ${(e as Error).message}`;
       await journaliserErreur("import", `${x.id} — ${x.url} — ${msg}`, a.compte.profil.id);
       return Response.json({ error: `${x.id} : ${msg}` }, { status: 502 });
+    }
+  } else if (x.action === "statut_groupe") {
+    // Changement de statut en une fois (ex. tous les documents « À vérifier » relus passent en « Provisoire »).
+    r = await db.from("base_documents").update({ statut: x.vers, maj_le: maintenant }).eq("statut", x.de).select("id");
+    if (!r.error) {
+      invaliderBaseEnLigne();
+      return Response.json({ ok: true, message: `${r.data?.length ?? 0} document(s) passé(s) au statut ${x.vers}.` });
     }
   } else if (x.action === "supprimer") r = await db.from("base_documents").delete().eq("id", x.id);
   else if (x.action === "modifier") {
