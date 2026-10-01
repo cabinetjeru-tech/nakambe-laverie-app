@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "0.3.0",
   "case": {
     "case_id": "VT-2026-0042",
     "title": "Suspicion de logiciel espion — téléphone de la plaignante",
@@ -285,16 +285,19 @@
         "thread_id": 12
       },
       "content_sha256": "3b45d7a508cf6234979d2a5f4b427f538e579b3b2030f97586ec0913108b69b3",
+      "fact_sha256": "ac7230e7cc72508ca93511123a618794c529dc96fca514d3680a740f69270fef",
       "corroboration": {
         "status": "corroborated",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0001"
+            "artifact_id": "ART-0001",
+            "engine": "ALEAPP"
           },
           {
             "tool": "veritrace-sqlite",
-            "artifact_id": "ART-0002"
+            "artifact_id": "ART-0002",
+            "engine": "veritrace-sqlite"
           }
         ]
       },
@@ -324,16 +327,19 @@
         "thread_id": 12
       },
       "content_sha256": "3b45d7a508cf6234979d2a5f4b427f538e579b3b2030f97586ec0913108b69b3",
+      "fact_sha256": "ac7230e7cc72508ca93511123a618794c529dc96fca514d3680a740f69270fef",
       "corroboration": {
         "status": "corroborated",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0001"
+            "artifact_id": "ART-0001",
+            "engine": "ALEAPP"
           },
           {
             "tool": "veritrace-sqlite",
-            "artifact_id": "ART-0002"
+            "artifact_id": "ART-0002",
+            "engine": "veritrace-sqlite"
           }
         ]
       },
@@ -361,12 +367,14 @@
         "call_type": "voice"
       },
       "content_sha256": "d1fd96018989d670f364fb25ad92f793437412d8d010602cf23251276d6df4dd",
+      "fact_sha256": "5953c37280626b5e5340758ca46b444c8f1b3cd94c22709de43a556057bf8e67",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0003"
+            "artifact_id": "ART-0003",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -401,16 +409,19 @@
         ]
       },
       "content_sha256": "4006ec73cb0de3d155d50d7a2e4e7b6b1a9a7084b8f0336c48edec5b8e230d56",
+      "fact_sha256": "37c74423e6df85a6c6843a8a3ba516b3540ba68f6276fb8b9e0be2541e330406",
       "corroboration": {
         "status": "corroborated",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0004"
+            "artifact_id": "ART-0004",
+            "engine": "ALEAPP"
           },
           {
             "tool": "MVT",
-            "artifact_id": "ART-0005"
+            "artifact_id": "ART-0005",
+            "engine": "MVT"
           }
         ]
       },
@@ -447,16 +458,19 @@
         ]
       },
       "content_sha256": "4006ec73cb0de3d155d50d7a2e4e7b6b1a9a7084b8f0336c48edec5b8e230d56",
+      "fact_sha256": "37c74423e6df85a6c6843a8a3ba516b3540ba68f6276fb8b9e0be2541e330406",
       "corroboration": {
         "status": "corroborated",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0004"
+            "artifact_id": "ART-0004",
+            "engine": "ALEAPP"
           },
           {
             "tool": "MVT",
-            "artifact_id": "ART-0005"
+            "artifact_id": "ART-0005",
+            "engine": "MVT"
           }
         ]
       },
@@ -486,12 +500,14 @@
         "malware_family": "FictiveSpy"
       },
       "content_sha256": "141028d96cec398952115cccd052944b51e4af86447601040ab90ba19cd25da3",
+      "fact_sha256": "6206c59fd7af42a625c37cb8eafbf73b43274ba20d98ba0a4f4ca1f0db138e05",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "MVT",
-            "artifact_id": "ART-0006"
+            "artifact_id": "ART-0006",
+            "engine": "MVT"
           }
         ]
       },
@@ -519,12 +535,14 @@
         "duration_s": 3.0
       },
       "content_sha256": "4be1182875fc4d4598224d7a5ba2812c8a5c186ebb1318d69b18683494491d6e",
+      "fact_sha256": "2fe86955b8094cf81ec590da28b1ab62a2a193ce6d154bd8f40cd70cc7248c56",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0007"
+            "artifact_id": "ART-0007",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -553,12 +571,14 @@
         "source_app": "com.google.android.gms"
       },
       "content_sha256": "8147f7dedd804072e16f2119836b212e10044770e280e6816efc815bcb811628",
+      "fact_sha256": "a5919d5901a017b58469b6f2f8d4d6e5235e42a99f65a443bf388fa3c3fa9dae",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0008"
+            "artifact_id": "ART-0008",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -585,12 +605,14 @@
         "visit_count": 1
       },
       "content_sha256": "411878160b79c5548b3d79709f8abb9bffe6338755ea68aa516fc7401854b1d4",
+      "fact_sha256": "893761183102603d262809db986518bbe1dd58f887accd1649383184f2388d09",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0009"
+            "artifact_id": "ART-0009",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -617,12 +639,14 @@
         "last_connected": "2026-09-02T18:00:00+00:00"
       },
       "content_sha256": "88edf6b5216b43c9d1bd0d7eb99cba722dd6baa868dfbab5aff85d644a06064d",
+      "fact_sha256": "d032f9b157d0ec0af44509312ed0b19fe5f67126597f1240a28420c5d2e4614e",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0010"
+            "artifact_id": "ART-0010",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -651,12 +675,14 @@
         "account": null
       },
       "content_sha256": "34be0e3cf024a7c5c6c1e133e3f5836115443612d56b77dcab5f904e1c378e47",
+      "fact_sha256": "0c02f61ad3673a10a5bbd47a875dbeb3c006be1dd820a65ac6b36797fa47713a",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "veritrace-sqlite",
-            "artifact_id": "ART-0011"
+            "artifact_id": "ART-0011",
+            "engine": "veritrace-sqlite"
           }
         ]
       },
@@ -682,12 +708,14 @@
         "package": "com.google.android.gms"
       },
       "content_sha256": "a09aeea914fd593b5ea018611009478a5e6a5ae2cf3cf0e795a2766c341599b6",
+      "fact_sha256": "0cfc4853fed932bddc00e87353cea47c1c679d870e69240975362653c1b5c60b",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0012"
+            "artifact_id": "ART-0012",
+            "engine": "ALEAPP"
           }
         ]
       },
@@ -714,12 +742,14 @@
         "last_seen": "2026-08-30T08:12:00+00:00"
       },
       "content_sha256": "c3ee1278ae056169e2723e4adb8daafef0080400a1a2986168aebb9df6f760ca",
+      "fact_sha256": "50aba142293388b09c1d7409b50e84b05d9adb969bd3e0972ddb37ce9efdd5af",
       "corroboration": {
         "status": "single_source",
         "sources": [
           {
             "tool": "ALEAPP",
-            "artifact_id": "ART-0013"
+            "artifact_id": "ART-0013",
+            "engine": "ALEAPP"
           }
         ]
       },

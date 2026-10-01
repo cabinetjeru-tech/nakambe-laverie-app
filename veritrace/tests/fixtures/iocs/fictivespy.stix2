@@ -1,0 +1,23 @@
+{
+  "type": "bundle",
+  "id": "bundle--6c1f6f3e-0000-4000-8000-000000000001",
+  "objects": [
+    {"type": "malware", "spec_version": "2.1", "id": "malware--6c1f6f3e-0000-4000-8000-000000000002",
+     "created": "2026-01-01T00:00:00.000Z", "modified": "2026-01-01T00:00:00.000Z",
+     "name": "FictiveSpy", "description": "Famille FICTIVE utilisée pour les tests Veritrace.", "is_family": true},
+    {"type": "indicator", "spec_version": "2.1", "id": "indicator--6c1f6f3e-0000-4000-8000-000000000003",
+     "created": "2026-01-01T00:00:00.000Z", "modified": "2026-01-01T00:00:00.000Z",
+     "indicator_types": ["malicious-activity"], "pattern_type": "stix", "valid_from": "2026-01-01T00:00:00Z",
+     "pattern": "[app:id='com.sys.monitor.service']"},
+    {"type": "indicator", "spec_version": "2.1", "id": "indicator--6c1f6f3e-0000-4000-8000-000000000004",
+     "created": "2026-01-01T00:00:00.000Z", "modified": "2026-01-01T00:00:00.000Z",
+     "indicator_types": ["malicious-activity"], "pattern_type": "stix", "valid_from": "2026-01-01T00:00:00Z",
+     "pattern": "[domain-name:value='example-monitor.invalid']"},
+    {"type": "relationship", "spec_version": "2.1", "id": "relationship--6c1f6f3e-0000-4000-8000-000000000005",
+     "created": "2026-01-01T00:00:00.000Z", "modified": "2026-01-01T00:00:00.000Z", "relationship_type": "indicates",
+     "source_ref": "indicator--6c1f6f3e-0000-4000-8000-000000000003", "target_ref": "malware--6c1f6f3e-0000-4000-8000-000000000002"},
+    {"type": "relationship", "spec_version": "2.1", "id": "relationship--6c1f6f3e-0000-4000-8000-000000000006",
+     "created": "2026-01-01T00:00:00.000Z", "modified": "2026-01-01T00:00:00.000Z", "relationship_type": "indicates",
+     "source_ref": "indicator--6c1f6f3e-0000-4000-8000-000000000004", "target_ref": "malware--6c1f6f3e-0000-4000-8000-000000000002"}
+  ]
+}

@@ -256,6 +256,151 @@ def audit_show(c: Ctx, case_dir: Path | None, last: int) -> None:
                    f"{json.dumps(e['details'], ensure_ascii=False)[:100]}")
 
 
+# --------------------------------------------------------------------------- parse / correlate
+def _open_case(c: Ctx, case_dir: Path) -> Case:
+    try:
+        return Case.open(case_dir, c.auth)
+    except CaseError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+
+def _print_outcome(label: str, o) -> None:
+    color = {"success": "green", "skipped": "yellow", "failed": "red"}[o.status]
+    click.secho(f"{'✔' if o.status == 'success' else '⚠' if o.status == 'skipped' else '✖'} {label} "
+                f"[{o.run_id}] {o.status}", fg=color)
+    if o.status == "success":
+        click.echo(f"    {o.artifacts_added} artefact(s) ajouté(s), {o.findings_added} constat(s) ; "
+                   f"faits uniques : {o.correlation.get('facts')}, corroborés : {o.correlation.get('corroborated_facts')}, "
+                   f"doublons inter-outils fusionnés : {o.correlation.get('merged_duplicates')}")
+    click.echo(f"    {o.message}")
+
+
+def _run(c: Ctx, case_dir: Path, wrapper, extraction: Path, options: dict, **kw):
+    from veritrace.core.evidence import IntegrityError
+    from veritrace.parsing.runner import run_wrapper
+
+    k = _open_case(c, case_dir)
+    try:
+        return run_wrapper(k, wrapper, extraction, options, **kw)
+    except (IntegrityError, FileNotFoundError) as exc:
+        raise click.ClickException(str(exc)) from exc
+    except CaseValidationError as exc:
+        raise click.ClickException(f"Résultat non conforme au schéma — rien n'a été enregistré.\n{exc}") from exc
+
+
+_case_opt = click.option("--case", "case_dir", required=True, type=click.Path(exists=True, file_okay=False, path_type=Path),
+                         help="Dossier d'affaire.")
+_input_opt = click.option("--input", "extraction", required=True, type=click.Path(exists=True, path_type=Path),
+                          help="Chemin de l'extraction (dossier, .tar/.zip, sauvegarde .ab, bundle AndroidQF…).")
+
+
+@cli.group()
+def parse() -> None:
+    """Analyse d'une extraction par ALEAPP, MVT, Autopsy (résultats normalisés + corrélation)."""
+
+
+@parse.command("aleapp")
+@_case_opt
+@_input_opt
+@click.option("--from-output", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Importer un rapport ALEAPP existant au lieu de lancer ALEAPP.")
+@click.option("--input-type", type=click.Choice(["fs", "tar", "zip", "gz", "raw"]), help="Forcer le type d'entrée.")
+@click.option("--timeout", default=4 * 3600, show_default=True, help="Délai maximal (s).")
+@pass_ctx
+def parse_aleapp(c: Ctx, case_dir: Path, extraction: Path, from_output: Path | None, input_type: str | None,
+                 timeout: int) -> None:
+    """Parsing complet de l'extraction logique par ALEAPP."""
+    from veritrace.parsing.aleapp import AleappWrapper
+
+    o = _run(c, case_dir, AleappWrapper(), extraction,
+             {"from_output": from_output, "input_type": input_type, "timeout": timeout})
+    _print_outcome("ALEAPP", o)
+
+
+@parse.command("mvt")
+@_case_opt
+@_input_opt
+@click.option("--iocs", "iocs", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Fichier d'IOC STIX2 (option répétable).")
+@click.option("--mode", type=click.Choice(["androidqf", "backup", "bugreport"]), help="Forcer le mode MVT.")
+@click.option("--from-output", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              help="Importer des résultats MVT existants au lieu de lancer MVT.")
+@click.option("--timeout", default=3600, show_default=True, help="Délai maximal (s).")
+@pass_ctx
+def parse_mvt(c: Ctx, case_dir: Path, extraction: Path, iocs: tuple[Path, ...], mode: str | None,
+              from_output: Path | None, timeout: int) -> None:
+    """Détection spyware/stalkerware par MVT (IOC STIX2)."""
+    from veritrace.parsing.mvt import MvtWrapper
+
+    o = _run(c, case_dir, MvtWrapper(), extraction,
+             {"iocs": list(iocs), "mode": mode, "from_output": from_output, "timeout": timeout})
+    _print_outcome("MVT", o)
+
+
+@parse.command("autopsy")
+@_case_opt
+@click.option("--input", "autopsy_case", required=True, type=click.Path(exists=True, path_type=Path),
+              help="Dossier de cas Autopsy, Portable Case, fichier .aut ou autopsy.db.")
+@click.option("--module", "modules", multiple=True,
+              help="Motif de module Autopsy à retenir (défaut : android, aleapp). Répétable.")
+@click.option("--autopsy-version", help="Version d'Autopsy ayant produit le cas (consignée dans le rapport).")
+@pass_ctx
+def parse_autopsy(c: Ctx, case_dir: Path, autopsy_case: Path, modules: tuple[str, ...],
+                  autopsy_version: str | None) -> None:
+    """Intègre le résultat de l'ingest Autopsy (artefacts du module Android)."""
+    from veritrace.parsing.autopsy import AutopsyWrapper, find_case_db
+    from veritrace.parsing.base import ToolFailed
+
+    try:
+        db = find_case_db(autopsy_case)
+    except ToolFailed as exc:
+        raise click.ClickException(str(exc)) from exc
+    o = _run(c, case_dir, AutopsyWrapper(), autopsy_case,
+             {"modules": list(modules) or None, "version": autopsy_version},
+             evidence_path=db, evidence_label=f"Base de cas Autopsy ({db.parent.name}/{db.name})",
+             evidence_type="tool_output")
+    _print_outcome("Autopsy", o)
+
+
+@parse.command("all")
+@_case_opt
+@_input_opt
+@click.option("--iocs", "iocs", multiple=True, type=click.Path(exists=True, dir_okay=False, path_type=Path),
+              help="Fichier(s) d'IOC STIX2 pour MVT.")
+@click.option("--mvt-input", type=click.Path(exists=True, path_type=Path),
+              help="Entrée spécifique pour MVT (bundle AndroidQF, .ab, bugreport) si différente.")
+@click.option("--autopsy-case", type=click.Path(exists=True, path_type=Path), help="Cas Autopsy à intégrer.")
+@pass_ctx
+def parse_all(c: Ctx, case_dir: Path, extraction: Path, iocs: tuple[Path, ...], mvt_input: Path | None,
+              autopsy_case: Path | None) -> None:
+    """Enchaîne ALEAPP, MVT et (si fourni) Autopsy ; un outil absent est ignoré."""
+    from veritrace.parsing.aleapp import AleappWrapper
+    from veritrace.parsing.autopsy import AutopsyWrapper, find_case_db
+    from veritrace.parsing.mvt import MvtWrapper
+
+    _print_outcome("ALEAPP", _run(c, case_dir, AleappWrapper(), extraction, {}))
+    _print_outcome("MVT", _run(c, case_dir, MvtWrapper(), mvt_input or extraction, {"iocs": list(iocs)}))
+    if autopsy_case:
+        db = find_case_db(autopsy_case)
+        _print_outcome("Autopsy", _run(c, case_dir, AutopsyWrapper(), autopsy_case, {}, evidence_path=db,
+                                       evidence_label=f"Base de cas Autopsy ({db.name})", evidence_type="tool_output"))
+    else:
+        click.echo("  Autopsy : aucun cas fourni (--autopsy-case) — étape non exécutée.")
+
+
+@cli.command()
+@_case_opt
+@pass_ctx
+def correlate(c: Ctx, case_dir: Path) -> None:
+    """Recalcule corroboration, dédoublonnage et timeline de l'affaire."""
+    from veritrace.parsing.runner import run_correlation
+
+    s = run_correlation(_open_case(c, case_dir))
+    click.secho(f"✔ {s['artifacts']} artefact(s) → {s['facts']} fait(s) unique(s) ; {s['corroborated_facts']} "
+                f"corroboré(s) ; {s['merged_duplicates']} doublon(s) inter-outils ; {s['timeline_events']} "
+                "événement(s) de timeline.", fg="green")
+
+
 # --------------------------------------------------------------------------- report
 @cli.command()
 @click.option("--case", "case_dir", type=click.Path(exists=True, file_okay=False, path_type=Path),

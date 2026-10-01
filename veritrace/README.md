@@ -23,12 +23,13 @@ sont générés depuis ce même JSON, en PDF et en Markdown.
 | Garde-fou d'autorisation légale (bloquant) | ✅ |
 | Journal d'audit horodaté, chaîné, en lecture seule | ✅ |
 | Dossier d'affaire normalisé (`case init`) | ✅ |
-| Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.2, voir plus bas)* |
+| Schéma JSON normalisé + validateur + exemple | ✅ *(schéma provisoire v0.3, voir plus bas)* |
 | Reporting judiciaire / entreprise, PDF + Markdown | ✅ |
 | Détection des outils externes (`doctor`) | ✅ |
 | Acquisition ADB (backup, pull ciblé, custody automatique) | ⏳ prochaine itération |
-| Wrappers ALEAPP / MVT / Autopsy + parseurs SQLite | ⏳ (contrat défini dans `parsing/base.py`) |
-| Corrélation, timeline, corroboration, détection | ⏳ |
+| Wrappers ALEAPP / MVT / Autopsy (`veritrace parse …`) | ✅ |
+| Corrélation inter-outils : corroboration, dédoublonnage, timeline (`veritrace correlate`) | ✅ |
+| Parseurs SQLite natifs Veritrace, règles de détection d'anomalies | ⏳ |
 
 ---
 
@@ -48,32 +49,73 @@ veritrace --version
 ### 2. Outils externes
 
 Ces outils sont **optionnels**. S'il en manque un, Veritrace affiche un avertissement et
-ignore l'étape concernée, qui est consignée « non exécutée » dans le rapport. Il ne plante
-pas. Pour faire le point :
+consigne l'étape comme « non exécutée » (`skipped`) dans l'affaire et dans le rapport. Il
+ne plante pas. Pour faire le point :
 
 ```bash
 veritrace doctor
 ```
 
 Chaque outil est cherché dans le `PATH`. Pour imposer un chemin, utilisez la variable
-correspondante.
+d'environnement indiquée. Il est conseillé d'installer **chaque outil dans son propre
+environnement virtuel**, car leurs dépendances entrent en conflit entre elles.
 
-| Outil | Rôle | Installation | Variable |
-|---|---|---|---|
-| **ADB** (Android SDK Platform-Tools) | Acquisition logique | Télécharger *Platform-Tools* sur developer.android.com/tools/releases/platform-tools, décompresser et ajouter au `PATH`. Sous Linux, ajouter aussi les règles udev Android (paquet `android-sdk-platform-tools-common` sur Debian/Ubuntu). | `VERITRACE_ADB` |
-| **ALEAPP** | Parsing d'artefacts Android | `git clone https://github.com/abrignoni/ALEAPP && cd ALEAPP && pip install -r requirements.txt`. Point d'entrée : `aleapp.py`. | `VERITRACE_ALEAPP` (chemin de `aleapp.py`) |
-| **MVT** (Mobile Verification Toolkit) | Spyware et stalkerware via IOC | `pipx install mvt` (fournit `mvt-android`), puis `mvt-android download-iocs`. | `VERITRACE_MVT` |
-| **Autopsy** | Analyse complémentaire | Installeur Windows sur sleuthkit.org/autopsy. Sous Linux : The Sleuth Kit + Java 17, puis le script `unix_setup.sh` de l'archive. | `VERITRACE_AUTOPSY` |
+#### ADB (Android SDK Platform-Tools)
+Rôle : acquisition logique (module à venir).
+1. Télécharger *SDK Platform-Tools* sur developer.android.com/tools/releases/platform-tools.
+2. Décompresser l'archive et ajouter le dossier au `PATH`.
+3. Sous Linux, installer aussi les règles udev Android (Debian/Ubuntu : paquet `android-sdk-platform-tools-common`).
+4. Vérifier avec `adb version`. Variable : `VERITRACE_ADB`.
+
+#### ALEAPP
+Rôle : parsing complet de l'extraction logique.
+```bash
+git clone https://github.com/abrignoni/ALEAPP.git
+python -m venv venv-aleapp
+venv-aleapp/bin/pip install -r ALEAPP/requirements.txt
+export VERITRACE_ALEAPP=$PWD/ALEAPP/aleapp.py
+export VERITRACE_ALEAPP_PYTHON=$PWD/venv-aleapp/bin/python   # interpréteur qui exécute aleapp.py
+```
+Si vous utilisez un binaire ALEAPP empaqueté, placez-le dans le `PATH` sous le nom `aleapp`
+(ou pointez `VERITRACE_ALEAPP` dessus).
+
+#### MVT (Mobile Verification Toolkit)
+Rôle : détection de spyware et de stalkerware par IOC.
+```bash
+python -m venv venv-mvt
+venv-mvt/bin/pip install mvt
+export VERITRACE_MVT=$PWD/venv-mvt/bin/mvt-android
+```
+Les IOC se fournissent au format **STIX2** avec `--iocs fichier.stix2` (option répétable),
+par exemple ceux du projet *stalkerware-indicators* ou des rapports d'Amnesty Tech.
+Veritrace lance MVT **sans téléchargement automatique d'IOC** (`--disable-indicator-update-check`) :
+seuls les fichiers fournis explicitement sont utilisés, et ils sont copiés et hachés dans
+l'affaire.
+
+#### Autopsy
+Rôle : intégration du résultat de l'ingest Android.
+- Windows : installeur MSI sur sleuthkit.org/autopsy.
+- Linux / macOS : installer The Sleuth Kit (Java), puis lancer le script `unix_setup.sh`
+  livré dans l'archive Autopsy.
+- Dans Autopsy, lancer l'ingest avec le module **Android Analyzer** sur l'extraction. On
+  peut ensuite transmettre à Veritrace le dossier du cas, ou un **Portable Case** exporté
+  (*Tools › Generate Portable Case*).
+- **Autopsy n'a pas besoin d'être installé sur le poste Veritrace.** Veritrace lit la base
+  `autopsy.db` du cas, en lecture seule.
 
 ### 3. Versions testées
 
-| Composant | Version testée | Remarque |
+| Composant | Version | Comment |
 |---|---|---|
 | Python | 3.11.15 | |
-| click | 8.4.2 | |
-| jsonschema | 4.26.0 | |
-| reportlab | 5.0.1 | |
-| ADB / ALEAPP / MVT / Autopsy | **non encore testés** | Les wrappers arrivent aux prochaines itérations. Ce tableau sera complété avec les versions réellement validées. |
+| click / jsonschema / reportlab | 8.4.2 / 4.26.0 / 5.0.1 | |
+| **ALEAPP** | **2026.4.2** (commit `82aec26`) | Exécuté par Veritrace sur une extraction Android synthétique. La sortie réelle (LAVA + TSV) est conservée dans `tests/fixtures/aleapp_2026.4.2`. |
+| **MVT** | **2026.9.28** | Exécuté par Veritrace (`check-androidqf`, IOC STIX2). La sortie réelle est conservée dans `tests/fixtures/mvt_2026.9.28`. |
+| **Autopsy** | **non testé avec une installation réelle** | Lecteur écrit d'après le schéma de base Sleuth Kit (tables *blackboard*) et testé sur une base synthétique conforme (schéma 9.4). **À valider sur un cas produit par Autopsy 4.21+ avant usage en production.** |
+| ADB | non testé | Le module d'acquisition reste à faire. |
+
+Pour relancer les tests avec les vrais outils :
+`VERITRACE_ALEAPP=… VERITRACE_ALEAPP_PYTHON=… VERITRACE_MVT=… python -m pytest -k real`
 
 ---
 
@@ -137,14 +179,15 @@ printf 'Nom Prénom\nmandat\nCR-2026-118\nAUTORISATION VERIFIEE\n' | veritrace r
   - intégrité référentielle : artefact → exécution d'outil → preuve → acquisition → appareil ;
   - empreintes de custody identiques à celle de la preuve ;
   - `content_sha256` cohérent avec les données ;
-  - statut « corroboré » seulement si au moins deux outils distincts confirment ;
+  - statut « corroboré » seulement si au moins deux moteurs d'analyse indépendants confirment le même fait ;
   - dates valides avec fuseau ;
   - avec `--case-root`, re-hachage des fichiers sur disque.
-- **Corroboration** : chaque artefact porte `content_sha256 = SHA-256(JSON canonique de {category, data})`.
-  Deux outils qui extraient le même fait produisent la même empreinte, et l'artefact passe
-  alors en `corroborated`.
+- **Deux empreintes par artefact** :
+  - `content_sha256` couvre le contenu exact (`{category, data}`) ;
+  - `fact_sha256` couvre l'identité du fait. C'est elle qui sert au dédoublonnage et à la
+    corroboration (voir « Analyse multi-outils »).
 
-> **Schéma provisoire.** Le schéma de référence n'a pas encore été fourni. La v0.2 a été
+> **Schéma provisoire.** Le schéma de référence n'a pas encore été fourni. La v0.3 a été
 > conçue pour couvrir le cahier des charges. Pour la remplacer, déposez le schéma de
 > référence à la place du fichier ou pointez `VERITRACE_SCHEMA` dessus, puis adaptez le
 > modèle de rapport (`reporting/model.py`) aux noms de champs.
@@ -153,6 +196,59 @@ printf 'Nom Prénom\nmandat\nCR-2026-118\nAUTORISATION VERIFIEE\n' | veritrace r
 veritrace schema validate mon_affaire.json [--case-root ./VT-2026-0042]
 veritrace schema example -o exemple.json
 ```
+
+---
+
+## Analyse multi-outils
+
+Les trois wrappers partagent la même interface (`parsing/base.py`). L'**entrée** est le
+chemin de l'extraction. La **sortie** est du JSON normalisé, versé dans le dossier d'affaire.
+
+```bash
+veritrace parse aleapp  --case ./VT --input ./extraction            # lance ALEAPP (parsing complet)
+veritrace parse mvt     --case ./VT --input ./androidqf --iocs stalkerware.stix2
+veritrace parse autopsy --case ./VT --input ./CasAutopsy --autopsy-version 4.21.0
+veritrace parse all     --case ./VT --input ./extraction --mvt-input ./androidqf \
+                        --iocs stalkerware.stix2 --autopsy-case ./CasAutopsy
+veritrace correlate     --case ./VT                                 # recalcul seul
+```
+
+Pour chaque outil, Veritrace enchaîne les étapes suivantes :
+
+1. **Preuve** : l'extraction est enregistrée et hachée. Pour un dossier, un manifeste
+   `sha256sum` est écrit dans `custody/manifests/`. Avant chaque nouvelle analyse,
+   l'empreinte est **recalculée**. Si l'extraction a changé, l'analyse est refusée.
+2. **Exécution ou import** : on peut lancer l'outil, ou importer une sortie existante avec
+   `--from-output`, par exemple si l'outil tourne sur un autre poste. La sortie brute est
+   conservée dans `parsed/<outil>/<RUN-ID>/` et son empreinte est consignée.
+3. **Normalisation** : le résultat est écrit au schéma commun dans
+   `parsed/<outil>/<RUN-ID>/veritrace_normalized.json`, puis fusionné dans l'affaire.
+   Relancer un outil ne crée pas de doublons.
+4. **Corrélation**, validation, sauvegarde et journal d'audit.
+
+| Outil | Ce qui est normalisé |
+|---|---|
+| ALEAPP | Lit la sortie LAVA (`_lava_data.lava` + `_lava_artifacts.db`), ou les TSV pour les versions antérieures. Catégories : SMS/MMS, appels, contacts, historique web, localisations, applications installées, usage des applications (événements), comptes, Wi-Fi, Bluetooth. Les artefacts non couverts sont listés dans le rapport et restent dans la sortie brute. |
+| MVT | Mode détecté automatiquement (AndroidQF, sauvegarde `.ab`, bugreport) ; si le format n'est pas reconnu, Veritrace le signale au lieu de deviner. **Chaque détection d'IOC devient un constat « critique » (alerte MVT CRITICAL) ou « élevé » (autres niveaux)**, avec l'indicateur, le jeu d'IOC et la famille. Les alertes heuristiques MEDIUM ou plus deviennent des constats « application suspecte ». Les applications installées servent à la corroboration. |
+| Autopsy | Lit `autopsy.db` (cas, Portable Case ou fichier `.db`). Seuls les artefacts du **module Android** sont retenus (option `--module` pour en ajouter d'autres). |
+
+### Corroboration et dédoublonnage
+
+- Chaque artefact porte une **empreinte de fait** (`fact_sha256`), calculée sur ses seuls
+  attributs identifiants (`schema/facts.py`). Par exemple : horodatage à la seconde,
+  numéro et texte pour un SMS ; nom de paquet pour une application. Les champs
+  secondaires, que chaque outil remplit différemment, n'entrent pas dans l'empreinte.
+- **Dédoublonnage** : un fait extrait par ALEAPP et par Autopsy n'est compté **qu'une
+  fois**. Il produit un seul événement de timeline, et les inventaires distinguent
+  « faits uniques » et « enregistrements tous outils ». Chaque outil garde son artefact,
+  pour la traçabilité.
+- **Corroboration** : un fait extrait par **au moins deux moteurs indépendants** est
+  marqué « Corroboré (fiabilité renforcée) » dans les rapports. Le module aLEAPP intégré
+  à Autopsy a le moteur `ALEAPP` : il **ne corrobore pas** ALEAPP.
+- Les constats IOC de MVT sont reliés automatiquement aux artefacts des autres outils qui
+  décrivent le même élément : application installée, usage, visite du domaine.
+- Choix prudent : en cas de doute, Veritrace ne fusionne pas deux faits. Une fausse
+  corroboration serait plus grave qu'un doublon.
 
 ---
 
@@ -192,7 +288,7 @@ affirmation doit pouvoir être reliée à une preuve hachée.
 | 5. Limites | |
 | Annexe — Preuves | Éléments de preuve, chaîne de custody, pièces (captures et exports), inventaire, intégrité |
 
-### Champs du JSON utilisés par les rapports (schéma v0.2)
+### Champs du JSON utilisés par les rapports (schéma v0.3)
 
 | Champ | Utilisé par |
 |---|---|
@@ -230,8 +326,14 @@ veritrace case init ./VT-2026-0042 --case-id VT-2026-0042 \
   --report-type judiciaire --tz Africa/Ouagadougou
 
 # 2. Acquisition ADB          (prochaine itération : veritrace acquire …)
-# 3. Parsing multi-outils     (prochaine itération : veritrace parse …)
-# 4. Corrélation / timeline   (prochaine itération : veritrace correlate …)
+
+# 3. Analyse multi-outils + corrélation (automatique après chaque outil)
+veritrace parse all --case ./VT-2026-0042 --input ./extraction --mvt-input ./androidqf \
+  --iocs stalkerware.stix2 --autopsy-case ./CasAutopsy
+
+# 4. Relire les constats générés (MVT) et compléter interprétation / remédiation
+#    dans normalized/veritrace_case.json, puis :
+veritrace schema validate VT-2026-0042/normalized/veritrace_case.json
 
 # 5. Rapports
 veritrace report --case ./VT-2026-0042 --report judiciaire --format pdf,md --verify-files
@@ -275,8 +377,8 @@ veritrace/
 ├── schema/                schéma, validateur, exemple
 ├── reporting/             modèle → Markdown / PDF
 ├── acquisition/           (à venir)
-├── parsing/               contrat des wrappers (base.py) ; wrappers à venir
-└── correlation/           (à venir)
+├── parsing/               base.py (contrat), aleapp.py, mvt.py, autopsy.py, runner.py
+└── correlation/           engine.py : corroboration, dédoublonnage, timeline
 ```
 
 ---

@@ -27,6 +27,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from veritrace import CREDIT_LINE
 from veritrace.core.timeutil import parse_iso, utc_now_iso
+from veritrace.schema.describe import artifact_summary  # noqa: F401  (réexporté)
+from veritrace.schema.validator import artifact_engine
 
 TEMPLATES = ("judiciaire", "entreprise")
 
@@ -270,40 +272,6 @@ def _os(d: dict) -> str:
     return v + (f" — correctif {d['security_patch']}" if d.get("security_patch") else "")
 
 
-def artifact_summary(a: dict[str, Any]) -> str:
-    """Résumé lisible d'un artefact, selon sa catégorie."""
-    d, c = a.get("data") or {}, a.get("category")
-    if c == "sms":
-        who = d.get("contact_name") or d.get("address")
-        arrow = "reçu de" if d.get("direction") == "incoming" else "envoyé à"
-        return f"SMS {arrow} {who} : « {d.get('body') or ''} »"
-    if c == "call":
-        return f"Appel {d.get('direction')} — {d.get('contact_name') or d.get('number')} ({_v(d.get('duration_s'))} s)"
-    if c == "contact":
-        return f"{d.get('display_name')} — {_v(d.get('phone_numbers'))}"
-    if c == "browser_history":
-        return f"{d.get('url')} ({d.get('browser') or 'navigateur ?'})"
-    if c == "location":
-        acc = f" ±{d['accuracy_m']:.0f} m" if d.get("accuracy_m") is not None else ""
-        return f"{d.get('latitude')}, {d.get('longitude')}{acc} ({d.get('provider') or '?'})"
-    if c == "exif":
-        return f"{d.get('file_path')} — {d.get('make') or ''} {d.get('model') or ''}".strip()
-    if c == "app_usage":
-        return f"{d.get('package')} — {d.get('event')}"
-    if c == "installed_app":
-        src = d.get("installer") or "installateur inconnu (sideload ?)"
-        return f"{d.get('package')} v{d.get('version_name') or '?'} — {src}"
-    if c == "wifi":
-        return f"SSID « {d.get('ssid')} » ({d.get('bssid') or 'BSSID ?'})"
-    if c == "bluetooth":
-        return f"{d.get('name') or 'sans nom'} [{d.get('mac')}]"
-    if c == "account":
-        return f"{d.get('account_name')} ({d.get('account_type')})"
-    if c == "ioc_match":
-        return f"{d.get('indicator_type')} « {d.get('indicator')} » — {d.get('ioc_source')}"
-    return ", ".join(f"{k}={v}" for k, v in list(d.items())[:4])
-
-
 def _operations_period(doc: dict) -> tuple[str | None, str | None]:
     stamps: list[str] = []
     for a in doc["acquisitions"]:
@@ -373,7 +341,8 @@ def _tools_inventory(doc: dict) -> Table:
             seen.setdefault((t["name"], t.get("version") or "non déterminée"), []).append("Acquisition")
     for r in doc["tool_runs"]:
         key = (r["tool"]["name"], r["tool"].get("version") or "non déterminée")
-        seen.setdefault(key, []).append(f"Analyse — {STATUS_FR[r['status']].lower()}")
+        mode = {"executed": ", exécuté par Veritrace", "imported": ", sortie importée"}.get(r.get("tool_mode") or "", "")
+        seen.setdefault(key, []).append(f"Analyse — {STATUS_FR[r['status']].lower()}{mode}")
     rows = [[n, v, ", ".join(dict.fromkeys(roles))] for (n, v), roles in seen.items()]
     return Table(["Outil", "Version", "Usage / statut"], rows, [2, 1.5, 3])
 
@@ -386,9 +355,12 @@ def _acquisitions_table(doc: dict, fmt: _Fmt) -> Table:
                  [0.8, 0.8, 1.6, 1.3, 1.3, 1.3, 0.8])
 
 
-def _tool_runs_table(doc: dict, fmt: _Fmt) -> Table:
-    rows = [[r["run_id"], f"{r['tool']['name']} {r['tool'].get('version') or ''}".strip(),
-             " ".join(r.get("command") or []) or "—", f"{fmt.ts(r['started_at'])} → {fmt.ts(r.get('ended_at'))}",
+def _tool_runs_table(doc: dict, fmt: _Fmt, case_root: Path | None = None) -> Table:
+    def cmd(r: dict) -> str:
+        text = " ".join(r.get("command") or []) or "—"
+        return text.replace(str(case_root.resolve()), "<affaire>") if case_root else text
+
+    rows = [[r["run_id"], f"{r['tool']['name']} {r['tool'].get('version') or ''}".strip(), cmd(r), f"{fmt.ts(r['started_at'])} → {fmt.ts(r.get('ended_at'))}",
              STATUS_FR[r["status"]], _v(r.get("input_evidence_ids")), _v(r.get("output_path")),
              r.get("message") or ""] for r in doc["tool_runs"]]
     return Table(["Exécution", "Outil", "Commande", "Début → fin", "Statut", "Entrées", "Sortie", "Remarque"],
@@ -426,14 +398,21 @@ def _timeline_table(c: _Ctx, events: list[dict]) -> Table:
 
 
 def _inventory_table(doc: dict) -> Table:
-    total, corr = Counter(), Counter()
+    """Inventaire par FAIT : un fait extrait par plusieurs outils n'est compté qu'une fois."""
+    facts: dict[str, dict[str, set]] = {}
+    raw = Counter()
     for a in doc["artifacts"]:
-        total[a["category"]] += 1
-        if a["corroboration"]["status"] == "corroborated":
-            corr[a["category"]] += 1
-    rows = [[CATEGORY_FR.get(k, k), str(n), str(corr[k])] for k, n in sorted(total.items(), key=lambda x: -x[1])]
-    rows.append(["Total", str(sum(total.values())), str(sum(corr.values()))])
-    return Table(["Catégorie", "Artefacts", "dont corroborés"], rows, [3, 1, 1])
+        raw[a["category"]] += 1
+        g = facts.setdefault(a["category"], {})
+        g.setdefault(a["fact_sha256"], set()).add(artifact_engine(a))
+    rows = []
+    for cat in sorted(facts, key=lambda k: -len(facts[k])):
+        corr = sum(1 for engines in facts[cat].values() if len(engines) >= 2)
+        rows.append([CATEGORY_FR.get(cat, cat), str(len(facts[cat])), str(corr), str(raw[cat])])
+    rows.append(["Total", str(sum(len(v) for v in facts.values())),
+                 str(sum(1 for v in facts.values() for e in v.values() if len(e) >= 2)), str(sum(raw.values()))])
+    return Table(["Catégorie", "Faits uniques", "dont corroborés", "Enregistrements (tous outils)"], rows,
+                 [2.6, 1, 1, 1.4])
 
 
 def _sources_table(c: _Ctx, artifact_ids: list[str]) -> Table:
@@ -442,7 +421,7 @@ def _sources_table(c: _Ctx, artifact_ids: list[str]) -> Table:
     for aid in artifact_ids:
         a = c.artifacts[aid]
         src = a["source"]
-        where = f"{src['tool']['name']}"
+        where = _tool_label(src["tool"])
         if src.get("file_path"):
             where += f" · {src['file_path']}"
         if src.get("record_ref"):
@@ -466,11 +445,24 @@ def _exhibit_blocks(c: _Ctx, exhibits: list[dict]) -> list[Block]:
     return blocks
 
 
+def _tool_label(tool: dict) -> str:
+    eng = tool.get("engine")
+    return tool["name"] + (f" (moteur {eng})" if eng and eng != tool["name"] else "")
+
+
 def _corroboration_line(c: _Ctx, f: dict) -> str:
-    tools = sorted({c.artifacts[a]["source"]["tool"]["name"] for a in f["artifact_ids"] if a in c.artifacts}
-                   | {s["tool"] for a in f["artifact_ids"] if a in c.artifacts
-                      for s in c.artifacts[a]["corroboration"]["sources"]})
-    return f"{_corr(f['corroborated'])} — outils : {', '.join(tools) or '—'}"
+    """Fiabilité d'un constat + moteurs d'analyse indépendants qui ont extrait ses faits."""
+    engines: set[str] = set()
+    for a in f["artifact_ids"]:
+        art = c.artifacts.get(a)
+        if not art:
+            continue
+        engines.add(artifact_engine(art))
+        for s in art["corroboration"]["sources"]:
+            other = c.artifacts.get(s["artifact_id"])
+            engines.add(artifact_engine(other) if other else s.get("engine") or s["tool"])
+    label = "Corroboré (fiabilité renforcée)" if f["corroborated"] else "Source unique"
+    return f"{label} — moteur(s) : {', '.join(sorted(engines)) or '—'}"
 
 
 def _integrity_blocks(c: _Ctx) -> list[Block]:
@@ -551,16 +543,19 @@ def _judiciaire(c: _Ctx) -> list[Section]:
                   "de custody ; tous sont concordants avec l'empreinte d'origine (vérification automatique "
                   "de Veritrace, toute discordance bloquant la production du rapport).", "note"),
         Subheading("3.4 Analyse et corroboration"),
-        Paragraph("Les éléments de preuve sont analysés par plusieurs outils indépendants. Leurs résultats sont "
-                  "convertis dans un format normalisé ; chaque fait reçoit une empreinte de contenu. Lorsqu'au "
-                  "moins deux outils produisent la même empreinte, le fait est qualifié de « corroboré »."),
+        Paragraph("Les éléments de preuve sont analysés par plusieurs outils. Leurs résultats sont convertis dans "
+                  "un format normalisé ; chaque fait reçoit une empreinte calculée sur ses seuls attributs "
+                  "identifiants (ex. horodatage, numéro et texte d'un SMS). Un même fait extrait par plusieurs "
+                  "outils n'est compté qu'une fois. Lorsqu'au moins deux moteurs d'analyse INDÉPENDANTS l'ont "
+                  "extrait, il est qualifié de « corroboré » (fiabilité renforcée). Un outil qui réutilise le "
+                  "moteur d'un autre (ex. le module aLEAPP intégré à Autopsy) n'est pas une source indépendante."),
     ]
 
     findings_blocks: list[Block] = [Paragraph(
         "Pour chaque constat, les faits matériellement observés sont présentés séparément de l'interprétation de "
         "l'examinateur. Chaque fait renvoie à un artefact, lui-même rattaché à un élément de preuve haché.",
         "small")]
-    for n, f in enumerate(doc["findings"], start=1):
+    for n, f in enumerate(c.findings, start=1):
         findings_blocks += [
             Subheading(f"Constat n° {n} — {f['title']}"),
             KeyValue([("Référence", f["finding_id"]), ("Fiabilité", _corroboration_line(c, f)),
@@ -613,7 +608,7 @@ def _judiciaire(c: _Ctx) -> list[Section]:
             Signature([e["name"] + (f" — {e['role']}" if e.get("role") else "") for e in case["examiners"]]
                       + ["Fait à ____________________, le ____ / ____ / ________", "Signature :"]),
         ]),
-        Section("Annexe A — Détails techniques des exécutions d'outils", [_tool_runs_table(doc, fmt)], new_page=True),
+        Section("Annexe A — Détails techniques des exécutions d'outils", [_tool_runs_table(doc, fmt, c.case_root)], new_page=True),
         Section("Annexe B — Artefacts", [
             Subheading("Artefacts cités et empreintes de contenu"),
             Table(["Artefact", "Catégorie", "Contenu", "Empreinte du contenu (SHA-256)"], cited_rows,

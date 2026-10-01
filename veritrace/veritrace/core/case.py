@@ -52,7 +52,7 @@ def empty_document(*, case_id: str, title: str, auth: AuthorizationRecord, organ
                    report_type: str = "judiciaire", display_timezone: str = "UTC") -> dict[str, Any]:
     now = utc_now_iso()
     return {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "case": {
             "case_id": case_id,
             "title": title,

@@ -34,29 +34,17 @@ def _fake_hash(label: str) -> str:
 def _artifact(aid: str, category: str, ts: str | None, tool: dict, run_id: str, evidence_id: str,
               data: dict, file_path: str | None = None, record_ref: str | None = None,
               tags: list[str] | None = None) -> dict[str, Any]:
-    return {
-        "artifact_id": aid,
-        "category": category,
-        "timestamp": ts,
-        "source": {"tool": tool, "run_id": run_id, "evidence_id": evidence_id,
-                   "file_path": file_path, "record_ref": record_ref},
-        "data": data,
-        "content_sha256": content_hash(category, data),
-        "corroboration": {"status": "single_source", "sources": [{"tool": tool["name"], "artifact_id": aid}]},
-        "tags": tags or [],
-    }
+    from veritrace.parsing.base import make_artifact
+
+    return make_artifact(artifact_id=aid, category=category, timestamp=ts, tool=tool, run_id=run_id,
+                         evidence_id=evidence_id, data=data, file_path=file_path, record_ref=record_ref, tags=tags)
 
 
 def _corroborate(arts: list[dict]) -> None:
-    """Marque comme corroborés les artefacts de même content_sha256 issus d'outils distincts."""
-    groups: dict[str, list[dict]] = {}
-    for a in arts:
-        groups.setdefault(a["content_sha256"], []).append(a)
-    for group in groups.values():
-        sources = [{"tool": a["source"]["tool"]["name"], "artifact_id": a["artifact_id"]} for a in group]
-        if len({s["tool"] for s in sources}) >= 2:
-            for a in group:
-                a["corroboration"] = {"status": "corroborated", "sources": sources}
+    """Même moteur de corroboration que les analyses réelles (correlation.engine)."""
+    from veritrace.correlation.engine import refresh_corroboration
+
+    refresh_corroboration(arts)
 
 
 def build_example() -> dict[str, Any]:
@@ -214,7 +202,7 @@ def build_example() -> dict[str, Any]:
 
     h1, h2, h3 = _fake_hash("backup.ab"), _fake_hash("dumpsys_package.txt"), _fake_hash("consentement.pdf")
     return {
-        "schema_version": "0.2.0",
+        "schema_version": "0.3.0",
         "case": {
             "case_id": "VT-2026-0042",
             "title": "Suspicion de logiciel espion — téléphone de la plaignante",

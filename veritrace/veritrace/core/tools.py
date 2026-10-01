@@ -6,8 +6,10 @@ dépendent consultent `ToolStatus.available` et consignent une exécution « ski
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 
 from veritrace.core.logging_setup import get_logger
@@ -41,21 +43,38 @@ TOOLS: dict[str, ToolSpec] = {
                     "Acquisition logique (backup, pull ciblé)"),
     "aleapp": ToolSpec("aleapp", "ALEAPP", ("aleapp", "aleapp.py"), ("--version",), "VERITRACE_ALEAPP",
                        "Parsing d'artefacts Android"),
-    "mvt": ToolSpec("mvt", "Mobile Verification Toolkit", ("mvt-android",), ("version",), "VERITRACE_MVT",
+    "mvt": ToolSpec("mvt", "Mobile Verification Toolkit", ("mvt-android",), ("--disable-update-check", "version"),
+                    "VERITRACE_MVT",
                     "Détection spyware/stalkerware via IOC"),
-    "autopsy": ToolSpec("autopsy", "Autopsy", ("autopsy", "autopsy64.exe", "autopsy.exe"), ("--version",),
-                        "VERITRACE_AUTOPSY", "Analyse complémentaire / ingestion"),
+    # Autopsy est une application graphique : pas de sonde de version (elle ouvrirait l'interface).
+    # Son absence n'empêche pas l'import d'un cas Autopsy exporté (lecture de autopsy.db).
+    "autopsy": ToolSpec("autopsy", "Autopsy", ("autopsy", "autopsy64.exe", "autopsy.exe"), (),
+                        "VERITRACE_AUTOPSY", "Ingest Android (import du cas possible sans l'application)"),
 }
 
 
 def _probe_version(path: str, args: tuple[str, ...]) -> str | None:
+    """Première ligne utile de `<outil> --version` (ou équivalent) ; None si illisible."""
+    cmd = [path, *args]
+    cwd = None
+    if path.endswith(".py"):  # ALEAPP lancé depuis ses sources
+        cmd = [os.environ.get("VERITRACE_ALEAPP_PYTHON") or sys.executable, *cmd]
+        cwd = os.path.dirname(path) or None
     try:
-        out = subprocess.run([path, *args], capture_output=True, text=True, timeout=15)
+        out = subprocess.run(cmd, capture_output=True, text=True, timeout=60, cwd=cwd)
     except (OSError, subprocess.TimeoutExpired) as exc:
         log.debug("Version de %s non lisible : %s", path, exc)
         return None
-    text = (out.stdout or out.stderr or "").strip()
-    return text.splitlines()[0][:200] if text else None
+    lines = [l.strip() for l in (out.stdout + "\n" + out.stderr).splitlines() if l.strip()]
+    for l in lines:  # MVT affiche une bannière puis « Version: x »
+        m = re.search(r"Version:\s*(\S+)", l)
+        if m:
+            return m.group(1)
+    for l in lines:
+        m = re.search(r"(\d+\.\d+(?:\.\d+)*)", l)
+        if m:
+            return m.group(1)
+    return lines[0][:200] if lines else None
 
 
 def detect(key: str) -> ToolStatus:
@@ -67,7 +86,7 @@ def detect(key: str) -> ToolStatus:
         msg = (f"{spec.label} introuvable (PATH ou ${spec.env_var}). "
                f"Fonction concernée désactivée : {spec.purpose}.")
         return ToolStatus(key, spec.label, False, None, None, spec.purpose, msg)
-    version = _probe_version(path, spec.version_args)
+    version = _probe_version(path, spec.version_args) if spec.version_args else None
     return ToolStatus(key, spec.label, True, path, version, spec.purpose, "OK")
 
 

@@ -1,5 +1,7 @@
-"""Parsing — wrappers ALEAPP, MVT, Autopsy et parseurs SQLite natifs.
+"""Parsing — wrappers ALEAPP, MVT et Autopsy à interface commune (voir base.py).
 
-Chaque wrapper hérite de `parsing.base.ToolWrapper` et ne produit que des objets du
-schéma normalisé. Implémentations : PROCHAINES ITÉRATIONS.
+- aleapp.py  : exécution / import d'ALEAPP, normalisation LAVA ou TSV ;
+- mvt.py     : exécution / import de MVT, IOC STIX2, détections → constats ;
+- autopsy.py : import du cas Autopsy (autopsy.db), module Android ;
+- runner.py  : preuve hachée → outil → fragment normalisé → fusion → corrélation.
 """

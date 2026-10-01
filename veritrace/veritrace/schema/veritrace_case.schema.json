@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://veritrace.local/schema/veritrace_case/0.2.0",
+  "$id": "https://veritrace.local/schema/veritrace_case/0.3.0",
   "title": "Veritrace — dossier d'affaire normalisé",
-  "description": "Contrat de données unique entre acquisition, parsing, corrélation et reporting. Les wrappers d'outils y écrivent ; les rapports ne lisent que lui. SCHÉMA PROVISOIRE v0.2 — à remplacer/aligner sur le schéma de référence fourni par le promoteur.",
+  "description": "Contrat de données unique entre acquisition, parsing, corrélation et reporting. Les wrappers d'outils y écrivent ; les rapports ne lisent que lui. SCHÉMA PROVISOIRE v0.3 — à remplacer/aligner sur le schéma de référence fourni par le promoteur.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,7 +21,7 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "pattern": "^0\\.2\\.\\d+$"
+      "pattern": "^0\\.3\\.\\d+$"
     },
     "case": {
       "$ref": "#/$defs/case"
@@ -128,6 +128,13 @@
             "string",
             "null"
           ]
+        },
+        "engine": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Moteur d'analyse réellement à l'origine de la donnée (ex. Autopsy exécutant son module aLEAPP → 'ALEAPP'). La corroboration exige au moins deux moteurs distincts. Par défaut : le nom de l'outil."
         }
       }
     },
@@ -478,7 +485,8 @@
             "archive",
             "tool_output",
             "ioc_set",
-            "document"
+            "document",
+            "extraction"
           ]
         },
         "local_path": {
@@ -607,6 +615,24 @@
         "artifacts_produced": {
           "type": "integer",
           "minimum": 0
+        },
+        "output_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Empreinte de la sortie brute de l'outil (fichier ou arborescence)."
+        },
+        "tool_mode": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Mode d'intégration : 'executed' (lancé par Veritrace) ou 'imported' (sortie existante importée)."
         }
       }
     },
@@ -620,6 +646,7 @@
         "source",
         "data",
         "content_sha256",
+        "fact_sha256",
         "corroboration"
       ],
       "properties": {
@@ -717,6 +744,9 @@
                   },
                   "artifact_id": {
                     "$ref": "#/$defs/id"
+                  },
+                  "engine": {
+                    "type": "string"
                   }
                 }
               }
@@ -728,6 +758,10 @@
           "items": {
             "type": "string"
           }
+        },
+        "fact_sha256": {
+          "$ref": "#/$defs/sha256",
+          "description": "Empreinte du FAIT (attributs identifiants, voir schema/facts.py) — clé de dédoublonnage et de corroboration."
         }
       },
       "allOf": [

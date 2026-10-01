@@ -70,7 +70,7 @@ def test_content_hash_mismatch(example_doc):
 def test_corroborated_requires_two_tools(example_doc):
     a = example_doc["artifacts"][2]
     a["corroboration"]["status"] = "corroborated"
-    assert any("deux outils" in m for m in _messages(validate(example_doc)))
+    assert any("deux moteurs" in m for m in _messages(validate(example_doc)))
 
 
 @pytest.mark.parametrize("ts", ["2026-13-01T00:00:00Z", "2026-09-02 19:44:05", "2026-09-02T19:44:05"])

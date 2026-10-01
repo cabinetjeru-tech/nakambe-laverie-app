@@ -1,0 +1,34 @@
+[
+    {
+        "name": "com.sys.monitor.service",
+        "files": [
+            {
+                "path": "/data/app/~~x/com.sys.monitor.service-1/base.apk",
+                "local_name": "",
+                "md5": "",
+                "sha1": "",
+                "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "sha512": "",
+                "error": "",
+                "verified_certificate": false,
+                "certificate": null,
+                "certificate_error": "",
+                "trusted_certificate": false
+            }
+        ],
+        "installer": "null",
+        "uid": 10245,
+        "disabled": false,
+        "system": false,
+        "third_party": true
+    },
+    {
+        "name": "com.whatsapp",
+        "files": [],
+        "installer": "com.android.vending",
+        "uid": 10150,
+        "disabled": false,
+        "system": false,
+        "third_party": true
+    }
+]

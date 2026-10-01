@@ -35,3 +35,32 @@ def canonical_json(obj: Any) -> str:
 
 def sha256_json(obj: Any) -> str:
     return sha256_bytes(canonical_json(obj).encode("utf-8"))
+
+
+def tree_manifest(root: str | Path) -> list[tuple[str, str, int]]:
+    """(chemin relatif POSIX, sha256, taille) de chaque fichier d'une arborescence, trié."""
+    root = Path(root)
+    out = []
+    for p in sorted(root.rglob("*")):
+        if p.is_file() and not p.is_symlink():
+            out.append((p.relative_to(root).as_posix(), sha256_file(p), p.stat().st_size))
+    return out
+
+
+def manifest_text(manifest: list[tuple[str, str, int]]) -> str:
+    """Format compatible `sha256sum -c` (deux espaces entre empreinte et chemin)."""
+    return "".join(f"{h}  {rel}\n" for rel, h, _ in manifest)
+
+
+def sha256_tree(root: str | Path) -> str:
+    """Empreinte d'un dossier = SHA-256 de son manifeste `sha256sum` (chemins triés).
+
+    Vérifiable indépendamment : `sha256sum -c manifeste` puis SHA-256 du manifeste.
+    """
+    return sha256_bytes(manifest_text(tree_manifest(root)).encode("utf-8"))
+
+
+def sha256_path(path: str | Path) -> str:
+    """SHA-256 d'un fichier, ou empreinte d'arborescence pour un dossier."""
+    path = Path(path)
+    return sha256_tree(path) if path.is_dir() else sha256_file(path)

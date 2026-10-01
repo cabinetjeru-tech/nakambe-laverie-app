@@ -27,7 +27,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from jsonschema import Draft202012Validator
 
-from veritrace.core.hashing import sha256_file, sha256_json
+from veritrace.core.hashing import sha256_file, sha256_json, sha256_path
+from veritrace.schema.facts import fact_hash
 from veritrace.core.timeutil import parse_iso
 
 SCHEMA_PATH = Path(__file__).with_name("veritrace_case.schema.json")
@@ -88,6 +89,12 @@ def _fmt_path(parts: Iterable[Any]) -> str:
     for p in parts:
         out += f"[{p}]" if isinstance(p, int) else (f".{p}" if out else str(p))
     return out
+
+
+def artifact_engine(art: dict[str, Any]) -> str:
+    """Moteur d'analyse d'un artefact (Autopsy+aLEAPP = ALEAPP : pas une source indépendante)."""
+    tool = (art.get("source") or {}).get("tool") or {}
+    return tool.get("engine") or tool.get("name") or "?"
 
 
 def content_hash(category: str, data: dict[str, Any]) -> str:
@@ -217,10 +224,10 @@ def _semantic_checks(doc: dict, report: ValidationReport, case_root: Path | None
             report.error(p, "aucun événement de custody « collected » pour cette preuve")
         if case_root is not None and ev.get("local_path"):
             f = (case_root / ev["local_path"]).resolve()
-            if not f.is_file():
+            if not f.exists():
                 report.error(f"{p}.local_path", f"fichier introuvable : {f}")
-            elif sha256_file(f) != ev.get("sha256"):
-                report.error(f"{p}.sha256", f"le fichier sur disque ne correspond plus à l'empreinte : {f}")
+            elif sha256_path(f) != ev.get("sha256"):
+                report.error(f"{p}.sha256", f"le contenu sur disque ne correspond plus à l'empreinte : {f}")
 
     # Exécutions d'outils
     for i, r in enumerate(doc["tool_runs"]):
@@ -246,17 +253,25 @@ def _semantic_checks(doc: dict, report: ValidationReport, case_root: Path | None
             expected = content_hash(art["category"], art["data"])
             if art.get("content_sha256") != expected:
                 report.error(f"{p}.content_sha256", f"ne correspond pas aux données (attendu {expected})")
+        if isinstance(art.get("data"), dict) and isinstance(art.get("category"), str):
+            expected_fact = fact_hash(art["category"], art["data"], art.get("timestamp"))
+            if art.get("fact_sha256") != expected_fact:
+                report.error(f"{p}.fact_sha256", f"ne correspond pas au fait (attendu {expected_fact})")
         corr = art.get("corroboration") or {}
-        sources = corr.get("sources") or []
-        tools = {s.get("tool") for s in sources if isinstance(s, dict)}
+        sources = [s for s in corr.get("sources") or [] if isinstance(s, dict)]
+        engines = set()
         for j, s in enumerate(sources):
-            if isinstance(s, dict):
-                _check_ref(s.get("artifact_id"), artifacts, f"{p}.corroboration.sources[{j}].artifact_id",
-                           "artifacts", report)
-        if corr.get("status") == "corroborated" and len(tools) < 2:
-            report.error(f"{p}.corroboration", "« corroborated » exige au moins deux outils distincts")
-        if corr.get("status") == "single_source" and len(tools) > 1:
-            report.error(f"{p}.corroboration", "plusieurs outils listés mais statut « single_source »")
+            _check_ref(s.get("artifact_id"), artifacts, f"{p}.corroboration.sources[{j}].artifact_id",
+                       "artifacts", report)
+            other = artifacts.get(s.get("artifact_id"))
+            engines.add(s.get("engine") or (other and artifact_engine(other)) or s.get("tool"))
+            if other and other.get("fact_sha256") != art.get("fact_sha256"):
+                report.error(f"{p}.corroboration.sources[{j}]",
+                             f"l'artefact {s.get('artifact_id')} ne décrit pas le même fait (fact_sha256 différent)")
+        if corr.get("status") == "corroborated" and len(engines) < 2:
+            report.error(f"{p}.corroboration", "« corroborated » exige au moins deux moteurs d'analyse distincts")
+        if corr.get("status") == "single_source" and len(engines) > 1:
+            report.error(f"{p}.corroboration", "plusieurs moteurs listés mais statut « single_source »")
 
     # Timeline
     for i, t in enumerate(doc["timeline"]):

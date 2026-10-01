@@ -1,0 +1,4 @@
+﻿User (UID)	Timestamp / Last Time Active	Usage Type	Time Active (ms)	Time Active (sec)	Last Time Service Used	Total Time Service Used (ms)	Last Time Visible	Total Time Visible (ms)	Last Time Component Used	App Launch Count	Package	Event Type	Class	Event Flags (as stored)	Shortcut ID	Standby Bucket (high 16 bits)	Standby Reason (low 16 bits)	Notification Channel	Instance ID	Task Root Package	Task Root Class	Locus ID	Interaction Category	Interaction Action	Interval
+0	2026-09-02 19:40:03+00:00	packages	3000	3							com.sys.monitor.service														daily
+0	2026-09-02 19:40:03+00:00	event-log									com.sys.monitor.service	ACTIVITY_PAUSED	com.sys.monitor.service.MainActivity												daily
+0	2026-09-02 19:40:00+00:00	event-log									com.sys.monitor.service	ACTIVITY_RESUMED	com.sys.monitor.service.MainActivity												daily
