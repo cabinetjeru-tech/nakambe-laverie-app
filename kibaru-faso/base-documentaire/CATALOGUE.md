@@ -5,8 +5,8 @@
 
 ## Synthèse
 
-- 28 ressource(s) au registre maître ; 0 intégrée(s) dont 0 consultable(s) et 0 dans l'historique ; 28 NON ENCORE INTÉGRÉE(S).
-- Par statut : ACTIF 0 · PROVISOIRE 0 · À VÉRIFIER 28 · REMPLACÉ 0 · ARCHIVE 0
+- 41 ressource(s) au registre maître ; 0 intégrée(s) dont 0 consultable(s) et 0 dans l'historique ; 41 NON ENCORE INTÉGRÉE(S).
+- Par statut : ACTIF 0 · PROVISOIRE 0 · À VÉRIFIER 41 · REMPLACÉ 0 · ARCHIVE 0
 
 ## Tableau maître
 
@@ -40,6 +40,19 @@
 | BF-6E-MATH-001 | 6e | Mathématiques | Guide pédagogique | Guide Mathématiques 6e | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
 | BF-6E-MATH-002 | 6e | Mathématiques | Curriculum | Curricula de mathématiques — 6e (réforme curriculaire) | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
 | BF-6E-SVT-001 | 6e | SVT | Guide pédagogique | Guide SVT 6e | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-BLG1-GEN-001 | Bilingue 1re année | toutes | Curriculum | Curricula de l'éducation de base — primaire bilingue, 1re année (formule Tin Tua) | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
+| BF-BLG2-GEO-001 | Bilingue 2e année-Bilingue 3e année | Géographie | Guide pédagogique | Guide de l'enseignant — Géographie 2e et 3e années bilingues | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-BLG2-MATH-001 | Bilingue 2e année-Bilingue 3e année | Mathématiques | Guide pédagogique | Guide de l'enseignant — Mathématiques 2e et 3e années bilingues | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CE1-ECM-001 | CE1 | Éducation civique et morale | Guide pédagogique | Guide de l'enseignant — Éducation civique et morale CE1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CE1-FR-001 | CE1 | Français | Guide pédagogique | Guide de l'enseignant — Français CE1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CE1-GEN-001 | CE1-CE2 | toutes | Curriculum | Curricula de l'éducation de base — primaire classique, sous-cycle CE | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-APA-001 | CP1-CP2-CE1 | Activités pratiques de production | Guide pédagogique | Guide de l'enseignant — Activités pratiques de production | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-ECM-001 | CP1 | Éducation civique et morale | Guide pédagogique | Guide de l'enseignant — Éducation civique et morale CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-EPS-001 | CP1-CP2 | Activités physiques éducatives | Guide pédagogique | Guide de l'enseignant — Activités physiques éducatives CP1-CP2 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-FR-001 | CP1 | Français | Guide pédagogique | Guide de l'enseignant — Français CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-MATH-001 | CP1 | Mathématiques | Guide pédagogique | Guide de l'enseignant — Mathématiques CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-CP1-SCI-001 | CP1 | Exercices sensoriels | Guide pédagogique | Guide de l'enseignant — Exercices sensoriels CP1 | À vérifier | À vérifier | À VÉRIFIER | Site du ministère de l'Éducation nationale (espace enseignant) | Haute | NON ENCORE INTÉGRÉ |
+| BF-GS-GEN-001 | Grande section | toutes | Curriculum | Curricula de l'éducation de base — préscolaire, grande section | À vérifier | À vérifier | À VÉRIFIER | Faso e-education — espace enseignants, réforme curriculaire | Haute | NON ENCORE INTÉGRÉ |
 
 ## Couverture par classe
 
@@ -47,6 +60,20 @@ Nombre de ressources inscrites au registre (dont intégrées). « NON ENCORE INT
 
 | Classe | Programmes / curricula | Guides | Manuels | Référentiels | Progressions | Évaluations / examens | Textes officiels |
 |---|---|---|---|---|---|---|---|
+| Petite section | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Moyenne section | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Grande section | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CP1 | NON ENCORE INTÉGRÉ | 6 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CP2 | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CE1 | 1 (0 intégrée) | 3 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CE2 | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CM1 | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| CM2 | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 1re année | 1 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 2e année | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 3e année | NON ENCORE INTÉGRÉ | 2 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 4e année | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
+| Bilingue 5e année | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | 6e | 2 (0 intégrée) | 7 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | 5e | 3 (0 intégrée) | 7 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
 | 4e | 2 (0 intégrée) | 9 (0 intégrée) | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ | NON ENCORE INTÉGRÉ |
@@ -91,6 +118,19 @@ _Aucune ressource intégrée pour le moment._
 | BF-4E-PHYS-002 | Curricula de sciences physiques — 4e et 3e (réforme curriculaire) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/POST_PRIMAIRE/4E/PHYSIQUE_CHIMIE/` |
 | BF-6E-HIST-002 | Curricula d'histoire-géographie — 6e et 5e (réforme curriculaire) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/POST_PRIMAIRE/6E/HISTOIRE/` |
 | BF-5E-EPS-002 | Curricula d'EPS — 5e (réforme curriculaire) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/POST_PRIMAIRE/5E/EPS/` |
+| BF-GS-GEN-001 | Curricula de l'éducation de base — préscolaire, grande section | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRESCOLAIRE/GS/MATIERE/` |
+| BF-CE1-GEN-001 | Curricula de l'éducation de base — primaire classique, sous-cycle CE | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRIMAIRE/CE1/MATIERE/` |
+| BF-BLG1-GEN-001 | Curricula de l'éducation de base — primaire bilingue, 1re année (formule Tin Tua) | `01_PROGRAMMES_ET_CURRICULA/BURKINA_FASO/PRIMAIRE_BILINGUE/BLG1/MATIERE/` |
+| BF-CP1-FR-001 | Guide de l'enseignant — Français CP1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/FRANCAIS/` |
+| BF-CE1-FR-001 | Guide de l'enseignant — Français CE1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CE1/FRANCAIS/` |
+| BF-CP1-MATH-001 | Guide de l'enseignant — Mathématiques CP1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/MATHEMATIQUES/` |
+| BF-CP1-ECM-001 | Guide de l'enseignant — Éducation civique et morale CP1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/EDUCATION_CIVIQUE_ET_MORALE/` |
+| BF-CE1-ECM-001 | Guide de l'enseignant — Éducation civique et morale CE1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CE1/EDUCATION_CIVIQUE_ET_MORALE/` |
+| BF-CP1-SCI-001 | Guide de l'enseignant — Exercices sensoriels CP1 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/SCIENCES_OBSERVATION/` |
+| BF-CP1-EPS-001 | Guide de l'enseignant — Activités physiques éducatives CP1-CP2 | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/EPS/` |
+| BF-CP1-APA-001 | Guide de l'enseignant — Activités pratiques de production | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE/CP1/ACTIVITES_PRATIQUES/` |
+| BF-BLG2-GEO-001 | Guide de l'enseignant — Géographie 2e et 3e années bilingues | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE_BILINGUE/BLG2/GEOGRAPHIE/` |
+| BF-BLG2-MATH-001 | Guide de l'enseignant — Mathématiques 2e et 3e années bilingues | `02_GUIDES_PEDAGOGIQUES/BURKINA_FASO/PRIMAIRE_BILINGUE/BLG2/MATHEMATIQUES/` |
 
 ## Historique des versions
 

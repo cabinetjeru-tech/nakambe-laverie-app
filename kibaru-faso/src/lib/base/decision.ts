@@ -69,10 +69,15 @@ const CLASS_WORDS: [RegExp, string][] = [
   [/^(tle|terminale)$/, "Terminale"],
 ];
 
-/** Classe citée dans la demande (« en 6e », « de 4ème », « classe de Terminale »…), sans confondre « 3e trimestre ». */
+/** Classe citée dans la demande (« en 6e », « de 4ème », « classe de Terminale », « au CM2 »…), sans confondre « 3e trimestre ». */
 export function classeInMessage(message: string): string | undefined {
   const n = normalize(message);
-  const m = n.match(/(?:\b(?:en|de|des|classe(?:s)? de|niveau|eleves de)\s+|\bclasse\s*:\s*|^\s*)(6e|6eme|sixieme|5e|5eme|cinquieme|4e|4eme|quatrieme|3e|3eme|troisieme|2nde|2de|seconde|1ere|1re|premiere|tle|terminale)\b(?!\s*(trimestre|partie|exercice|question|etape|semaine|heure|seance))/);
+  // Primaire bilingue : « 2e année bilingue », « classe bilingue de 3e année »…
+  const b = n.match(/\b([1-5])\s*(?:e|ere|re|eme)?\s*annee\s*(?:du\s+primaire\s+)?(?:bilingue|blg)\b|\bbilingue\s*(?:de\s+)?([1-5])\s*(?:e|ere|re|eme)?\s*annee\b/);
+  if (b) return canonicalClasse(`bilingue ${b[1] ?? b[2]}`);
+  const p = n.match(/\b(cp|ce|cm)\s?([12])\b|\b(petite|moyenne|grande) section\b/);
+  if (p) return canonicalClasse(p[3] ? `${p[3]} section` : `${p[1]}${p[2]}`);
+  const m = n.match(/(?:\b(?:en|de|des|classe(?:s)? de|niveau|eleves de)\s+|\bclasse\s*:\s*|^\s*)(6e|6eme|sixieme|5e|5eme|cinquieme|4e|4eme|quatrieme|3e|3eme|troisieme|2nde|2de|seconde|1ere|1re|premiere|tle|terminale)\b(?!\s*(trimestre|partie|exercice|question|etape|semaine|heure|seance|annee))/);
   if (!m) return undefined;
   return CLASS_WORDS.find(([re]) => re.test(m[1]!))?.[1];
 }
@@ -89,7 +94,14 @@ const SUBJECT_WORDS: [RegExp, string][] = [
   [/\ballemand\b/, "Allemand"],
   [/\bespagnol\b/, "Espagnol"],
   [/\bphilosophie\b/, "Philosophie"],
-  [/\beps\b|\beducation physique\b/, "EPS"],
+  [/\beps\b|\beducation physique\b|\bactivites physiques\b/, "EPS"],
+  // Primaire et préscolaire
+  [/\b(lecture|ecriture|expression orale|expression ecrite|redaction|dictee|orthographe|grammaire|conjugaison|vocabulaire|langage)\b/, "Français"],
+  [/\b(calcul|numeration)\b/, "Mathématiques"],
+  [/\b(sciences d'observation|exercices sensoriels|eveil scientifique)\b/, "Sciences d'observation"],
+  [/\b(education civique|civisme|morale|ecm)\b/, "Éducation civique et morale"],
+  [/\b(langue nationale|moore|dioula|jula|fulfulde|gulmancema|bissa|lyele|dagara|nuni)\b/, "Langue nationale"],
+  [/\b(activites pratiques|production|dessin|chant|musique|arts plastiques)\b/, "Activités pratiques et artistiques"],
 ];
 
 export function matiereInMessage(message: string): string | undefined {
@@ -215,14 +227,14 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
   else if (missing.length === 1 && missing[0] === "volume") question = askVolume;
   else if (main.length > 1) {
     const asks = [
-      missing.includes("classe") && "quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale)",
+      missing.includes("classe") && "quelle classe (du préscolaire à la Terminale : CP1, CM2, 6e, Terminale…)",
       missing.includes("matiere") && (fromTheme ? `quelle matière (${fromTheme} ou une autre)` : "quelle matière"),
       missing.includes("notions") && "sur quel(s) chapitre(s) ou notion(s)",
     ].filter(Boolean) as string[];
     question = `Pour ${asks.slice(0, -1).join(", ")} et ${asks[asks.length - 1]} souhaitez-vous ${cette} ${besoin} ?`;
   } else if (main.length === 0) {
     // rien d'autre
-  } else if (missing.includes("classe")) question = `Pour quelle classe souhaitez-vous ${cette} ${besoin} : 6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale ?`;
+  } else if (missing.includes("classe")) question = `Pour quelle classe souhaitez-vous ${cette} ${besoin} (du préscolaire à la Terminale : CP1, CM2, 6e, Terminale…) ?`;
   else if (missing.includes("notions")) question = `Sur quel(s) chapitre(s) ou notion(s) doit porter ${cette} ${besoin} ?`;
   else if (missing.includes("matiere"))
     question = fromTheme

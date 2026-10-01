@@ -1,3 +1,4 @@
+import { cycleDe } from "./search";
 import type { TeacherContext } from "./conversation";
 import type { Category } from "./documents";
 
@@ -248,3 +249,42 @@ export const DISCIPLINES = [
   "Informatique",
   "Économie",
 ];
+
+/** Disciplines et domaines du primaire (classique et bilingue). */
+export const DISCIPLINES_PRIMAIRE = [
+  "Français (lecture)",
+  "Français (expression orale)",
+  "Français (écriture et orthographe)",
+  "Mathématiques",
+  "Sciences d'observation",
+  "Histoire",
+  "Géographie",
+  "Éducation civique et morale",
+  "Activités physiques éducatives",
+  "Activités pratiques de production",
+  "Dessin",
+  "Chant",
+];
+
+/** Domaines d'activités du préscolaire. */
+export const DISCIPLINES_PRESCOLAIRE = [
+  "Langage",
+  "Pré-lecture",
+  "Pré-écriture et graphisme",
+  "Activités mathématiques",
+  "Exercices sensoriels",
+  "Éveil scientifique",
+  "Activités physiques",
+  "Activités artistiques (dessin, chant, comptines)",
+  "Vie pratique",
+];
+
+/** Suggestions de disciplines adaptées au cycle de la classe (toutes si la classe est inconnue). */
+export function disciplinesPour(classe?: string | null): string[] {
+  const cycle = cycleDe(classe)?.code;
+  if (cycle === "PRESCOLAIRE") return DISCIPLINES_PRESCOLAIRE;
+  if (cycle === "PRIMAIRE") return DISCIPLINES_PRIMAIRE;
+  if (cycle === "PRIMAIRE_BILINGUE") return ["Langue nationale", ...DISCIPLINES_PRIMAIRE];
+  if (cycle) return DISCIPLINES;
+  return [...new Set([...DISCIPLINES, ...DISCIPLINES_PRIMAIRE, "Langue nationale"])];
+}

@@ -27,7 +27,7 @@ const SECTIONS: [string, string, React.ReactNode][] = [
     "2. Le service",
     <>
       <p>
-        PÉDAGOGUE.IA aide les enseignants du secondaire à préparer leurs cours : fiches pédagogiques, exercices, devoirs avec corrigés et barèmes,
+        PÉDAGOGUE.IA aide les enseignants, du préscolaire au secondaire, à préparer leurs cours : fiches pédagogiques, exercices, devoirs avec corrigés et barèmes,
         remédiation, progressions. Les contenus sont produits par une intelligence artificielle à partir des demandes de l&apos;enseignant.
       </p>
       <p>

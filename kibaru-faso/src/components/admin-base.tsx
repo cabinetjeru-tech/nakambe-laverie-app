@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { casesCouvertes, CLASSES_COUVERTURE, MATIERES_COUVERTURE, type Couverture } from "@/lib/base/couverture";
+import { casesCouvertes, CYCLES_COUVERTURE, type Couverture } from "@/lib/base/couverture";
 import { prochainId } from "@/lib/base/en-ligne";
 import { CLASS_INFO, DOC_TYPES, STATUT_LABELS, SUBJECTS, type Statut } from "@/lib/base/structure";
 import { hoteOfficiel } from "@/lib/base/sources-officielles";
@@ -360,22 +360,25 @@ export function BaseDocumentaire() {
           </label>
           <fieldset className="text-xs font-medium text-muted sm:col-span-2">
             <legend>Classes concernées (aucune = toutes)</legend>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {CLASS_INFO.map((c) => {
-                const on = f.classes.includes(c.classe);
-                return (
-                  <button
-                    key={c.classe}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => setF({ ...f, classes: on ? f.classes.filter((x) => x !== c.classe) : [...f.classes, c.classe] })}
-                    className={`rounded-full border px-3 py-1 text-xs ${on ? "border-faso bg-faso text-white" : "border-line text-ink"}`}
-                  >
-                    {c.classe}
-                  </button>
-                );
-              })}
-            </div>
+            {[...new Set(CLASS_INFO.map((c) => c.niveau))].map((niveau) => (
+              <div key={niveau} className="mt-1 flex flex-wrap items-center gap-1.5">
+                <span className="w-full text-[11px] uppercase tracking-wide sm:w-28">{niveau}</span>
+                {CLASS_INFO.filter((c) => c.niveau === niveau).map((c) => {
+                  const on = f.classes.includes(c.classe);
+                  return (
+                    <button
+                      key={c.classe}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setF({ ...f, classes: on ? f.classes.filter((x) => x !== c.classe) : [...f.classes, c.classe] })}
+                      className={`rounded-full border px-3 py-1 text-xs ${on ? "border-faso bg-faso text-white" : "border-line text-ink"}`}
+                    >
+                      {c.classe}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
           </fieldset>
           <label className="text-xs font-medium text-muted">
             Statut
@@ -624,36 +627,39 @@ function TableauCouverture({ c }: { c: Couverture }) {
         <strong className="text-faso-dark">G</strong> guide pédagogique · <strong className="text-faso-dark">P</strong> programme ou curriculum ·{" "}
         <span className="text-[#7a5a00]">○</span> inscrit au registre, à déposer · case vide : aucun document, l'assistant répond alors sans source officielle.
       </p>
-      <div className="mt-2 overflow-x-auto">
-        <table className="w-full border-collapse text-center text-xs">
-          <thead>
-            <tr>
-              <th className="p-1 text-left">Classe</th>
-              {MATIERES_COUVERTURE.map((m) => (
-                <th key={m.code} className="p-1 font-semibold">
-                  {m.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {CLASSES_COUVERTURE.map((cl) => (
-              <tr key={cl} className="border-t border-line">
-                <th className="p-1 text-left font-semibold">{cl}</th>
-                {MATIERES_COUVERTURE.map((m) => {
-                  const k = c[cl]?.[m.code];
-                  const plein = k && (k.guide || k.programme);
-                  return (
-                    <td key={m.code} className={`p-1 ${plein ? "bg-faso-50 font-bold text-faso-dark" : k?.attendu ? "bg-or-50 text-[#7a5a00]" : "text-muted"}`}>
-                      {plein ? [k.guide && "G", k.programme && "P"].filter(Boolean).join("+") : k?.attendu ? "○" : "·"}
-                    </td>
-                  );
-                })}
+      {CYCLES_COUVERTURE.map((cy) => (
+        <div key={cy.code} className="mt-3 overflow-x-auto">
+          <h3 className="text-xs font-bold uppercase tracking-wide text-muted">{cy.label}</h3>
+          <table className="mt-1 w-full border-collapse text-center text-xs">
+            <thead>
+              <tr>
+                <th className="p-1 text-left">Classe</th>
+                {cy.matieres.map((m) => (
+                  <th key={m.code} className="p-1 font-semibold">
+                    {m.label}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {cy.classes.map((cl) => (
+                <tr key={cl} className="border-t border-line">
+                  <th className="whitespace-nowrap p-1 text-left font-semibold">{cl}</th>
+                  {cy.matieres.map((m) => {
+                    const k = c[cl]?.[m.code];
+                    const plein = k && (k.guide || k.programme);
+                    return (
+                      <td key={m.code} className={`p-1 ${plein ? "bg-faso-50 font-bold text-faso-dark" : k?.attendu ? "bg-or-50 text-[#7a5a00]" : "text-muted"}`}>
+                        {plein ? [k.guide && "G", k.programme && "P"].filter(Boolean).join("+") : k?.attendu ? "○" : "·"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
     </section>
   );
 }

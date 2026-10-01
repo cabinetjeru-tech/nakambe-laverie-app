@@ -72,6 +72,23 @@ export function parseStatut(v: string | undefined): Statut | undefined {
 }
 
 const CLASSES: Record<string, string> = {
+  PS: "Petite section",
+  PETITE_SECTION: "Petite section",
+  MS: "Moyenne section",
+  MOYENNE_SECTION: "Moyenne section",
+  GS: "Grande section",
+  GRANDE_SECTION: "Grande section",
+  CP1: "CP1",
+  CP2: "CP2",
+  CE1: "CE1",
+  CE2: "CE2",
+  CM1: "CM1",
+  CM2: "CM2",
+  BLG1: "Bilingue 1re année",
+  BLG2: "Bilingue 2e année",
+  BLG3: "Bilingue 3e année",
+  BLG4: "Bilingue 4e année",
+  BLG5: "Bilingue 5e année",
   "6E": "6e",
   "5E": "5e",
   "4E": "4e",
@@ -88,6 +105,7 @@ const CLASSES: Record<string, string> = {
 const ALL_CLASSES = /^(TOUTES?_(LES_)?CLASSES|TOUS_NIVEAUX|TOUTES)$/;
 
 const NIVEAUX: Record<string, string> = {
+  PRIMAIRE_BILINGUE: "Primaire bilingue",
   POST_PRIMAIRE: "Post-primaire",
   SECONDAIRE: "Secondaire",
   PRIMAIRE: "Primaire",
@@ -162,7 +180,7 @@ export function parsePath(rel: string): PathInfo {
     const n = norm(classe);
     if (ALL_CLASSES.test(n)) info.classes = [];
     else if (CLASSES[n]) info.classes = [CLASSES[n]!];
-    else info.problems.push(`classe « ${classe} » non reconnue (attendu : 6E, 5E, 4E, 3E, 2NDE, 1ERE, TLE ou TOUTES_CLASSES)`);
+    else info.problems.push(`classe « ${classe} » non reconnue (attendu : PS, MS, GS, CP1 à CM2, BLG1 à BLG5, 6E, 5E, 4E, 3E, 2NDE, 1ERE, TLE ou TOUTES_CLASSES)`);
   }
   if (matiere) {
     const n = norm(matiere);
@@ -251,6 +269,20 @@ export function categoryForType(t: string | undefined): CategoryCode {
 
 /** Classes dans l'ordre, avec leur code d'identifiant et leur niveau. */
 export const CLASS_INFO = [
+  { classe: "Petite section", code: "PS", dossier: "PS", niveau: "Préscolaire", niveauDossier: "PRESCOLAIRE" },
+  { classe: "Moyenne section", code: "MS", dossier: "MS", niveau: "Préscolaire", niveauDossier: "PRESCOLAIRE" },
+  { classe: "Grande section", code: "GS", dossier: "GS", niveau: "Préscolaire", niveauDossier: "PRESCOLAIRE" },
+  { classe: "CP1", code: "CP1", dossier: "CP1", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "CP2", code: "CP2", dossier: "CP2", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "CE1", code: "CE1", dossier: "CE1", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "CE2", code: "CE2", dossier: "CE2", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "CM1", code: "CM1", dossier: "CM1", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "CM2", code: "CM2", dossier: "CM2", niveau: "Primaire", niveauDossier: "PRIMAIRE" },
+  { classe: "Bilingue 1re année", code: "BLG1", dossier: "BLG1", niveau: "Primaire bilingue", niveauDossier: "PRIMAIRE_BILINGUE" },
+  { classe: "Bilingue 2e année", code: "BLG2", dossier: "BLG2", niveau: "Primaire bilingue", niveauDossier: "PRIMAIRE_BILINGUE" },
+  { classe: "Bilingue 3e année", code: "BLG3", dossier: "BLG3", niveau: "Primaire bilingue", niveauDossier: "PRIMAIRE_BILINGUE" },
+  { classe: "Bilingue 4e année", code: "BLG4", dossier: "BLG4", niveau: "Primaire bilingue", niveauDossier: "PRIMAIRE_BILINGUE" },
+  { classe: "Bilingue 5e année", code: "BLG5", dossier: "BLG5", niveau: "Primaire bilingue", niveauDossier: "PRIMAIRE_BILINGUE" },
   { classe: "6e", code: "6E", dossier: "6E", niveau: "Post-primaire", niveauDossier: "POST_PRIMAIRE" },
   { classe: "5e", code: "5E", dossier: "5E", niveau: "Post-primaire", niveauDossier: "POST_PRIMAIRE" },
   { classe: "4e", code: "4E", dossier: "4E", niveau: "Post-primaire", niveauDossier: "POST_PRIMAIRE" },
@@ -263,7 +295,12 @@ export const CLASS_INFO = [
 /** Codes matière des identifiants, avec les intitulés qu'ils recouvrent. */
 export const SUBJECTS = [
   { code: "MATH", label: "Mathématiques", dossier: "MATHEMATIQUES", re: /^(math|maths|mathematique)/ },
-  { code: "FR", label: "Français", dossier: "FRANCAIS", re: /^(fr|francais)$|^francais/ },
+  {
+    code: "FR",
+    label: "Français",
+    dossier: "FRANCAIS",
+    re: /^(fr|francais)$|^francais|^(lecture|ecriture|expression orale|expression ecrite|langage|orthographe|grammaire|conjugaison|vocabulaire|redaction|dictee)/,
+  },
   { code: "HIST", label: "Histoire", dossier: "HISTOIRE", re: /histoire/ },
   { code: "GEO", label: "Géographie", dossier: "GEOGRAPHIE", re: /^geo$|geographie/ },
   { code: "SVT", label: "Sciences de la Vie et de la Terre", dossier: "SVT", re: /^svt$|sciences? de la vie/ },
@@ -273,9 +310,12 @@ export const SUBJECTS = [
   { code: "ESP", label: "Espagnol", dossier: "ESPAGNOL", re: /^(esp|espagnol)/ },
   { code: "AR", label: "Arabe", dossier: "ARABE", re: /^(ar|arabe)$/ },
   { code: "PHILO", label: "Philosophie", dossier: "PHILOSOPHIE", re: /^philo/ },
-  { code: "EPS", label: "Éducation physique et sportive", dossier: "EPS", re: /^eps$|education physique/ },
+  { code: "EPS", label: "Éducation physique et sportive", dossier: "EPS", re: /^eps$|education physique|activites physiques|^ape$/ },
   { code: "ECM", label: "Éducation civique et morale", dossier: "EDUCATION_CIVIQUE_ET_MORALE", re: /^ecm$|civique/ },
   { code: "INFO", label: "Informatique", dossier: "INFORMATIQUE", re: /^info/ },
+  { code: "SCI", label: "Sciences d'observation", dossier: "SCIENCES_OBSERVATION", re: /sciences? d.observation|exercices? sensoriels?|eveil scientifique/ },
+  { code: "LN", label: "Langue nationale", dossier: "LANGUE_NATIONALE", re: /langues? nationales?|^(moore|dioula|jula|fulfulde|gulmancema|bissa|lyele|dagara|nuni|tin ?tua)$/ },
+  { code: "APA", label: "Activités pratiques et artistiques", dossier: "ACTIVITES_PRATIQUES", re: /activites? (pratiques|de production)|^production$|^(dessin|chant|musique)|arts? plastiques/ },
   { code: "ECO", label: "Économie", dossier: "ECONOMIE", re: /^eco(nomie)?$/ },
 ] as const;
 
@@ -296,4 +336,4 @@ export function subjectCodes(name: string): Set<string> {
 }
 
 /** Format recommandé des identifiants : BF-[CLASSE]-[MATIERE]-[NUMERO], ex. BF-6E-MATH-001. */
-export const ID_FORMAT = /^BF-(6E|5E|4E|3E|2NDE|1ERE|TERM)-([A-Z]+)-(\d{3})$/;
+export const ID_FORMAT = /^BF-(PS|MS|GS|CP1|CP2|CE1|CE2|CM1|CM2|BLG[1-5]|6E|5E|4E|3E|2NDE|1ERE|TERM)-([A-Z]+)-(\d{3})$/;

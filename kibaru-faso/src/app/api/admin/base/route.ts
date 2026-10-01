@@ -51,7 +51,7 @@ const texteCourt = (n: number) => z.string().trim().max(n).optional().transform(
 const champs = {
   titre: z.string().trim().min(3, "Titre trop court.").max(240),
   type: z.enum(Object.keys(DOC_TYPES) as [string, ...string[]]),
-  classes: z.array(z.string().max(20)).max(7),
+  classes: z.array(z.string().max(30)).max(24),
   disciplines: z.array(z.string().max(80)).max(6),
   organisme: texteCourt(200),
   annee: texteCourt(20),

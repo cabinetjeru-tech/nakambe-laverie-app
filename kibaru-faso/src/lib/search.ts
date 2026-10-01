@@ -5,8 +5,28 @@ import { CONSULTED, STATUT_LABELS, STATUT_WEIGHT, subjectCodes, typeLabel, type 
  * Fonctions pures (aucun accès disque), utilisables côté serveur et dans les tests.
  */
 
-export const CLASSES = ["6e", "5e", "4e", "3e", "2nde", "1ère", "Terminale"] as const;
-export type Classe = (typeof CLASSES)[number];
+/** Cycles du système éducatif burkinabè couverts par PÉDAGOGUE.IA, du préscolaire à la Terminale. */
+export const CYCLES = [
+  { code: "PRESCOLAIRE", label: "Préscolaire", classes: ["Petite section", "Moyenne section", "Grande section"] },
+  { code: "PRIMAIRE", label: "Primaire classique", classes: ["CP1", "CP2", "CE1", "CE2", "CM1", "CM2"] },
+  {
+    code: "PRIMAIRE_BILINGUE",
+    label: "Primaire bilingue",
+    classes: ["Bilingue 1re année", "Bilingue 2e année", "Bilingue 3e année", "Bilingue 4e année", "Bilingue 5e année"],
+  },
+  { code: "POST_PRIMAIRE", label: "Post-primaire", classes: ["6e", "5e", "4e", "3e"] },
+  { code: "SECONDAIRE", label: "Secondaire", classes: ["2nde", "1ère", "Terminale"] },
+] as const;
+export type Cycle = (typeof CYCLES)[number];
+export type Classe = Cycle["classes"][number];
+export const CLASSES: readonly Classe[] = CYCLES.flatMap((c) => c.classes);
+
+/** Cycle d'une classe (après normalisation), ou undefined pour une classe inconnue. */
+export function cycleDe(classe: string | null | undefined): Cycle | undefined {
+  if (!classe) return undefined;
+  const c = canonicalClasse(classe);
+  return CYCLES.find((cy) => (cy.classes as readonly string[]).includes(c));
+}
 
 export type RefOrigin = "bibliotheque" | "enseignant";
 
@@ -133,6 +153,16 @@ export function chunkText(text: string, size = 1400, overlap = 200): string[] {
 /** Normalise une classe saisie librement (« Tle », « terminale D », « 1ere »…) vers la liste officielle. */
 export function canonicalClasse(s: string): string {
   const n = normalize(s).replace(/\s+/g, "");
+  // Primaire bilingue : « 2e année bilingue », « Bilingue 3e année », « 1re A blg »… (avant les classes du post-primaire).
+  if (/bilingue|blg/.test(n)) {
+    const b = n.match(/([1-5])/);
+    if (b) return b[1] === "1" ? "Bilingue 1re année" : `Bilingue ${b[1]}e année`;
+  }
+  if (/^(petitesection|ps$)/.test(n)) return "Petite section";
+  if (/^(moyennesection|ms$)/.test(n)) return "Moyenne section";
+  if (/^(grandesection|gs$)/.test(n)) return "Grande section";
+  const p = n.match(/^(cp|ce|cm)([12])/);
+  if (p) return `${p[1]!.toUpperCase()}${p[2]}`;
   if (/^(tle|term|terminale)/.test(n)) return "Terminale";
   if (/^(1ere|1re|premiere|1e)/.test(n)) return "1ère";
   if (/^(2nde|2nd|2de|seconde)/.test(n)) return "2nde";

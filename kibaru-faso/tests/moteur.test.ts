@@ -39,7 +39,7 @@ describe("identification du contexte (sections 4 et 5)", () => {
   it("« Prépare-moi une leçon sur les fractions » : demande la classe, déduit la matière", () => {
     const p = identifyRequest("Prépare-moi une leçon sur les fractions", {});
     expect(p.missing).toEqual(["classe"]);
-    expect(p.question).toBe("Pour quelle classe souhaitez-vous cette préparation de cours : 6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale ?");
+    expect(p.question).toBe("Pour quelle classe souhaitez-vous cette préparation de cours (du préscolaire à la Terminale : CP1, CM2, 6e, Terminale…) ?");
     expect(p).toMatchObject({ matiere: "Mathématiques", origineMatiere: "theme" });
     expect(p.assumptions.some((a) => a.includes("durée non précisée"))).toBe(true);
   });
@@ -50,7 +50,7 @@ describe("identification du contexte (sections 4 et 5)", () => {
   it("demande classe et matière quand rien ne permet de les déduire", () => {
     const p = identifyRequest("Prépare un devoir", {});
     expect(p.missing).toEqual(["classe", "matiere", "notions"]);
-    expect(p.question).toBe("Pour quelle classe (6e, 5e, 4e, 3e, 2nde, 1ère ou Terminale), quelle matière et sur quel(s) chapitre(s) ou notion(s) souhaitez-vous ce devoir ?");
+    expect(p.question).toBe("Pour quelle classe (du préscolaire à la Terminale : CP1, CM2, 6e, Terminale…), quelle matière et sur quel(s) chapitre(s) ou notion(s) souhaitez-vous ce devoir ?");
   });
   it("une réponse courte complète la demande précédente ; le message le plus récent l'emporte", () => {
     const p = identifyConversation(["Prépare-moi une leçon sur les fractions.", "Classe : 6e."], {});

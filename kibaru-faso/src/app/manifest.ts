@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "PÉDAGOGUE.IA — L'intelligence au service de la pédagogie",
     short_name: "PÉDAGOGUE.IA",
-    description: "Assistant pédagogique pour les enseignants du secondaire au Burkina Faso.",
+    description: "Assistant pédagogique pour les enseignants du Burkina Faso, du préscolaire au secondaire.",
     lang: "fr",
     start_url: "/",
     display: "standalone",

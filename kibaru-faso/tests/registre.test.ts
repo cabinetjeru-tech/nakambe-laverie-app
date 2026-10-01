@@ -10,13 +10,13 @@ import { ID_FORMAT, parseDocType, subjectCodes } from "@/lib/base/structure";
 const BASE = path.resolve(import.meta.dirname, "..", "base-documentaire");
 
 describe("registre maître (fichier du projet)", () => {
-  it("contient les 21 guides initiaux et les 7 curricula repérés, au bon format, tous À VÉRIFIER", async () => {
+  it("contient les guides et curricula repérés (secondaire, primaire, préscolaire), au bon format, tous À VÉRIFIER", async () => {
     const content = await readFile(path.join(BASE, "REGISTRE_MAITRE.csv"), "utf8");
     const { entries, problems } = readRegistry(content);
     expect(problems).toEqual([]);
-    expect(entries).toHaveLength(28);
-    expect(entries.filter((e) => e.meta.type === "GUIDE_PEDAGOGIQUE")).toHaveLength(21);
-    expect(entries.filter((e) => e.meta.type === "CURRICULUM")).toHaveLength(7);
+    expect(entries).toHaveLength(41);
+    expect(entries.filter((e) => e.meta.type === "GUIDE_PEDAGOGIQUE")).toHaveLength(31);
+    expect(entries.filter((e) => e.meta.type === "CURRICULUM")).toHaveLength(10);
     for (const e of entries) {
       expect(e.meta.documentId).toMatch(ID_FORMAT);
       expect(e.meta.statut).toBe("A_VERIFIER");
@@ -26,12 +26,14 @@ describe("registre maître (fichier du projet)", () => {
     }
     const fr = entries.find((e) => e.meta.documentId === "BF-6E-FR-001")!.meta;
     expect(fr.classes).toEqual(["6e", "5e"]);
+    expect(entries.find((e) => e.meta.documentId === "BF-BLG2-GEO-001")!.meta.classes).toEqual(["Bilingue 2e année", "Bilingue 3e année"]);
+    expect(entries.find((e) => e.meta.documentId === "BF-CE1-GEN-001")!.meta.classes).toEqual(["CE1", "CE2"]);
     expect(entries.filter((e) => e.meta.priorite === "MOYENNE").map((e) => e.meta.documentId)).toEqual(["BF-6E-EPS-001", "BF-5E-EPS-001", "BF-4E-EPS-001"]);
   });
   it("n'a aucune erreur bloquante", async () => {
     const base = await loadBase(BASE);
     expect(base.issues.filter((i) => i.level === "erreur")).toEqual([]);
-    expect(base.pending).toHaveLength(28);
+    expect(base.pending).toHaveLength(41);
   });
 });
 
