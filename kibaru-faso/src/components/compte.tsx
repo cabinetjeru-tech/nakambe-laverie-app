@@ -39,7 +39,7 @@ export type EtatCompte = {
   granted: boolean;
   parrainage?: ParrainageInfo | null;
   /** Générations utilisées aujourd'hui et limite (null = illimité). */
-  quota?: { limite: number | null; utilisees: number } | null;
+  quota?: { limite: number | null; utilisees: number; periode?: { limite: number; utilisees: number } | null } | null;
 };
 
 /** Lien d'invitation d'un parrain : page de présentation (aperçu soigné sur WhatsApp), puis inscription parrainée. */
@@ -315,7 +315,8 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
               )}
               <div className="text-xs text-muted">
                 {dureeFormule(f.duree_jours)} d&apos;accès complet
-                {f.quota_jour ? ` · ${f.quota_jour} générations par jour` : ""}
+                {f.quota_periode ? ` · ${f.quota_periode} générations` : ""}
+                {f.quota_jour ? ` (${f.quota_jour} max par jour)` : ""}
               </div>
               <button
                 type="button"
@@ -343,6 +344,23 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
               />
             </div>
             <p className="mt-1 text-xs text-muted">Le compteur repart à zéro chaque jour à minuit. Les questions de précision ne sont pas comptées.</p>
+            {etat.quota.periode && (
+              <>
+                <div className="mt-3 flex justify-between">
+                  <span>Générations de votre formule</span>
+                  <strong>
+                    {etat.quota.periode.utilisees} / {etat.quota.periode.limite}
+                  </strong>
+                </div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-faso-50">
+                  <div
+                    className={`h-full rounded-full ${etat.quota.periode.utilisees >= etat.quota.periode.limite ? "bg-rouge" : "bg-faso"}`}
+                    style={{ width: `${Math.min(100, (etat.quota.periode.utilisees / Math.max(1, etat.quota.periode.limite)) * 100)}%` }}
+                  />
+                </div>
+                <p className="mt-1 text-xs text-muted">Une préparation en mode expert compte pour deux.</p>
+              </>
+            )}
           </div>
         )}
         {c.role !== "admin" && (

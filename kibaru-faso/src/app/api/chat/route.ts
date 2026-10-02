@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { hasAccess } from "@/lib/access";
 import { compteCourant, enregistrerUsage, etatQuota } from "@/lib/comptes";
+import { plafondAtteint, unitesGeneration } from "@/lib/quota";
 import { CONTACT } from "@/lib/contact";
 import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
@@ -35,7 +36,13 @@ export async function POST(req: Request) {
     estAdmin = compte.profil.role === "admin";
     // Quota du jour : protège la rentabilité (chaque génération a un coût d'IA).
     const q = await etatQuota(compte);
-    if (q.limite !== null && q.utilisees >= q.limite)
+    const plafond = plafondAtteint(q);
+    if (plafond === "periode")
+      return jsonError(
+        429,
+        `Vous avez utilisé les ${q.periode!.limite} générations de votre formule. Renouvelez ou changez de formule dans « Mon compte » pour continuer.`,
+      );
+    if (plafond === "jour")
       return jsonError(
         429,
         compte.essai
@@ -130,6 +137,8 @@ export async function POST(req: Request) {
           consommation: r.value.consommation,
           besoin: profile.needs.join(","),
           decompte: !profile.question,
+          // Le mode expert utilise un modèle deux fois plus cher : il compte pour deux générations.
+          unites: unitesGeneration(profile.mode),
         }).catch(() => undefined);
         if (r.value.fin === "refusal") send({ type: "delta", text: "\n\n_Je ne peux pas traiter cette demande. Reformulez-la en lien avec votre préparation pédagogique._" });
         if (r.value.fin === "max_tokens") send({ type: "delta", text: "\n\n_(Production interrompue car trop longue : demandez « continue » pour la suite.)_" });

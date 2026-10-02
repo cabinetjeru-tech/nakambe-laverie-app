@@ -667,8 +667,9 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
   return (
     <div className="space-y-3">
       <p className="text-sm text-muted">
-        Les nouveaux prix s&apos;appliquent aux prochains paiements. Montants en FCFA, multiples de 5. Le quota limite le nombre de générations par jour et par
-        enseignant (laisser vide = illimité) ; il protège la marge, car chaque génération a un coût d&apos;IA (voir le tableau de bord). Essai gratuit : 5 par jour.
+        Les nouveaux prix s&apos;appliquent aux prochains paiements. Montants en FCFA, multiples de 5. « Générations / jour » évite les rafales ;
+        « Générations / formule » plafonne le total sur toute la durée (le mode expert compte double). Laisser vide = pas de plafond. Ces plafonds protègent la
+        marge, car chaque génération a un coût d&apos;IA (voir le tableau de bord). Essai gratuit : 5 par jour.
       </p>
       {Object.values(edits).map((f) => (
         <div key={f.id} className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-white p-3">
@@ -694,6 +695,16 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
               className={`${input} mt-1 block w-24`}
             />
           </label>
+          <label className="text-xs font-medium text-muted">
+            Générations / formule
+            <input
+              inputMode="numeric"
+              value={f.quota_periode ?? ""}
+              placeholder="sans plafond"
+              onChange={(e) => setEdits({ ...edits, [f.id]: { ...f, quota_periode: e.target.value.replace(/\D/g, "") ? Number(e.target.value.replace(/\D/g, "")) : null } })}
+              className={`${input} mt-1 block w-28`}
+            />
+          </label>
           <label className="flex items-center gap-2 pb-2 text-sm">
             <input type="checkbox" className="accent-faso" checked={f.active} onChange={(e) => setEdits({ ...edits, [f.id]: { ...f, active: e.target.checked } })} /> Proposée
           </label>
@@ -701,7 +712,7 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
             type="button"
             onClick={() =>
               void action(
-                { action: "formule", id: f.id, libelle: f.libelle, prix_fcfa: f.prix_fcfa, duree_jours: f.duree_jours, active: f.active, quota_jour: f.quota_jour ?? null },
+                { action: "formule", id: f.id, libelle: f.libelle, prix_fcfa: f.prix_fcfa, duree_jours: f.duree_jours, active: f.active, quota_jour: f.quota_jour ?? null, quota_periode: f.quota_periode ?? null },
                 `Formule « ${f.libelle} » enregistrée`,
               )
             }

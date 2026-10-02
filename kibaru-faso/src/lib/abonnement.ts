@@ -12,6 +12,8 @@ export type Formule = {
   ordre: number;
   /** Générations par jour (null = illimité). */
   quota_jour?: number | null;
+  /** Générations sur toute la durée de la formule (null = pas de plafond de période). Le mode expert compte double. */
+  quota_periode?: number | null;
 };
 export type Periode = { debut: Date; fin: Date };
 
