@@ -3,6 +3,7 @@ import { hasAccess } from "@/lib/access";
 import { compteCourant, enregistrerUsage, etatQuota } from "@/lib/comptes";
 import { plafondAtteint, unitesGeneration } from "@/lib/quota";
 import { CONTACT } from "@/lib/contact";
+import { notifierFicheOfferte } from "@/lib/email/notifications";
 import { accountsEnabled } from "@/lib/supabase/server";
 import { chatRequestSchema, formatContextBlock, MAX_TEACHER_DOCS_CHARS, normalizeHistory, searchQuery } from "@/lib/conversation";
 import { decide, decisionSummary, formatDecisionBlock, identifyConversation } from "@/lib/base/decision";
@@ -26,6 +27,8 @@ export async function POST(req: Request) {
   let who = clientIp(req);
   let utilisateurId: string | null = null;
   let estAdmin = false;
+  // Fiche offerte (essai) : produite en mode expert pour montrer le meilleur de l'outil.
+  let estEssai = false;
   if (accountsEnabled()) {
     const compte = await compteCourant().catch(() => null);
     if (!compte) return jsonError(401, "Connectez-vous à votre espace enseignant.");
@@ -34,6 +37,7 @@ export async function POST(req: Request) {
     who = compte.profil.id;
     utilisateurId = compte.profil.id;
     estAdmin = compte.profil.role === "admin";
+    estEssai = compte.essai;
     // Quota du jour : protège la rentabilité (chaque génération a un coût d'IA).
     const q = await etatQuota(compte);
     const plafond = plafondAtteint(q);
@@ -126,7 +130,8 @@ export async function POST(req: Request) {
       const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
       send({ type: "meta", sources, libraryCount: catalogue.length, decision: decisionSummary(decision) });
       try {
-        const gen = streamAnswer(messages, profile.mode);
+        const modeIA = estEssai && !profile.question ? "expert" : profile.mode;
+        const gen = streamAnswer(messages, modeIA);
         let answer = "";
         let r = await gen.next();
         while (!r.done) {
@@ -141,8 +146,8 @@ export async function POST(req: Request) {
           consommation: r.value.consommation,
           besoin: profile.needs.join(","),
           decompte: !profile.question,
-          // Le mode expert utilise un modèle deux fois plus cher : il compte pour deux générations.
-          unites: unitesGeneration(profile.mode),
+          // Le mode expert utilise un modèle deux fois plus cher : il compte pour deux générations (sauf la fiche offerte).
+          unites: estEssai ? 1 : unitesGeneration(profile.mode),
         }).catch(() => undefined);
         if (r.value.fin === "refusal") send({ type: "delta", text: "\n\n_Je ne peux pas traiter cette demande. Reformulez-la en lien avec votre préparation pédagogique._" });
         if (r.value.fin === "max_tokens") send({ type: "delta", text: "\n\n_(Production interrompue car trop longue : demandez « continue » pour la suite.)_" });
@@ -162,6 +167,8 @@ export async function POST(req: Request) {
           progression: profile.module04 ? profile.progression : undefined,
         });
         send({ type: "done", check });
+        // Relance commerciale juste après la fiche offerte (une seule fois par enseignant), après la réponse.
+        if (estEssai && !profile.question && utilisateurId) await notifierFicheOfferte(utilisateurId);
       } catch (e) {
         const detail = detailErreur(e);
         console.error("[chat]", detail);

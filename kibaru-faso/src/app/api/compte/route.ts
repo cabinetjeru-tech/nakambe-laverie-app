@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { accessRequired, hasAccess } from "@/lib/access";
-import { compteCourant, etatQuota, formules, parrainage } from "@/lib/comptes";
+import { compteCourant, creditPass, espaceAmbassadeur, etatQuota, formules, parrainage } from "@/lib/comptes";
 import { paiementDisponible } from "@/lib/paiement/cinetpay";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
@@ -42,6 +42,8 @@ export async function GET(req: Request) {
     },
     parrainage: compte ? await parrainage(compte.profil).catch(() => null) : null,
     quota: compte ? await etatQuota(compte).catch(() => null) : null,
+    creditPass: compte ? await creditPass(compte.profil.id).catch(() => null) : null,
+    ambassadeur: compte ? await espaceAmbassadeur(compte.profil).catch(() => null) : null,
     formules: offres,
     paiementDisponible: paiementDisponible(),
     paiements: compte ? await derniersPaiements(compte.profil.id) : [],

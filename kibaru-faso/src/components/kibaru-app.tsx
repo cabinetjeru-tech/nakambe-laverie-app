@@ -34,7 +34,7 @@ import {
   IconeReprendre,
   IconeRetour,
 } from "./icones";
-import { AbonnementScreen, AuthScreen, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
+import { AbonnementScreen, AuthScreen, codeLicenceMemorise, ComptePanel, type CompteInfo, type EtatCompte, type PaiementInfo } from "./compte";
 
 type LibraryDoc = {
   id: string;
@@ -80,6 +80,8 @@ type CompteReponse = {
   paiements?: PaiementInfo[];
   parrainage?: EtatCompte["parrainage"];
   quota?: EtatCompte["quota"];
+  creditPass?: EtatCompte["creditPass"];
+  ambassadeur?: EtatCompte["ambassadeur"];
 };
 const PARRAIN_KEY = "kibaru:parrain";
 
@@ -156,11 +158,13 @@ export function KibaruApp() {
   }, []);
 
   const loadStatus = useCallback(async () => {
+    // Lien de licence établissement (?licence=…) : le code est gardé pour l'activer après l'inscription.
+    codeLicenceMemorise();
     try {
       const a = (await (await fetch("/api/compte")).json()) as CompteReponse;
       const etat: EtatCompte | undefined =
         a.mode === "comptes"
-          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted, parrainage: a.parrainage ?? null, quota: a.quota ?? null }
+          ? { compte: a.compte ?? null, formules: a.formules ?? [], paiementDisponible: !!a.paiementDisponible, paiements: a.paiements ?? [], granted: a.granted, parrainage: a.parrainage ?? null, quota: a.quota ?? null, creditPass: a.creditPass ?? null, ambassadeur: a.ambassadeur ?? null }
           : undefined;
       applyScope(a.mode === "comptes" ? (a.compte?.email.toLowerCase() ?? null) : null);
       if (!a.granted && a.mode !== "libre") {

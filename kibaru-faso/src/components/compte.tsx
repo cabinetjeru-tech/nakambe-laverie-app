@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dureeFormule, formatDate, formatFcfa, type Formule } from "@/lib/abonnement";
+import { accepteCreditPass, dureeFormule, estPass, formatDate, formatFcfa, prixApresCredit, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { CONTACT } from "@/lib/contact";
 
@@ -40,7 +40,34 @@ export type EtatCompte = {
   parrainage?: ParrainageInfo | null;
   /** Générations utilisées aujourd'hui et limite (null = illimité). */
   quota?: { limite: number | null; utilisees: number; periode?: { limite: number; utilisees: number } | null } | null;
+  /** Pass 24 h payés depuis moins de 7 jours, déductibles de l'abonnement annuel. */
+  creditPass?: { montant: number; expire: string | null } | null;
+  /** Tableau de bord de l'ambassadeur (null si l'enseignant n'en est pas un). */
+  ambassadeur?: AmbassadeurInfo | null;
 };
+export type AmbassadeurInfo = {
+  region: string | null;
+  zone: string | null;
+  disciplines: string | null;
+  taux: number;
+  objectifMois: number | null;
+  rang: number;
+  total: number;
+  stats: { inscrits: number; inscritsMois: number; payeurs: number; conversion: number; ventes: number; ventesMois: number; payeursMois: number };
+};
+
+/** Code de licence établissement reçu par lien (?licence=…), conservé jusqu'à l'activation (inscription comprise). */
+const CLE_LICENCE = "pedagogue_licence";
+export function codeLicenceMemorise(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const url = new URLSearchParams(window.location.search).get("licence");
+    if (url) localStorage.setItem(CLE_LICENCE, url.toUpperCase());
+    return (url ?? localStorage.getItem(CLE_LICENCE) ?? "").toUpperCase();
+  } catch {
+    return "";
+  }
+}
 
 /** Lien d'invitation d'un parrain : page de présentation (aperçu soigné sur WhatsApp), puis inscription parrainée. */
 export function lienParrainage(code: string): string {
@@ -98,6 +125,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(notice ?? null);
+  const [licence] = useState(codeLicenceMemorise);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,6 +172,11 @@ export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: {
       <form onSubmit={submit} className="w-full max-w-sm rounded-2xl border border-line bg-white p-6 shadow-sm">
         <Logo />
         <h1 className="mt-5 text-lg font-bold text-faso-dark">{titres[vue]}</h1>
+        {licence && (
+          <p className="mt-2 rounded-lg border border-faso/40 bg-faso-50 p-2.5 text-sm">
+            🏫 Licence de votre établissement (code <strong>{licence}</strong>) : connectez-vous ou créez votre compte, puis activez votre accès dans « Mon compte ».
+          </p>
+        )}
         {vue === "inscription" && (
           <>
             <p className="mt-2 rounded-lg border border-or/50 bg-or-50 p-2.5 text-sm font-semibold text-ink">
@@ -288,8 +321,17 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
           <p className="mt-1 text-sm">Compte administrateur : accès complet, sans abonnement.</p>
         ) : actif && c.essai ? (
           <p className="mt-1 rounded-lg border border-or/50 bg-or-50 p-2.5 text-sm">
-            🎁 <strong>Essai gratuit en cours</strong> : il vous reste {c.heuresRestantes} heure{c.heuresRestantes > 1 ? "s" : ""}. Abonnez-vous
-            maintenant pour continuer sans interruption : les jours payés s&apos;ajoutent après l&apos;essai.
+            {etat.quota?.periode && etat.quota.periode.utilisees >= etat.quota.periode.limite ? (
+              <>
+                🎁 <strong>Vous avez utilisé votre fiche offerte.</strong> Choisissez une formule pour continuer : le pass 24 h payé est déduit de l&apos;annuel si
+                vous le prenez dans les 7 jours.
+              </>
+            ) : (
+              <>
+                🎁 <strong>Une fiche vous est offerte</strong> : préparez votre prochaine leçon gratuitement (à utiliser avant le {formatDate(c.fin!)}). Elle est
+                produite en mode expert, le plus complet.
+              </>
+            )}
           </p>
         ) : actif ? (
           <p className="mt-1 text-sm">
@@ -305,18 +347,30 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
           {etat.formules.map((f) => (
             <div key={f.id} className="rounded-xl border-2 border-faso/30 bg-white p-4">
               <div className="font-semibold">{f.libelle}</div>
-              {promo?.prix[f.id] !== undefined && promo.prix[f.id] !== f.prix_fcfa ? (
-                <div className="mt-1">
-                  <span className="text-sm text-muted line-through">{formatFcfa(f.prix_fcfa)}</span>{" "}
-                  <span className="text-2xl font-extrabold text-faso-dark">{formatFcfa(promo.prix[f.id]!)}</span>
-                </div>
-              ) : (
-                <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
-              )}
+              {(() => {
+                const avecPromo = promo?.prix[f.id] ?? f.prix_fcfa;
+                const credit = accepteCreditPass(f.duree_jours) ? (etat.creditPass?.montant ?? 0) : 0;
+                const final = prixApresCredit(avecPromo, credit);
+                return final !== f.prix_fcfa ? (
+                  <div className="mt-1">
+                    <span className="text-sm text-muted line-through">{formatFcfa(f.prix_fcfa)}</span>{" "}
+                    <span className="text-2xl font-extrabold text-faso-dark">{formatFcfa(final)}</span>
+                    {credit > 0 && (
+                      <div className="text-xs font-semibold text-faso">
+                        − {formatFcfa(avecPromo - final)} : votre pass 24 h est déduit
+                        {etat.creditPass?.expire ? ` (jusqu'au ${formatDate(etat.creditPass.expire)})` : ""}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-1 text-2xl font-extrabold text-faso-dark">{formatFcfa(f.prix_fcfa)}</div>
+                );
+              })()}
               <div className="text-xs text-muted">
                 {dureeFormule(f.duree_jours)} d&apos;accès complet
                 {f.quota_periode ? ` · ${f.quota_periode} générations` : ""}
                 {f.quota_jour ? ` (${f.quota_jour} max par jour)` : ""}
+                {estPass(f.duree_jours) ? " · déduit de l'annuel si vous le prenez dans les 7 jours" : ""}
               </div>
               <button
                 type="button"
@@ -358,7 +412,7 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
                     style={{ width: `${Math.min(100, (etat.quota.periode.utilisees / Math.max(1, etat.quota.periode.limite)) * 100)}%` }}
                   />
                 </div>
-                <p className="mt-1 text-xs text-muted">Une préparation en mode expert compte pour deux.</p>
+                {!c.essai && <p className="mt-1 text-xs text-muted">Une préparation en mode expert compte pour deux.</p>}
               </>
             )}
           </div>
@@ -386,6 +440,10 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
         <Contact className="mt-1" />
         {error && <p className="mt-2 text-sm text-rouge">{error}</p>}
       </section>
+
+      {c.role !== "admin" && <LicenceEtablissement onChange={onChange} />}
+
+      {etat.ambassadeur && etat.parrainage && <EspaceAmbassadeur a={etat.ambassadeur} code={etat.parrainage.code} />}
 
       {etat.parrainage && <Parrainage p={etat.parrainage} telephone={c.telephone} />}
 
@@ -628,6 +686,126 @@ function DonnerAvis() {
           {busy ? "Envoi…" : etat === "vide" ? "Envoyer mon avis" : "Mettre à jour mon avis"}
         </button>
       </form>
+    </section>
+  );
+}
+
+/** Licence établissement : l'enseignant active la place offerte par son école avec le code reçu. */
+function LicenceEtablissement({ onChange }: { onChange: () => void }) {
+  const [code, setCode] = useState(codeLicenceMemorise);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ ok: boolean; texte: string } | null>(null);
+  async function activer(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setMsg(null);
+    const r = await fetch("/api/licence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) }).catch(() => null);
+    const j = (await r?.json().catch(() => ({}))) as { message?: string; error?: string };
+    setBusy(false);
+    if (r?.ok) {
+      try {
+        localStorage.removeItem(CLE_LICENCE);
+      } catch {}
+      setMsg({ ok: true, texte: j.message ?? "Accès activé." });
+      onChange();
+    } else setMsg({ ok: false, texte: j?.error ?? "Activation impossible." });
+  }
+  return (
+    <section className={`rounded-xl border p-4 ${code ? "border-2 border-faso/40 bg-faso-50" : "border-line"}`}>
+      <h3 className="font-bold text-faso-dark">🏫 Licence établissement</h3>
+      <p className="mt-1 text-sm text-muted">Votre école a pris une licence PÉDAGOGUE.IA ? Saisissez le code reçu de votre direction : votre accès est activé immédiatement.</p>
+      <form onSubmit={activer} className="mt-2 flex flex-wrap items-center gap-2">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          placeholder="Code à 8 caractères"
+          aria-label="Code de licence"
+          maxLength={12}
+          className="min-w-0 flex-1 rounded-lg border border-line bg-white px-3 py-2 text-sm uppercase tracking-widest focus:border-faso focus:outline-none"
+        />
+        <button type="submit" disabled={busy || code.replace(/[\s-]/g, "").length < 8} className="rounded-lg bg-faso px-4 py-2 text-sm font-semibold text-white disabled:opacity-40">
+          {busy ? "Activation…" : "Activer"}
+        </button>
+      </form>
+      {msg && <p className={`mt-2 text-sm ${msg.ok ? "font-semibold text-faso" : "text-rouge"}`}>{msg.texte}</p>}
+    </section>
+  );
+}
+
+/** Espace ambassadeur : ses résultats du mois, son rang, son objectif et ses outils de partage. */
+function EspaceAmbassadeur({ a, code }: { a: AmbassadeurInfo; code: string }) {
+  const lien = lienParrainage(code);
+  const obj = a.objectifMois ?? 0;
+  const pct = obj ? Math.min(100, Math.round((a.stats.inscritsMois / obj) * 100)) : 0;
+  const messages = messagesCampagne(lien);
+  async function copier(texte: string) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      alert("Message copié : collez-le dans vos groupes WhatsApp.");
+    } catch {
+      prompt("Copiez ce message :", texte);
+    }
+  }
+  return (
+    <section className="rounded-xl border-2 border-or bg-or-50 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-bold text-ink">🌍 Espace ambassadeur{a.region ? ` · ${a.region}` : ""}</h3>
+        {a.total > 1 && (
+          <span className="rounded-full bg-white px-3 py-1 text-sm font-bold text-faso-dark">
+            {a.rang === 1 ? "🥇" : a.rang === 2 ? "🥈" : a.rang === 3 ? "🥉" : "🏅"} {a.rang}
+            <sup>{a.rang === 1 ? "er" : "e"}</sup> sur {a.total} ce mois
+          </span>
+        )}
+      </div>
+      <p className="mt-1 text-sm">
+        Merci de faire connaître PÉDAGOGUE.IA{a.zone ? ` (${a.zone})` : ""} ! Vous touchez <strong>{a.taux} %</strong> de chaque abonnement mensuel ou annuel des collègues inscrits
+        par votre lien.
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2 text-center text-sm sm:grid-cols-4">
+        <div className="rounded-lg bg-white p-2">
+          <div className="text-xl font-extrabold text-faso-dark">{a.stats.inscritsMois}</div>
+          <div className="text-[11px] text-muted">inscrits ce mois</div>
+        </div>
+        <div className="rounded-lg bg-white p-2">
+          <div className="text-xl font-extrabold text-faso-dark">{a.stats.inscrits}</div>
+          <div className="text-[11px] text-muted">inscrits au total</div>
+        </div>
+        <div className="rounded-lg bg-white p-2">
+          <div className="text-xl font-extrabold text-faso-dark">{a.stats.payeurs}</div>
+          <div className="text-[11px] text-muted">collègues abonnés</div>
+        </div>
+        <div className="rounded-lg bg-white p-2">
+          <div className="text-xl font-extrabold text-faso-dark">{a.stats.conversion} %</div>
+          <div className="text-[11px] text-muted">taux d&apos;abonnement</div>
+        </div>
+      </div>
+      {obj > 0 && (
+        <div className="mt-3">
+          <div className="flex justify-between text-xs">
+            <span>Objectif du mois : {obj} inscriptions</span>
+            <strong>{pct >= 100 ? "🎉 atteint !" : `${pct} %`}</strong>
+          </div>
+          <div className="mt-1 h-2.5 overflow-hidden rounded-full bg-white">
+            <div className={`h-full rounded-full ${pct >= 100 ? "bg-faso" : "bg-or"}`} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      )}
+      <div className="mt-3">
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted">Messages prêts à partager</div>
+        <div className="mt-1.5 flex flex-wrap gap-2">
+          {messages.map((m) => (
+            <button key={m.titre} type="button" onClick={() => void copier(m.texte)} className="rounded-lg border border-faso bg-white px-3 py-1.5 text-xs font-semibold text-faso hover:bg-faso-50">
+              📋 {m.titre}
+            </button>
+          ))}
+          <a href={`https://wa.me/?text=${encodeURIComponent(messages[0]!.texte)}`} target="_blank" rel="noopener" className="rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white">
+            Partager sur WhatsApp
+          </a>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted">
+        Astuce : présentez PÉDAGOGUE.IA en 5 minutes lors d&apos;une animation pédagogique ou d&apos;une réunion de CEB, en préparant une vraie fiche devant vos collègues.
+      </p>
     </section>
   );
 }

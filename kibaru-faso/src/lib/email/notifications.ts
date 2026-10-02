@@ -3,7 +3,7 @@ import type { CodePromo } from "../abonnement";
 import { lienDecouvrir, SITE } from "../campagne";
 import { adminClient } from "../supabase/server";
 import { emailConfigure, envoyerUneFois } from "./envoi";
-import { emailAdminPaiement, emailBienvenue, emailCommission, emailFinEssai, emailPaiement, emailRappelFin } from "./modeles";
+import { emailAdminPaiement, emailApresFicheOfferte, emailBienvenue, emailCommission, emailFinEssai, emailPaiement, emailRappelFin } from "./modeles";
 
 /** E-mails automatiques de PÉDAGOGUE.IA. Chaque fonction est silencieuse en cas d'échec (journal serveur uniquement). */
 
@@ -96,6 +96,33 @@ export async function notifierCommission(o: { parrainId: string; filleulId: stri
     });
   } catch (e) {
     console.error("[email] commission", (e as Error).message);
+  }
+}
+
+/** Relance envoyée une fois, juste après la fiche offerte : les formules, la déduction du pass et le meilleur code promo. */
+export async function notifierFicheOfferte(utilisateurId: string): Promise<void> {
+  if (!emailConfigure()) return;
+  try {
+    const p = await profil(utilisateurId);
+    if (!p || p.suspendu || p.role === "admin") return;
+    await envoyerUneFois({
+      cle: `fiche_offerte:${p.id}`,
+      type: "fiche_offerte",
+      utilisateurId: p.id,
+      to: p.email,
+      email: async () => {
+        const db = adminClient();
+        const [{ data: formules }, { data: promos }] = await Promise.all([
+          db.from("formules").select("id, prix_fcfa").eq("active", true),
+          db.from("codes_promo").select("*").eq("actif", true).order("remise_pct", { ascending: false }).limit(5),
+        ]);
+        const prix = Object.fromEntries((formules ?? []).map((f) => [f.id as string, f.prix_fcfa as number]));
+        const promo = ((promos ?? []) as CodePromo[]).find((x) => !x.expire_le || new Date(x.expire_le) > new Date()) ?? null;
+        return emailApresFicheOfferte({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 30000 }, promo });
+      },
+    });
+  } catch (e) {
+    console.error("[email] fiche offerte", (e as Error).message);
   }
 }
 

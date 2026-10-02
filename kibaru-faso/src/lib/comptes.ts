@@ -1,5 +1,21 @@
 import "server-only";
-import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, refusPromo, tauxCommission, type CodePromo, type Formule } from "./abonnement";
+import {
+  estPass,
+  finAbonnement,
+  heuresRestantes,
+  joursRestants,
+  messageLicence,
+  montantCommission,
+  nouveauCodeParrainage,
+  nouvellePeriode,
+  passesDeductibles,
+  refusPromo,
+  statsAmbassadeur,
+  tauxCommission,
+  tauxPour,
+  type CodePromo,
+  type Formule,
+} from "./abonnement";
 import { coutUsd, debutJour, type Consommation } from "./couts";
 import { notifierCommission, notifierPaiement } from "./email/notifications";
 import type { EtatQuota } from "./quota";
@@ -106,10 +122,13 @@ export async function formules(toutes = false): Promise<Formule[]> {
 }
 
 /** Ajoute des jours d'abonnement (prolonge l'abonnement en cours s'il n'est pas terminé). */
-export async function activerAbonnement(o: { utilisateurId: string; jours: number; formuleId?: string | null; paiementId?: string; origine: "paiement" | "admin"; note?: string }) {
+export async function activerAbonnement(o: { utilisateurId: string; jours: number; formuleId?: string | null; paiementId?: string; origine: "paiement" | "admin" | "licence"; note?: string }) {
   const db = adminClient();
-  const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", o.utilisateurId).order("fin", { ascending: false }).limit(1);
-  const p = nouvellePeriode(new Date(), finAbonnement(abos ?? []), o.jours);
+  const maintenant = new Date();
+  // L'essai (fiche offerte, valable 30 jours) s'arrête dès qu'un vrai accès commence : le paiement n'attend pas sa fin.
+  await db.from("abonnements").update({ fin: maintenant.toISOString() }).eq("utilisateur_id", o.utilisateurId).eq("origine", "essai").gt("fin", maintenant.toISOString()).lt("debut", maintenant.toISOString());
+  const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", o.utilisateurId).neq("origine", "essai").order("fin", { ascending: false }).limit(1);
+  const p = nouvellePeriode(maintenant, finAbonnement(abos ?? []), o.jours);
   const { error } = await db.from("abonnements").insert({
     utilisateur_id: o.utilisateurId,
     formule_id: o.formuleId ?? null,
@@ -124,7 +143,7 @@ export async function activerAbonnement(o: { utilisateurId: string; jours: numbe
   return p;
 }
 
-type PaiementRow = { id: string; utilisateur_id: string; formule_id: string; montant_fcfa: number; statut: string; transaction_id: string };
+type PaiementRow = { id: string; utilisateur_id: string; formule_id: string; montant_fcfa: number; statut: string; transaction_id: string; passes_deduits?: string[] | null };
 
 /**
  * Vérifie une transaction auprès de CinetPay et en tire les conséquences : statut du paiement et, s'il est réussi
@@ -149,6 +168,8 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
   if (statut === "reussi") {
     const { data: f } = await db.from("formules").select("duree_jours").eq("id", paiement.formule_id).single<{ duree_jours: number }>();
     await activerAbonnement({ utilisateurId: paiement.utilisateur_id, jours: f?.duree_jours ?? 30, formuleId: paiement.formule_id, paiementId: paiement.id, origine: "paiement" });
+    // Pass 24 h déduits de cet abonnement : ils ne pourront plus l'être une seconde fois.
+    if (paiement.passes_deduits?.length) await db.from("paiements").update({ deduit_par: paiement.id }).in("id", paiement.passes_deduits).is("deduit_par", null);
     await enregistrerCommission(paiement).catch((e: Error) => console.error("[parrainage]", e.message));
     await notifierPaiement(paiement);
   }
@@ -161,8 +182,9 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
 export const DUREE_MIN_COMMISSION = 30;
 
 /**
- * Commission du parrain (10 % par défaut) sur chaque paiement réussi de son filleul, mensuel ou annuel.
- * Condition : le parrain est lui-même abonné (ou administrateur) et non suspendu au moment du paiement.
+ * Commission du parrain (10 % par défaut, taux propre pour un ambassadeur) sur chaque paiement réussi de son filleul,
+ * mensuel ou annuel. Condition : le parrain n'est pas suspendu, et il est abonné (ou administrateur) sauf s'il est
+ * ambassadeur actif.
  * Un paiement ne donne qu'une commission (contrainte d'unicité sur paiement_id).
  */
 async function enregistrerCommission(paiement: PaiementRow) {
@@ -172,11 +194,17 @@ async function enregistrerCommission(paiement: PaiementRow) {
   // Pas de commission sur les passes courts (journalier) : leur marge ne le permet pas.
   const { data: formule } = await db.from("formules").select("duree_jours").eq("id", paiement.formule_id).maybeSingle<{ duree_jours: number }>();
   if (!formule || formule.duree_jours < DUREE_MIN_COMMISSION) return;
-  const { data: parrain } = await db.from("profils").select("*").eq("id", filleul.parrain_id).single<Profil>();
-  if (!parrain) return;
-  const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", parrain.id).order("fin", { ascending: false }).limit(1);
-  if (!aAcces(parrain, finAbonnement(abos ?? []))) return;
-  const taux = tauxCommission();
+  const [{ data: parrain }, { data: amb }] = await Promise.all([
+    db.from("profils").select("*").eq("id", filleul.parrain_id).single<Profil>(),
+    db.from("ambassadeurs").select("actif, taux").eq("profil_id", filleul.parrain_id).maybeSingle<{ actif: boolean; taux: number | null }>(),
+  ]);
+  if (!parrain || parrain.suspendu) return;
+  // Un ambassadeur actif touche sa commission même sans abonnement personnel.
+  if (!amb?.actif) {
+    const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", parrain.id).order("fin", { ascending: false }).limit(1);
+    if (!aAcces(parrain, finAbonnement(abos ?? []))) return;
+  }
+  const taux = tauxPour(amb ?? null, tauxCommission());
   const montant = montantCommission(paiement.montant_fcfa, taux);
   const { error } = await db.from("commissions").insert({
     parrain_id: parrain.id,
@@ -201,22 +229,105 @@ export type Parrainage = {
 
 export async function parrainage(profil: Profil): Promise<Parrainage> {
   const db = adminClient();
-  const [{ data: filleuls }, { data: coms }] = await Promise.all([
+  const [{ data: filleuls }, { data: coms }, { data: amb }] = await Promise.all([
     db.from("profils").select("id, nom, email").eq("parrain_id", profil.id).limit(5000),
     db.from("commissions").select("montant_fcfa, statut, cree_le, filleul_id").eq("parrain_id", profil.id).order("cree_le", { ascending: false }).limit(500),
+    db.from("ambassadeurs").select("actif, taux").eq("profil_id", profil.id).maybeSingle<{ actif: boolean; taux: number | null }>(),
   ]);
   const noms = new Map((filleuls ?? []).map((f) => [f.id as string, (f.nom as string | null) || (f.email as string).replace(/@.*/, "@…")]));
   const payeurs = new Set((coms ?? []).map((c) => c.filleul_id as string));
   const somme = (st: string) => (coms ?? []).filter((c) => c.statut === st).reduce((s, c) => s + (c.montant_fcfa as number), 0);
   return {
     code: profil.code_parrainage,
-    taux: tauxCommission(),
+    taux: tauxPour(amb ?? null, tauxCommission()),
     filleuls: filleuls?.length ?? 0,
     filleulsAbonnes: payeurs.size,
     due: somme("due"),
     versee: somme("versee"),
     commissions: (coms ?? []).slice(0, 20).map((c) => ({ montant_fcfa: c.montant_fcfa, statut: c.statut, cree_le: c.cree_le, filleul: noms.get(c.filleul_id) ?? "—" })),
   };
+}
+
+// ---------------------------------------------------------------- Ambassadeurs
+
+export type EspaceAmbassadeur = {
+  region: string | null;
+  zone: string | null;
+  disciplines: string | null;
+  taux: number;
+  objectifMois: number | null;
+  rang: number;
+  total: number;
+  stats: ReturnType<typeof statsAmbassadeur>;
+};
+
+/** Tableau de bord d'un ambassadeur actif (null s'il n'en est pas un) : ses chiffres et son rang du mois. */
+export async function espaceAmbassadeur(profil: Profil): Promise<EspaceAmbassadeur | null> {
+  const db = adminClient();
+  const { data: amb } = await db.from("ambassadeurs").select("*").eq("profil_id", profil.id).maybeSingle();
+  if (!amb?.actif) return null;
+  const { data: tous } = await db.from("ambassadeurs").select("profil_id").eq("actif", true);
+  const ids = (tous ?? []).map((a) => a.profil_id as string);
+  const { data: filleuls } = await db.from("profils").select("id, cree_le, parrain_id").in("parrain_id", ids).limit(50000);
+  const fids = (filleuls ?? []).map((f) => f.id as string);
+  const ventes: { utilisateur_id: string; montant_fcfa: number; cree_le: string }[] = [];
+  for (let i = 0; i < fids.length; i += 300) {
+    const { data } = await db.from("paiements").select("utilisateur_id, montant_fcfa, cree_le").eq("statut", "reussi").in("utilisateur_id", fids.slice(i, i + 300));
+    ventes.push(...((data ?? []) as typeof ventes));
+  }
+  const maintenant = new Date();
+  const debutMois = new Date(Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), 1));
+  const par = (id: string) => statsAmbassadeur((filleuls ?? []).filter((f) => f.parrain_id === id) as { id: string; cree_le: string }[], ventes, debutMois);
+  // Classement du mois : ventes du mois, puis inscriptions du mois.
+  const classement = ids.map((id) => ({ id, s: par(id) })).sort((a, b) => b.s.ventesMois - a.s.ventesMois || b.s.inscritsMois - a.s.inscritsMois);
+  return {
+    region: amb.region,
+    zone: amb.zone,
+    disciplines: amb.disciplines,
+    taux: tauxPour(amb, tauxCommission()),
+    objectifMois: amb.objectif_mois,
+    rang: classement.findIndex((c) => c.id === profil.id) + 1,
+    total: classement.length,
+    stats: par(profil.id),
+  };
+}
+
+// ---------------------------------------------------------------- Pass 24 h déduit de l'annuel
+
+/** Crédit des pass 24 h payés depuis moins de 7 jours et pas encore déduits d'un abonnement annuel. */
+export async function creditPass(utilisateurId: string): Promise<{ montant: number; passes: string[]; expire: string | null }> {
+  const db = adminClient();
+  const [{ data: offres }, { data }] = await Promise.all([
+    db.from("formules").select("id, duree_jours"),
+    db
+      .from("paiements")
+      .select("id, formule_id, montant_fcfa, cree_le, deduit_par")
+      .eq("utilisateur_id", utilisateurId)
+      .eq("statut", "reussi")
+      .is("deduit_par", null)
+      .gte("cree_le", new Date(Date.now() - 8 * 86_400_000).toISOString()),
+  ]);
+  const courtes = new Set((offres ?? []).filter((f) => estPass(f.duree_jours as number)).map((f) => f.id as string));
+  const passes = passesDeductibles(((data ?? []) as { id: string; formule_id: string; montant_fcfa: number; cree_le: string; deduit_par: string | null }[]).filter((p) => courtes.has(p.formule_id)));
+  const plusAncien = passes.reduce<string | null>((m, p) => (!m || p.cree_le < m ? p.cree_le : m), null);
+  return {
+    montant: passes.reduce((s, p) => s + p.montant_fcfa, 0),
+    passes: passes.map((p) => p.id),
+    expire: plusAncien ? new Date(new Date(plusAncien).getTime() + 7 * 86_400_000).toISOString() : null,
+  };
+}
+
+// ---------------------------------------------------------------- Licences établissement
+
+/** Active la place d'un enseignant dans la licence de son établissement (réservation atomique côté base). */
+export async function rejoindreLicence(code: string, utilisateurId: string): Promise<{ ok: true; nom: string; fin: Date } | { erreur: string }> {
+  const db = adminClient();
+  const { data, error } = await db.rpc("rejoindre_licence", { p_code: code, p_utilisateur: utilisateurId });
+  if (error) return { erreur: messageLicence(error.message) };
+  const e = (data as { etablissement_id: string; nom: string; formule_id: string | null; duree_jours: number }[])[0];
+  if (!e) return { erreur: messageLicence("") };
+  const p = await activerAbonnement({ utilisateurId, jours: e.duree_jours, formuleId: e.formule_id ?? "annuel", origine: "licence", note: `Licence établissement : ${e.nom}` });
+  return { ok: true, nom: e.nom, fin: p.fin };
 }
 
 // ---------------------------------------------------------------- Codes promo
