@@ -76,7 +76,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/icon.svg" alt="" width={40} height={40} className="h-10 w-10 rounded-lg bg-white/10" />
+              <img src="/logo.svg" alt="" width={40} height={40} className="h-10 w-10 rounded-lg ring-2 ring-white/70" />
               <div className="leading-tight">
                 <div className="text-lg font-extrabold tracking-wide">PÉDAGOGUE.IA</div>
                 <div className="text-xs text-white/80">L&apos;intelligence au service de la pédagogie</div>

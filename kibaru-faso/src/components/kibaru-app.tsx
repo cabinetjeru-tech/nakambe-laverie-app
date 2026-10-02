@@ -845,7 +845,7 @@ function Brand() {
   return (
     <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.svg" alt="" width={32} height={32} className="h-7 w-7 shrink-0 rounded-lg sm:h-8 sm:w-8" />
+      <img src="/logo.svg" alt="" width={32} height={32} className="h-7 w-7 shrink-0 rounded-lg sm:h-8 sm:w-8" />
       <div className="leading-tight">
         <div className="whitespace-nowrap text-[13px] font-extrabold tracking-wide text-faso-dark sm:text-[15px]">PÉDAGOGUE.IA</div>
         <div className="hidden text-[11px] text-muted sm:block">L&apos;intelligence au service de la pédagogie</div>

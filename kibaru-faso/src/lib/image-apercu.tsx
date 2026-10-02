@@ -14,13 +14,13 @@ export async function imageApercu() {
       <div style={{ width: "100%", height: "100%", display: "flex", background: "#00843d", color: "white", fontFamily: "sans-serif" }}>
         <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 56 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{ display: "flex", flexDirection: "column", width: 80, height: 80, borderRadius: 16, overflow: "hidden", position: "relative" }}>
-              <div style={{ flex: 1, background: "#c8102e" }} />
-              <div style={{ flex: 1, background: "#00a14b" }} />
-              <svg width="80" height="80" viewBox="0 0 96 96" style={{ position: "absolute", left: 0, top: 0 }}>
-                <polygon points="48,22 54.2,40.4 73.7,40.6 58,52.2 63.9,70.8 48,59.5 32.1,70.8 38,52.2 22.3,40.6 41.8,40.4" fill="#f2b705" />
-              </svg>
-            </div>
+            <svg width="84" height="84" viewBox="0 0 96 96" style={{ borderRadius: 18, border: "3px solid rgba(255,255,255,0.8)" }}>
+              <rect width="96" height="96" fill="#00843d" />
+              <rect y="80" width="96" height="8" fill="#c8102e" />
+              <rect y="88" width="96" height="8" fill="#00592a" />
+              <path fill="#fff" fillRule="evenodd" d="M12 18h22a15 15 0 0 1 0 30h-11v22H12zM23 28h10a5 5 0 0 1 0 10H23z" />
+              <path fill="#f2b705" fillRule="evenodd" d="M52 38h8.5v32H52zM63.5 70l8.6-32h7.8l8.6 32h-8.4l-1.6-6.4h-6.6L70.3 70zM72.7 57h5.2L75.3 46z" />
+            </svg>
             <div style={{ display: "flex", flexDirection: "column" }}>
               <div style={{ fontSize: 52, fontWeight: 800, letterSpacing: 2 }}>PÉDAGOGUE.IA</div>
               <div style={{ fontSize: 24, opacity: 0.85 }}>L&apos;intelligence au service de la pédagogie</div>
