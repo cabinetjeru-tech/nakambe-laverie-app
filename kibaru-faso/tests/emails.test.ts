@@ -12,7 +12,7 @@ describe("e-mails automatiques", () => {
   it("bienvenue : essai, lien de parrainage, version texte sans balises", () => {
     const m = emailBienvenue({ nom: "Awa", site: "https://s", lienParrainage: "https://s/decouvrir?parrain=ABC234", essaiFin: new Date("2026-10-01T10:00:00Z") });
     expect(m.sujet).toMatch(/Bienvenue/);
-    expect(m.html).toContain("<strong>24 h d'essai gratuit</strong>");
+    expect(m.html).toContain("<strong>fiche complète vous est offerte</strong>");
     expect(m.texte).toContain("Bonjour Awa,");
     expect(m.texte).toContain("parrain=ABC234");
     expect(m.texte).not.toMatch(/<|\*\*/);

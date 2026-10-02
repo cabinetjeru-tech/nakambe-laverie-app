@@ -59,7 +59,7 @@ export function emailBienvenue(o: { nom?: string | null; site: string; lienParra
     paragraphes: [
       salut(o.nom),
       o.essaiFin
-        ? `Votre espace enseignant est prêt. Vous profitez de **24 h d'essai gratuit** (jusqu'au ${formatDate(o.essaiFin)}) : tous les générateurs sont ouverts.`
+        ? `Votre espace enseignant est prêt. Une **fiche complète vous est offerte** (à utiliser avant le ${formatDate(o.essaiFin)}) : essayez PÉDAGOGUE.IA sur votre prochaine leçon.`
         : "Votre espace enseignant est prêt : tous les générateurs sont ouverts.",
       "Pour bien commencer, demandez par exemple : « Fiche pédagogique de SVT, 4e, la digestion, 55 minutes » ou « Devoir de mathématiques, 3e, théorème de Pythagore, avec corrigé et barème ».",
       "Chaque préparation se télécharge en PDF ou en Word, prête à imprimer.",

@@ -27,7 +27,7 @@ pendant l'essai s'ajoute après l'essai.
   à copier ou à partager sur WhatsApp depuis « Mon compte ».
 - Un collègue qui s'inscrit par ce lien est rattaché au parrain et reçoit ses 24 h d'essai.
 - À **chaque paiement réussi** du filleul (mensuel ou annuel, y compris les renouvellements), le parrain gagne
-  **20 %** du montant (variable `PARRAINAGE_TAUX`), à condition d'être lui-même abonné (ou administrateur) et non
+  **10 %** du montant des abonnements mensuels et annuels (variable `PARRAINAGE_TAUX`), à condition d'être lui-même abonné (ou administrateur) et non
   suspendu au moment du paiement. Un paiement ne donne qu'une commission.
 - Le parrain voit ses filleuls, les montants à recevoir et déjà reçus. L'administration verse les commissions par
   mobile money (numéro du profil) et les marque « versées » dans l'onglet **Parrainage** de `/admin`.

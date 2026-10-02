@@ -55,8 +55,10 @@ describe("Paiement", () => {
 
 describe("Essai gratuit et parrainage", async () => {
   const { codeParrainageValide, heuresRestantes, montantCommission, nouveauCodeParrainage, tauxCommission } = await import("@/lib/abonnement");
-  it("calcule la commission de 20 % sur chaque paiement du filleul", () => {
-    expect(tauxCommission()).toBe(20);
+  it("calcule la commission de 10 % sur chaque abonnement du filleul", () => {
+    expect(tauxCommission()).toBe(10);
+    expect(montantCommission(7500, 10)).toBe(750);
+    expect(montantCommission(30000, 10)).toBe(3000);
     expect(montantCommission(2000, 20)).toBe(400);
     expect(montantCommission(15000, 20)).toBe(3000);
     expect(montantCommission(2005, 20)).toBe(401);

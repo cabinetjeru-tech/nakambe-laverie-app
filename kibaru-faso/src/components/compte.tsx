@@ -18,7 +18,7 @@ export type CompteInfo = {
   fin: string | null;
   joursRestants: number;
   heuresRestantes: number;
-  /** Accès en cours issu de l'essai gratuit de 24 h. */
+  /** Accès en cours issu de l'essai gratuit (fiche offerte). */
   essai: boolean;
 };
 export type PaiementInfo = { transaction_id: string; formule_id: string; montant_fcfa: number; statut: string; moyen: string | null; cree_le: string };
@@ -147,7 +147,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: {
         {vue === "inscription" && (
           <>
             <p className="mt-2 rounded-lg border border-or/50 bg-or-50 p-2.5 text-sm font-semibold text-ink">
-              🎁 24 h d&apos;essai gratuit, sans paiement : tous les générateurs dès votre inscription.
+              🎁 1 fiche offerte, sans paiement : essayez PÉDAGOGUE.IA dès votre inscription.
             </p>
             <p className="mt-2 text-sm text-muted">Votre espace personnel : vos préparations sont sauvegardées et retrouvées sur tous vos appareils.</p>
             {parrain && <p className="mt-2 text-xs text-faso-dark">Invitation d&apos;un collègue : code parrain <strong>{parrain}</strong>.</p>}
@@ -188,7 +188,7 @@ export function AuthScreen({ onDone, initial = "connexion", notice, parrain }: {
           {vue === "connexion" && (
             <>
               <button type="button" onClick={() => setVue("inscription")} className="block w-full font-semibold text-faso underline underline-offset-2">
-                Pas encore de compte ? Créer mon espace (24 h gratuites)
+                Pas encore de compte ? Créer mon espace (1 fiche offerte)
               </button>
               <button type="button" onClick={() => setVue("oubli")} className="block w-full text-muted underline underline-offset-2">
                 Mot de passe oublié
@@ -457,7 +457,7 @@ export function ComptePanel({ etat, onChange, message }: { etat: EtatCompte; onC
 
 const STATUTS_COM: Record<string, string> = { due: "À verser", versee: "Versée", annulee: "Annulée" };
 
-/** Parrainage : lien personnel, partage WhatsApp, filleuls et commissions (20 % de chaque paiement d'un filleul). */
+/** Parrainage : lien personnel, partage WhatsApp, filleuls et commissions (10 % de chaque abonnement mensuel ou annuel d'un filleul). */
 function Parrainage({ p, telephone }: { p: ParrainageInfo; telephone: string | null }) {
   const [copie, setCopie] = useState(false);
   const lien = lienParrainage(p.code);
@@ -475,7 +475,7 @@ function Parrainage({ p, telephone }: { p: ParrainageInfo; telephone: string | n
     <section className="rounded-xl border-2 border-faso/30 bg-faso-50 p-4">
       <h3 className="font-bold text-faso-dark">🤝 Parrainage : gagnez {p.taux} % sur chaque abonnement de vos filleuls</h3>
       <p className="mt-1 text-sm">
-        Partagez votre lien avec vos collègues. Ils profitent de 24 h gratuites, et vous touchez <strong>{p.taux} %</strong> de chacun de leurs paiements,
+        Partagez votre lien avec vos collègues. Ils reçoivent 1 fiche offerte, et vous touchez <strong>{p.taux} %</strong> de chacun de leurs paiements,
         mensuels ou annuels, tant que votre propre abonnement est actif.
       </p>
       <div className="mt-3 flex flex-wrap items-center gap-2">

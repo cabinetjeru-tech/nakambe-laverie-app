@@ -25,7 +25,7 @@ export default function Image() {
         <div style={{ marginTop: 60, fontSize: 54, fontWeight: 800, lineHeight: 1.15, maxWidth: 1000 }}>Vos cours, devoirs et corrigés prêts en quelques minutes</div>
         <div style={{ marginTop: 20, fontSize: 30, opacity: 0.9 }}>Pour les enseignants du Burkina Faso · du préscolaire à la Terminale</div>
         <div style={{ marginTop: "auto", display: "flex" }}>
-          <div style={{ background: "#f2b705", color: "#17202a", fontSize: 34, fontWeight: 800, padding: "14px 28px", borderRadius: 16 }}>24 h d&apos;essai gratuit</div>
+          <div style={{ background: "#f2b705", color: "#17202a", fontSize: 34, fontWeight: 800, padding: "14px 28px", borderRadius: 16 }}>1 fiche offerte</div>
         </div>
       </div>
     ),
