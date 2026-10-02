@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: "PÉDAGOGUE.IA — L'intelligence au service de la pédagogie",
   description:
     "Assistant pédagogique pour les enseignants du Burkina Faso, du préscolaire au secondaire : leçons, fiches, exercices, devoirs et corrigés, évaluations, remédiation.",
-  icons: { icon: [{ url: "/icon.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },
+  icons: { icon: [{ url: "/logo.svg", type: "image/svg+xml" }, { url: "/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/apple-touch-icon.png" },
   appleWebApp: { capable: true, title: "PÉDAGOGUE.IA", statusBarStyle: "default" },
   openGraph: { siteName: "PÉDAGOGUE.IA", locale: "fr_BF", type: "website" },
 };

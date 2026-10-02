@@ -83,7 +83,7 @@ export function Logo() {
   return (
     <div className="flex items-center gap-2.5">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icon.svg" alt="" width={36} height={36} className="h-9 w-9 rounded-lg" />
+      <img src="/logo.svg" alt="" width={36} height={36} className="h-9 w-9 rounded-lg" />
       <div className="leading-tight">
         <div className="text-[16px] font-extrabold tracking-wide text-faso-dark">PÉDAGOGUE.IA</div>
         <div className="text-[11px] text-muted">L&apos;intelligence au service de la pédagogie</div>

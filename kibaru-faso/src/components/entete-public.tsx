@@ -5,7 +5,7 @@ export function EntetePublic() {
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
         <a href="/decouvrir" className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/icon.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-md" />
+          <img src="/logo.svg" alt="" width={32} height={32} className="h-8 w-8 rounded-md" />
           <span className="font-extrabold tracking-wide text-faso-dark">PÉDAGOGUE.IA</span>
         </a>
         <a href="/?inscription=1" className="rounded-lg bg-or px-3 py-1.5 text-sm font-extrabold text-ink hover:brightness-95">

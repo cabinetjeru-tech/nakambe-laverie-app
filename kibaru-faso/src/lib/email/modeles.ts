@@ -3,7 +3,11 @@
  * Fonctions pures, sans accès au réseau : testables.
  */
 import { formatDate, formatFcfa } from "../abonnement";
+import { SITE } from "../campagne";
 import { CONTACT } from "../contact";
+
+/** Logo (PNG : pris en charge par toutes les messageries, contrairement au SVG). */
+const LOGO = `${(process.env.APP_URL?.trim() || SITE).replace(/\/$/, "")}/icon-192.png`;
 
 export type Email = { sujet: string; html: string; texte: string };
 
@@ -30,7 +34,7 @@ function composer(sujet: string, b: Bloc): Email {
 <body style="margin:0;padding:0;background:#f6f7f5;font-family:Arial,Helvetica,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f5"><tr><td align="center" style="padding:20px 10px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e6ea">
-<tr><td style="background:#00843d;padding:16px 22px;color:#ffffff;font-size:20px;font-weight:bold">PÉDAGOGUE.IA</td></tr>
+<tr><td style="background:#00843d;padding:14px 22px;color:#ffffff;font-size:20px;font-weight:bold"><img src="${LOGO}" width="36" height="36" alt="" style="vertical-align:middle;border-radius:8px;border:2px solid #ffffff;margin-right:10px">PÉDAGOGUE.IA</td></tr>
 <tr><td style="padding:22px">
 <h1 style="margin:0 0 16px;font-size:19px;color:#00592a">${enHtml(b.titre)}</h1>
 ${b.paragraphes.map(p).join("\n")}${bouton}${(b.apres ?? []).map(p).join("\n")}
