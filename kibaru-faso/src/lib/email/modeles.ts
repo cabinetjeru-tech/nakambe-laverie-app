@@ -116,6 +116,23 @@ export function emailFinEssai(o: { nom?: string | null; site: string; prix: { jo
   });
 }
 
+export function emailApresFicheOfferte(o: { nom?: string | null; site: string; prix: { journalier?: number | null; mensuel: number; annuel: number }; promo?: { code: string; remise_pct: number } | null }): Email {
+  return composer("Votre fiche PÉDAGOGUE.IA est prête : et la suivante ?", {
+    titre: "Votre fiche offerte est prête 🎉",
+    paragraphes: [
+      salut(o.nom),
+      "Merci d'avoir essayé PÉDAGOGUE.IA ! Votre fiche est enregistrée dans « Mes préparations » : vous pouvez la télécharger en PDF ou en Word et l'imprimer.",
+      "Pour préparer toutes vos leçons de l'année avec la même qualité :",
+      ...(o.prix.journalier ? [`• **Pass 24 h : ${formatFcfa(o.prix.journalier)}**, pour un besoin ponctuel. Payé dans les 7 jours avant un abonnement annuel, il est **déduit de l'annuel**.`] : []),
+      `• **Annuel : ${formatFcfa(o.prix.annuel)}**, soit ${formatFcfa(Math.round(o.prix.annuel / 12))} par mois : la formule la plus avantageuse.`,
+      `• Mensuel : ${formatFcfa(o.prix.mensuel)}.`,
+      ...(o.promo ? [`🎟️ Avec le code **${o.promo.code}**, profitez de **-${o.promo.remise_pct} %**.`] : []),
+      "Paiement par Orange Money, Moov Money ou carte bancaire.",
+    ],
+    bouton: { libelle: "Choisir ma formule", lien: o.site },
+  });
+}
+
 export function emailRappelFin(o: { nom?: string | null; fin: Date; jours: number; site: string }): Email {
   const quand = o.jours <= 1 ? "demain" : `dans ${o.jours} jours`;
   return composer(`Votre abonnement PÉDAGOGUE.IA se termine ${quand}`, {

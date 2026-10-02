@@ -143,3 +143,74 @@ export function dureeFormule(jours: number): string {
   if (jours === 365) return "1 an";
   return `${jours} jours`;
 }
+
+// ---------------------------------------------------------------- Pass 24 h déduit de l'annuel
+
+/** Délai pendant lequel un pass 24 h payé est déduit d'un abonnement annuel. */
+export const JOURS_CREDIT_PASS = 7;
+
+/** Une formule « courte » (pass) peut être déduite ; une formule d'au moins un an peut en bénéficier. */
+export const estPass = (dureeJours: number) => dureeJours < 30;
+export const accepteCreditPass = (dureeJours: number) => dureeJours >= 365;
+
+/** Pass encore déductibles : payés depuis moins de 7 jours et jamais déduits. */
+export function passesDeductibles<T extends { montant_fcfa: number; cree_le: string; deduit_par?: string | null }>(passes: T[], maintenant = new Date()): T[] {
+  const limite = maintenant.getTime() - JOURS_CREDIT_PASS * 86_400_000;
+  return passes.filter((p) => !p.deduit_par && new Date(p.cree_le).getTime() >= limite);
+}
+
+/** Prix après déduction du crédit, arrondi au multiple de 5 FCFA inférieur, au moins 100 FCFA (exigence mobile money). */
+export function prixApresCredit(prix: number, credit: number): number {
+  if (credit <= 0) return prix;
+  return Math.max(100, Math.floor((prix - credit) / 5) * 5);
+}
+
+// ---------------------------------------------------------------- Licences établissement
+
+/** Code de licence : 8 caractères sans ambiguïté. */
+export function nouveauCodeLicence(): string {
+  return Array.from({ length: 8 }, () => CODE_CHARS[Math.floor(Math.random() * CODE_CHARS.length)]).join("");
+}
+
+export function codeLicenceValide(code: string | null | undefined): string | null {
+  const c = (code ?? "").trim().toUpperCase().replace(/[\s-]+/g, "");
+  return /^[ABCDEFGHJKMNPQRSTUVWXYZ2-9]{8}$/.test(c) ? c : null;
+}
+
+/** Message lisible pour une erreur de réservation de place (fonction rejoindre_licence). */
+export function messageLicence(erreur: string): string {
+  if (erreur.includes("LICENCE_DEJA_MEMBRE")) return "Vous faites déjà partie de cette licence.";
+  if (erreur.includes("LICENCE_COMPLETE")) return "Toutes les places de cette licence sont déjà utilisées. Contactez votre établissement.";
+  if (erreur.includes("LICENCE_EXPIREE")) return "Ce code de licence a expiré. Contactez votre établissement.";
+  if (erreur.includes("LICENCE_INCONNUE")) return "Code de licence inconnu ou désactivé. Vérifiez le code donné par votre établissement.";
+  return "Activation impossible pour le moment. Réessayez plus tard.";
+}
+
+// ---------------------------------------------------------------- Ambassadeurs
+
+/** Taux de commission d'un parrain : celui de l'ambassadeur actif s'il en a un, sinon le taux général. */
+export function tauxPour(ambassadeur: { actif: boolean; taux: number | string | null } | null, tauxGeneral: number): number {
+  const t = ambassadeur?.actif && ambassadeur.taux !== null ? Number(ambassadeur.taux) : NaN;
+  return Number.isFinite(t) && t > 0 && t <= 50 ? t : tauxGeneral;
+}
+
+export type FilleulStat = { id: string; cree_le: string };
+export type VenteStat = { utilisateur_id: string; montant_fcfa: number; cree_le: string };
+
+/** Indicateurs d'un ambassadeur : inscriptions, conversions et ventes, au total et sur le mois en cours. */
+export function statsAmbassadeur(filleuls: FilleulStat[], ventes: VenteStat[], debutMois: Date) {
+  const ids = new Set(filleuls.map((f) => f.id));
+  const siennes = ventes.filter((v) => ids.has(v.utilisateur_id));
+  const payeurs = new Set(siennes.map((v) => v.utilisateur_id));
+  const duMois = (d: string) => new Date(d) >= debutMois;
+  const ventesMois = siennes.filter((v) => duMois(v.cree_le));
+  return {
+    inscrits: filleuls.length,
+    inscritsMois: filleuls.filter((f) => duMois(f.cree_le)).length,
+    payeurs: payeurs.size,
+    conversion: filleuls.length ? Math.round((payeurs.size / filleuls.length) * 100) : 0,
+    ventes: siennes.reduce((s, v) => s + v.montant_fcfa, 0),
+    ventesMois: ventesMois.reduce((s, v) => s + v.montant_fcfa, 0),
+    payeursMois: new Set(ventesMois.map((v) => v.utilisateur_id)).size,
+  };
+}

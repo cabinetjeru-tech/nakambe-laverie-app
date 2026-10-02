@@ -5,6 +5,7 @@ import { formatDate, formatFcfa, type CodePromo, type Formule } from "@/lib/abon
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import type { Temoignage } from "@/lib/vitrine";
 import { BaseDocumentaire } from "./admin-base";
+import { Ambassadeurs, Etablissements, type Ambassadeur, type Etablissement } from "./admin-croissance";
 import { deconnexion, Logo } from "./compte";
 
 /** Espace administration : tableau de bord, enseignants, paiements, tarifs. */
@@ -70,8 +71,11 @@ type Donnees = {
   temoignages: Temoignage[];
   erreurs: { id: number; cree_le: string; source: string; detail: string }[];
   fiches: { slug: string; titre: string; classe: string | null; discipline: string | null; publie: boolean; vues: number; cree_le: string }[];
+  ambassadeurs: Ambassadeur[];
+  etablissements: Etablissement[];
+  tauxParrainage: number;
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "campagne" | "vitrine" | "base" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "ambassadeurs" | "etablissements" | "campagne" | "vitrine" | "base" | "tarifs";
 /** Objectif de lancement : 5 000 enseignants abonnés. */
 const OBJECTIF_ABONNES = 5000;
 
@@ -122,6 +126,8 @@ export function AdminApp() {
     ["enseignants", `Enseignants (${d.stats.enseignants})`],
     ["paiements", "Paiements"],
     ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
+    ["ambassadeurs", `🌍 Ambassadeurs (${d.ambassadeurs.filter((a) => a.actif).length})`],
+    ["etablissements", "🏫 Établissements"],
     ["campagne", "Campagne"],
     ["vitrine", `Vitrine${d.temoignages.some((t) => !t.publie) ? " •" : ""}`],
     ["base", "Base documentaire"],
@@ -160,6 +166,8 @@ export function AdminApp() {
         {onglet === "enseignants" && <Enseignants d={d} action={action} />}
         {onglet === "paiements" && <Paiements d={d} action={action} />}
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
+        {onglet === "ambassadeurs" && <Ambassadeurs ambassadeurs={d.ambassadeurs} tauxParrainage={d.tauxParrainage} action={action} />}
+        {onglet === "etablissements" && <Etablissements etablissements={d.etablissements} action={action} />}
         {onglet === "campagne" && <Campagne d={d} action={action} />}
         {onglet === "vitrine" && <Vitrine d={d} action={action} />}
         {onglet === "base" && <BaseDocumentaire />}
@@ -443,8 +451,8 @@ function ParrainageAdmin({ d, action }: { d: Donnees; action: (b: Record<string,
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted">
-        Chaque paiement réussi d&apos;un enseignant parrainé donne {d.commissions[0]?.taux ?? 20} % à son parrain, si celui-ci est abonné. Versez les montants par mobile money,
-        puis marquez-les « versés ».
+        Chaque abonnement mensuel ou annuel d&apos;un enseignant parrainé donne {d.tauxParrainage} % à son parrain, si celui-ci est abonné (les ambassadeurs actifs
+        touchent leur propre taux, même sans abonnement). Versez les montants par mobile money, puis marquez-les « versés ».
       </p>
       {parParrain.size > 0 && (
         <div className="rounded-xl border border-line bg-white p-3">

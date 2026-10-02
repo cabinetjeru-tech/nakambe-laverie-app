@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { finAbonnement, prixValide } from "@/lib/abonnement";
+import { finAbonnement, nouveauCodeLicence, prixValide, statsAmbassadeur, tauxCommission, tauxPour } from "@/lib/abonnement";
 import { activerAbonnement, compteCourant, formules, traiterPaiement, type Profil } from "@/lib/comptes";
 import { debutJour, tauxUsdFcfa, usdEnFcfa } from "@/lib/couts";
 import { diagnosticCinetpay } from "@/lib/paiement/cinetpay";
@@ -28,7 +28,7 @@ export async function GET() {
   const db = adminClient();
   const il30j = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const debutMoisUtc = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();
-  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails, temoignages, fiches, erreurs] = await Promise.all([
+  const [profils, abos, paiements, preps, offres, coms, promos, paiementsPromo, conso, mails, temoignages, fiches, erreurs, ambs, ventes, etabs, membres] = await Promise.all([
     db.from("profils").select("*").order("cree_le", { ascending: false }).limit(10000),
     db.from("abonnements").select("utilisateur_id, fin, origine").limit(50000),
     db.from("paiements").select("id, utilisateur_id, formule_id, montant_fcfa, statut, moyen, transaction_id, cree_le").order("cree_le", { ascending: false }).limit(300),
@@ -42,6 +42,10 @@ export async function GET() {
     db.from("temoignages").select("*").order("publie").order("ordre").order("cree_le", { ascending: false }).limit(500),
     db.from("fiches_publiques").select("slug, titre, classe, discipline, publie, vues, cree_le").order("cree_le", { ascending: false }).limit(1000),
     db.from("journal_erreurs").select("id, cree_le, source, detail").order("cree_le", { ascending: false }).limit(15),
+    db.from("ambassadeurs").select("*").order("cree_le"),
+    db.from("paiements").select("utilisateur_id, montant_fcfa, cree_le").eq("statut", "reussi").limit(100000),
+    db.from("etablissements").select("*").order("cree_le", { ascending: false }),
+    db.from("etablissement_membres").select("etablissement_id, utilisateur_id, cree_le").limit(100000),
   ]);
   // Coût de l'IA : aujourd'hui, depuis le début du mois, et par enseignant sur 30 jours.
   const taux = tauxUsdFcfa();
@@ -105,6 +109,38 @@ export async function GET() {
   }));
   const debutMois = new Date(now.getFullYear(), now.getMonth(), 1);
   const reussis = (paiements.data ?? []).filter((p) => p.statut === "reussi");
+  // Ambassadeurs : indicateurs du mois et cumulés, commissions, classement par ventes du mois.
+  const ventesTout = (ventes.data ?? []) as { utilisateur_id: string; montant_fcfa: number; cree_le: string }[];
+  const ambassadeurs = (ambs.data ?? [])
+    .map((a) => {
+      const e = enseignants.find((x) => x.id === a.profil_id);
+      const sesCommissions = commissions.filter((c) => c.parrain_id === a.profil_id);
+      return {
+        ...a,
+        email: e?.email ?? "—",
+        nom: e?.nom ?? null,
+        telephone: e?.telephone ?? null,
+        code_parrainage: e?.code_parrainage ?? "",
+        acces_fin: e?.fin ?? null,
+        taux_effectif: tauxPour(a, tauxCommission()),
+        stats: statsAmbassadeur(
+          enseignants.filter((x) => x.parrain_id === a.profil_id),
+          ventesTout,
+          debutMois,
+        ),
+        commissionsDues: sesCommissions.filter((c) => c.statut === "due").reduce((s, c) => s + c.montant_fcfa, 0),
+        commissionsVersees: sesCommissions.filter((c) => c.statut === "versee").reduce((s, c) => s + c.montant_fcfa, 0),
+      };
+    })
+    .sort((x, y) => Number(y.actif) - Number(x.actif) || y.stats.ventesMois - x.stats.ventesMois || y.stats.inscritsMois - x.stats.inscritsMois);
+  const etablissements = (etabs.data ?? []).map((e) => {
+    const m = (membres.data ?? []).filter((x) => x.etablissement_id === e.id);
+    return {
+      ...e,
+      ambassadeur: e.ambassadeur_id ? (emails.get(e.ambassadeur_id) ?? "—") : null,
+      membres: m.map((x) => ({ email: emails.get(x.utilisateur_id) ?? "—", nom: enseignants.find((y) => y.id === x.utilisateur_id)?.nom ?? null, cree_le: x.cree_le })),
+    };
+  });
   return Response.json({
     stats: {
       enseignants: enseignants.length,
@@ -133,6 +169,9 @@ export async function GET() {
     temoignages: temoignages.data ?? [],
     fiches: fiches.data ?? [],
     erreurs: erreurs.data ?? [],
+    ambassadeurs,
+    etablissements,
+    tauxParrainage: tauxCommission(),
   });
 }
 
@@ -181,6 +220,35 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("fiche"), slug: z.string().regex(/^[a-z0-9-]{3,120}$/), publie: z.boolean().optional(), supprimer: z.boolean().optional() }),
   z.object({ action: z.literal("commission"), id: z.uuid(), statut: z.enum(["versee", "annulee", "due"]), reference: z.string().trim().max(120).optional() }),
+  z.object({
+    action: z.literal("ambassadeur"),
+    email: z.string().trim().toLowerCase().email("Adresse e-mail invalide."),
+    region: z.string().trim().max(80).optional(),
+    zone: z.string().trim().max(120).optional(),
+    disciplines: z.string().trim().max(160).optional(),
+    taux: z.number().min(1).max(50).nullable().optional(),
+    objectif_mois: z.number().int().min(1).max(10000).nullable().optional(),
+    actif: z.boolean(),
+    note: z.string().trim().max(300).optional(),
+    offrir_acces_jours: z.number().int().min(1).max(730).optional(),
+  }),
+  z.object({ action: z.literal("ambassadeur_retirer"), utilisateur: z.uuid() }),
+  z.object({
+    action: z.literal("etablissement"),
+    id: z.uuid().optional(),
+    nom: z.string().trim().min(2).max(160),
+    ville: z.string().trim().max(80).optional(),
+    contact_nom: z.string().trim().max(120).optional(),
+    contact_telephone: z.string().trim().max(40).optional(),
+    contact_email: z.string().trim().max(160).optional(),
+    places: z.number().int().min(1).max(5000),
+    duree_jours: z.number().int().min(1).max(730),
+    montant_fcfa: z.number().int().min(0).max(100_000_000),
+    ambassadeur_email: z.string().trim().toLowerCase().max(160).optional(),
+    actif: z.boolean(),
+    expire_le: z.string().max(40).nullable().optional(),
+    note: z.string().trim().max(300).optional(),
+  }),
 ]);
 
 export async function POST(req: Request) {
@@ -230,6 +298,68 @@ export async function POST(req: Request) {
       const { error } = await db.from("commissions").update(patch).eq("id", x.id);
       if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
       return Response.json({ ok: true });
+    }
+    case "ambassadeur": {
+      const { data: p } = await db.from("profils").select("id").ilike("email", x.email).maybeSingle<{ id: string }>();
+      if (!p) return Response.json({ error: "Aucun compte enseignant avec cette adresse : l'ambassadeur doit d'abord créer son compte." }, { status: 400 });
+      const { error } = await db.from("ambassadeurs").upsert({
+        profil_id: p.id,
+        region: x.region || null,
+        zone: x.zone || null,
+        disciplines: x.disciplines || null,
+        taux: x.taux ?? null,
+        objectif_mois: x.objectif_mois ?? null,
+        actif: x.actif,
+        note: x.note || null,
+      });
+      if (error) return Response.json({ error: "Enregistrement impossible." }, { status: 500 });
+      if (x.offrir_acces_jours) {
+        const per = await activerAbonnement({ utilisateurId: p.id, jours: x.offrir_acces_jours, formuleId: "annuel", origine: "admin", note: `Accès ambassadeur offert par ${a.compte.profil.email}` });
+        return Response.json({ ok: true, fin: per.fin.toISOString() });
+      }
+      return Response.json({ ok: true });
+    }
+    case "ambassadeur_retirer": {
+      const { error } = await db.from("ambassadeurs").delete().eq("profil_id", x.utilisateur);
+      if (error) return Response.json({ error: "Suppression impossible." }, { status: 500 });
+      return Response.json({ ok: true });
+    }
+    case "etablissement": {
+      let ambassadeurId: string | null = null;
+      if (x.ambassadeur_email) {
+        const { data: amb } = await db.from("profils").select("id").ilike("email", x.ambassadeur_email).maybeSingle<{ id: string }>();
+        if (!amb) return Response.json({ error: "Ambassadeur introuvable : vérifiez son adresse e-mail." }, { status: 400 });
+        ambassadeurId = amb.id;
+      }
+      const expire = x.expire_le ? new Date(x.expire_le) : null;
+      if (expire && Number.isNaN(expire.getTime())) return Response.json({ error: "Date limite invalide." }, { status: 400 });
+      const champs = {
+        nom: x.nom,
+        ville: x.ville || null,
+        contact_nom: x.contact_nom || null,
+        contact_telephone: x.contact_telephone || null,
+        contact_email: x.contact_email || null,
+        places: x.places,
+        duree_jours: x.duree_jours,
+        montant_fcfa: x.montant_fcfa,
+        ambassadeur_id: ambassadeurId,
+        actif: x.actif,
+        expire_le: expire?.toISOString() ?? null,
+        note: x.note || null,
+      };
+      if (x.id) {
+        const { error } = await db.from("etablissements").update(champs).eq("id", x.id);
+        if (error) return Response.json({ error: "Mise à jour impossible." }, { status: 500 });
+        return Response.json({ ok: true });
+      }
+      // Nouveau code de licence (nouvel essai en cas de collision, très improbable).
+      for (let i = 0; i < 5; i++) {
+        const code = nouveauCodeLicence();
+        const { error } = await db.from("etablissements").insert({ ...champs, code });
+        if (!error) return Response.json({ ok: true, message: `code de licence ${code}` });
+        if (error.code !== "23505") return Response.json({ error: "Création impossible." }, { status: 500 });
+      }
+      return Response.json({ error: "Création impossible, réessayez." }, { status: 500 });
     }
     case "temoignage_ajouter": {
       const { error } = await db.from("temoignages").insert({ nom: x.nom, fonction: x.fonction || null, ville: x.ville || null, texte: x.texte, note: x.note, publie: true });
