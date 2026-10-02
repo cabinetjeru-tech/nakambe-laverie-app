@@ -7,6 +7,7 @@ import type { Temoignage } from "@/lib/vitrine";
 import { BaseDocumentaire } from "./admin-base";
 import { Ambassadeurs, Etablissements, type Ambassadeur, type Etablissement } from "./admin-croissance";
 import { deconnexion, Logo } from "./compte";
+import { PartageReseaux } from "./partage-reseaux";
 
 /** Espace administration : tableau de bord, enseignants, paiements, tarifs. */
 
@@ -557,6 +558,7 @@ function Campagne({ d, action }: { d: Donnees; action: (b: Record<string, unknow
             Ouvrir
           </a>
         </div>
+        <PartageReseaux lien={lien} className="mt-4" titre="Partager la page de présentation" />
       </section>
 
       <section className="rounded-xl border border-line bg-white p-4">

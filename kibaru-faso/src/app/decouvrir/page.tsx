@@ -3,6 +3,7 @@ import { formatFcfa, type CodePromo } from "@/lib/abonnement";
 import { CONTACT } from "@/lib/contact";
 import { ExempleFiche } from "@/components/exemple-fiche";
 import { BoutonInstaller } from "@/components/installer";
+import { PartageReseaux } from "@/components/partage-reseaux";
 import { compteursPublics, fichesPubliees, temoignagesPublies } from "@/lib/vitrine-serveur";
 import { accountsEnabled, adminClient } from "@/lib/supabase/server";
 
@@ -85,7 +86,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
               Se connecter
             </a>
           </div>
-          <div className="mt-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_400px]">
+          <div className="mt-10 grid grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_440px]">
             <div className="min-w-0">
               <h1 className="max-w-3xl text-3xl font-extrabold leading-tight sm:text-5xl">Préparez vos cours, devoirs et corrigés en quelques minutes.</h1>
               <p className="mt-4 max-w-2xl text-lg text-white/90">
@@ -104,14 +105,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
               <BoutonInstaller className="mt-4" clair />
               {parrain && <p className="mt-4 text-sm text-white/85">Vous êtes invité(e) par un collègue (code {parrain}).</p>}
             </div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/illustration-enseignante.svg"
-              alt="Une enseignante burkinabè en Faso Dan Fani prépare ses fiches pédagogiques à son bureau."
-              width={480}
-              height={360}
-              className="mx-auto h-auto w-full min-w-0 max-w-md rounded-3xl shadow-2xl ring-4 ring-white/20"
-            />
+            <PhotosAccueil />
           </div>
         </div>
       </section>
@@ -251,6 +245,16 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
         </div>
       </section>
 
+      <section className="bg-faso-50 px-4 py-10">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-2xl font-extrabold text-faso-dark">📣 Faites connaître PÉDAGOGUE.IA à vos collègues</h2>
+          <p className="mt-2 max-w-3xl text-sm text-muted">
+            Un clic pour partager cette page dans vos groupes WhatsApp, sur Facebook ou sur TikTok. Le lien garde le code de parrainage de la personne qui vous a invité.
+          </p>
+          <PartageReseaux className="mt-4" titre={null} />
+        </div>
+      </section>
+
       <section className="mx-auto max-w-5xl px-4 py-12">
         <h2 className="text-2xl font-extrabold text-faso-dark">Questions fréquentes</h2>
         <dl className="mt-5 space-y-4 text-sm">
@@ -302,5 +306,30 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
         <span aria-hidden className="text-lg leading-none">💬</span> Une question ? WhatsApp
       </a>
     </main>
+  );
+}
+
+/** Deux photos d'enseignants burkinabè en pleine préparation de leurs fiches, superposées. */
+function PhotosAccueil() {
+  const photo = (nom: string, alt: string, classe: string) => (
+    <picture>
+      <source type="image/webp" srcSet={`/${nom}-600.webp 600w, /${nom}.webp 1000w`} sizes="(min-width: 1024px) 360px, 70vw" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={`/${nom}.jpg`} alt={alt} width={1000} height={nom.endsWith("enseignante") ? 833 : 1067} className={classe} />
+    </picture>
+  );
+  return (
+    <div className="relative mx-auto w-full max-w-md pb-16 pr-10 sm:pb-20">
+      {photo(
+        "accueil-enseignante",
+        "Une enseignante burkinabè en Faso Dan Fani prépare ses fiches de cours à son bureau.",
+        "w-full rounded-3xl object-cover shadow-2xl ring-4 ring-white/25",
+      )}
+      {photo(
+        "accueil-enseignant",
+        "Un enseignant burkinabè en Faso Dan Fani rédige sa fiche de préparation de cours.",
+        "absolute bottom-0 right-0 w-[52%] rounded-2xl object-cover shadow-2xl ring-4 ring-white",
+      )}
+    </div>
   );
 }

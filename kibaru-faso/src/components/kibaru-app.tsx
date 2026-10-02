@@ -940,11 +940,11 @@ function Welcome({
         </div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/illustration-enseignante.svg"
+          src="/accueil-enseignante-600.webp"
           alt="Enseignante burkinabè préparant ses fiches"
-          width={480}
-          height={360}
-          className="w-28 shrink-0 rounded-2xl border border-line sm:w-44"
+          width={600}
+          height={500}
+          className="h-24 w-28 shrink-0 rounded-2xl border border-line object-cover sm:h-32 sm:w-44"
         />
       </div>
       <BoutonInstaller className="mt-3" />
