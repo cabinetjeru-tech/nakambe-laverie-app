@@ -77,13 +77,13 @@ export function statutCinetpay(status: string | undefined): StatutPaiement {
 
 // ---------------------------------------------------------------- Essai gratuit et parrainage
 
-/** Durée de l'essai gratuit offert à l'inscription (appliqué par la base, voir supabase/migrations/0002). */
-export const ESSAI_HEURES = 24;
+/** Durée de validité de la fiche offerte à l'inscription (appliquée par la base, voir supabase/migrations/0011). */
+export const ESSAI_HEURES = 30 * 24;
 
 /** Commission du parrain sur chaque paiement de son filleul (mensuel ou annuel), en pourcentage. */
 export function tauxCommission(): number {
   const t = Number(process.env.PARRAINAGE_TAUX);
-  return Number.isFinite(t) && t > 0 && t <= 50 ? t : 20;
+  return Number.isFinite(t) && t > 0 && t <= 50 ? t : 10;
 }
 
 export function montantCommission(montant: number, taux: number): number {

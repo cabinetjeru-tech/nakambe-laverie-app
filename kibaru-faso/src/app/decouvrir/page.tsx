@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 const TITRE = "PÉDAGOGUE.IA — Préparez vos cours en quelques minutes";
 const DESCRIPTION =
-  "L'assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale : fiches, devoirs avec corrigés et barèmes, remédiation, progressions. 24 h d'essai gratuit.";
+  "L'assistant pédagogique des enseignants du Burkina Faso, du préscolaire à la Terminale : fiches, devoirs avec corrigés et barèmes, remédiation, progressions. 1 fiche offerte.";
 
 export const metadata: Metadata = {
   title: TITRE,
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function offres() {
-  const defaut = { journalier: 300 as number | null, mensuel: 3000, annuel: 30000, promo: null as CodePromo | null };
+  const defaut = { journalier: 500 as number | null, mensuel: 7500, annuel: 30000, promo: null as CodePromo | null };
   if (!accountsEnabled()) return defaut;
   try {
     const db = adminClient();
@@ -64,7 +64,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
 
   const Cta = ({ className = "" }: { className?: string }) => (
     <a href={inscription} className={`inline-block rounded-xl bg-or px-6 py-3 text-center text-base font-extrabold text-ink shadow hover:brightness-95 ${className}`}>
-      🎁 Essayer gratuitement pendant 24 h
+      🎁 Essayer gratuitement : 1 fiche offerte
     </a>
   );
 
@@ -216,7 +216,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
           <div className="rounded-2xl border-2 border-or bg-or-50 p-5">
             <div className="font-bold">Essai gratuit</div>
             <div className="mt-1 text-3xl font-extrabold">0 FCFA</div>
-            <div className="text-sm text-muted">24 h d&apos;accès complet dès l&apos;inscription</div>
+            <div className="text-sm text-muted">1 fiche offerte dès l&apos;inscription</div>
           </div>
           {o.journalier && (
             <div className="rounded-2xl border-2 border-faso/30 p-5">
@@ -243,10 +243,10 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
 
       <section className="bg-faso-dark px-4 py-12 text-white">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-2xl font-extrabold">🤝 Parrainez vos collègues, gagnez 20 %</h2>
+          <h2 className="text-2xl font-extrabold">🤝 Parrainez vos collègues, gagnez 10 %</h2>
           <p className="mt-3 max-w-3xl text-white/90">
-            Chaque enseignant abonné reçoit un lien personnel. Pour chaque collègue inscrit par ce lien, vous touchez 20 % de chacun de ses paiements, mensuels ou
-            annuels, versés par mobile money. Cinq filleuls à l&apos;année couvrent déjà votre propre abonnement.
+            Chaque enseignant abonné reçoit un lien personnel. Pour chaque collègue inscrit par ce lien, vous touchez 10 % de chacun de ses abonnements, mensuels ou
+            annuels, versés par mobile money. Dix filleuls à l&apos;année couvrent votre propre abonnement annuel.
           </p>
         </div>
       </section>
@@ -256,7 +256,7 @@ export default async function Decouvrir({ searchParams }: { searchParams: Promis
         <dl className="mt-5 space-y-4 text-sm">
           {(
             [
-              ["Faut-il payer pour essayer ?", "Non : l'inscription donne 24 h d'accès complet, sans paiement."],
+              ["Faut-il payer pour essayer ?", "Non : l'inscription vous offre une fiche complète, sans paiement."],
               ["Comment payer ?", "Par Orange Money, Moov Money ou carte bancaire, via la plateforme sécurisée CinetPay. Pass journalier (24 h), mensuel ou annuel, au choix."],
               ["Les contenus sont-ils officiels ?", "PÉDAGOGUE.IA s'appuie en priorité sur sa base documentaire et indique toujours ce qui est une proposition. L'enseignant reste maître de ses préparations."],
               ["Mes préparations sont-elles sauvegardées ?", "Oui : vous les retrouvez sur votre téléphone comme sur votre ordinateur, et vous pouvez les télécharger en PDF ou Word."],

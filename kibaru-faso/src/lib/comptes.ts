@@ -28,7 +28,7 @@ export type Compte = {
   acces: boolean;
   joursRestants: number;
   heuresRestantes: number;
-  /** Accès en cours issu de l'essai gratuit de 24 h (et non d'un paiement). */
+  /** Accès en cours issu de l'essai gratuit (fiche offerte), et non d'un paiement. */
   essai: boolean;
   /** Abonnement qui couvre le moment présent (pour le quota du jour). */
   enCours: { origine: string; formule_id: string | null; debut: string } | null;
@@ -161,7 +161,7 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
 export const DUREE_MIN_COMMISSION = 30;
 
 /**
- * Commission du parrain (20 % par défaut) sur chaque paiement réussi de son filleul, mensuel ou annuel.
+ * Commission du parrain (10 % par défaut) sur chaque paiement réussi de son filleul, mensuel ou annuel.
  * Condition : le parrain est lui-même abonné (ou administrateur) et non suspendu au moment du paiement.
  * Un paiement ne donne qu'une commission (contrainte d'unicité sur paiement_id).
  */
@@ -235,10 +235,10 @@ export async function verifierPromo(code: string, utilisateurId: string): Promis
 
 // ---------------------------------------------------------------- Quotas et coût de l'IA
 
-/** Quota quotidien de l'essai gratuit (QUOTA_ESSAI_JOUR, 10 par défaut). */
+/** Générations offertes à l'inscription, au total (QUOTA_ESSAI, 1 par défaut : une fiche gratuite). */
 export function quotaEssai(): number {
-  const q = Number(process.env.QUOTA_ESSAI_JOUR);
-  return Number.isInteger(q) && q > 0 ? q : 5;
+  const q = Number(process.env.QUOTA_ESSAI);
+  return Number.isInteger(q) && q > 0 ? q : 1;
 }
 
 /** Quota par défaut d'un accès accordé par l'administration (QUOTA_DEFAUT_JOUR, 30 par défaut). */
@@ -275,10 +275,12 @@ export function generationsDuJour(utilisateurId: string): Promise<number> {
   return unitesDepuis(utilisateurId, debutJour());
 }
 
-/** Plafond de générations sur toute la durée de la formule en cours (null = aucun : essai, accès accordé, administration). */
+/** Plafond de générations sur toute la durée de la formule en cours, ou de l'essai (null = aucun : accès accordé, administration). */
 export async function quotaPeriode(compte: Compte): Promise<number | null> {
   const c = compte.enCours;
-  if (compte.profil.role === "admin" || !c || c.origine === "essai" || !c.formule_id) return null;
+  if (compte.profil.role === "admin" || !c) return null;
+  if (c.origine === "essai") return quotaEssai();
+  if (!c.formule_id) return null;
   const { data } = await adminClient().from("formules").select("quota_periode").eq("id", c.formule_id).maybeSingle<{ quota_periode: number | null }>();
   return data?.quota_periode ?? null;
 }

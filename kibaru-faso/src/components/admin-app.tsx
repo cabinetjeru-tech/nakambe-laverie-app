@@ -198,7 +198,7 @@ function Tableau({ d, action }: { d: Donnees; action: (b: Record<string, unknown
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Carte label="Enseignants inscrits" valeur={String(s.enseignants)} detail={`${s.parraines} via parrainage`} />
         <Carte label="Abonnés payants actifs" valeur={String(s.abonnesActifs)} detail={s.enseignants ? `${Math.round((s.abonnesActifs / s.enseignants) * 100)} % des inscrits` : undefined} />
-        <Carte label="En essai gratuit (24 h)" valeur={String(s.enEssai)} detail="à convertir en abonnés" />
+        <Carte label="En essai (fiche offerte)" valeur={String(s.enEssai)} detail="à convertir en abonnés" />
         <Carte label="Recettes du mois" valeur={formatFcfa(s.recettesMois)} detail={`Total : ${formatFcfa(s.recettesTotal)}`} />
         <Carte label="Commissions à verser" valeur={formatFcfa(s.commissionsDues)} detail="onglet Parrainage" />
         <Carte label="Générations aujourd'hui" valeur={String(s.generationsJour)} detail={`Coût IA : ${formatFcfa(s.coutJourFcfa)}`} />
@@ -518,7 +518,7 @@ function ParrainageAdmin({ d, action }: { d: Donnees; action: (b: Record<string,
 }
 
 function Campagne({ d, action }: { d: Donnees; action: (b: Record<string, unknown>, ok: string) => Promise<void> }) {
-  const vide = { code: "", description: "", remise_pct: 20, actif: true, expire_le: "", max_utilisations: "" };
+  const vide = { code: "", description: "", remise_pct: 5, actif: true, expire_le: "", max_utilisations: "" };
   const [f, setF] = useState(vide);
   const [copie, setCopie] = useState<number | null>(null);
   const actifs = d.promos.filter((p) => p.actif && (!p.expire_le || new Date(p.expire_le) > new Date()));
@@ -669,7 +669,7 @@ function Tarifs({ d, action }: { d: Donnees; action: (b: Record<string, unknown>
       <p className="text-sm text-muted">
         Les nouveaux prix s&apos;appliquent aux prochains paiements. Montants en FCFA, multiples de 5. « Générations / jour » évite les rafales ;
         « Générations / formule » plafonne le total sur toute la durée (le mode expert compte double). Laisser vide = pas de plafond. Ces plafonds protègent la
-        marge, car chaque génération a un coût d&apos;IA (voir le tableau de bord). Essai gratuit : 5 par jour.
+        marge, car chaque génération a un coût d&apos;IA (voir le tableau de bord). Essai : 1 fiche offerte (variable QUOTA_ESSAI).
       </p>
       {Object.values(edits).map((f) => (
         <div key={f.id} className="flex flex-wrap items-end gap-3 rounded-xl border border-line bg-white p-3">

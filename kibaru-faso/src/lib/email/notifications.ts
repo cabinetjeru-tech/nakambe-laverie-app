@@ -147,7 +147,7 @@ export async function envoyerRappels(maintenant = new Date()): Promise<{ finEssa
       type: "fin_essai",
       utilisateurId: id,
       to: p.email,
-      email: () => emailFinEssai({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 3000, annuel: prix.annuel ?? 30000 }, promo }),
+      email: () => emailFinEssai({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 30000 }, promo }),
     });
     if (ok) res.finEssai++;
   }

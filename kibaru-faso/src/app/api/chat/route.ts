@@ -40,7 +40,11 @@ export async function POST(req: Request) {
     if (plafond === "periode")
       return jsonError(
         429,
-        `Vous avez utilisé les ${q.periode!.limite} générations de votre formule. Renouvelez ou changez de formule dans « Mon compte » pour continuer.`,
+        compte.essai
+          ? q.periode!.limite === 1
+            ? "Vous avez utilisé votre fiche gratuite. Abonnez-vous dans « Mon compte » pour continuer : pass 24 h, mensuel ou annuel."
+            : `Vous avez utilisé les ${q.periode!.limite} générations offertes. Abonnez-vous dans « Mon compte » pour continuer.`
+          : `Vous avez utilisé les ${q.periode!.limite} générations de votre formule. Renouvelez ou changez de formule dans « Mon compte » pour continuer.`,
       );
     if (plafond === "jour")
       return jsonError(

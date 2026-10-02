@@ -21,8 +21,8 @@ export function AppelEssai({ titre = "Préparez la vôtre en quelques minutes" }
     <div className="rounded-2xl bg-faso p-6 text-white">
       <h2 className="text-xl font-extrabold">{titre}</h2>
       <p className="mt-2 text-white/90">
-        Indiquez votre classe, votre discipline et la leçon : PÉDAGOGUE.IA rédige la fiche, le devoir, le corrigé et le barème, adaptés à vos élèves. 24 h
-        d&apos;essai gratuit, sans paiement.
+        Indiquez votre classe, votre discipline et la leçon : PÉDAGOGUE.IA rédige la fiche, le devoir, le corrigé et le barème, adaptés à vos élèves. 1 fiche
+        offerte, sans paiement.
       </p>
       <a href="/?inscription=1" className="mt-4 inline-block rounded-xl bg-or px-5 py-2.5 font-extrabold text-ink hover:brightness-95">
         Essayer gratuitement
