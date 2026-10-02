@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 async function offres() {
-  const defaut = { journalier: 200 as number | null, mensuel: 2000, annuel: 15000, promo: null as CodePromo | null };
+  const defaut = { journalier: 300 as number | null, mensuel: 3000, annuel: 30000, promo: null as CodePromo | null };
   if (!accountsEnabled()) return defaut;
   try {
     const db = adminClient();

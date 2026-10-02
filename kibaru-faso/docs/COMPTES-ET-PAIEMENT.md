@@ -7,8 +7,8 @@ megavision.gca@gmail.com.
 ## Ce que voit l'enseignant
 
 1. **Inscription / connexion** par e-mail et mot de passe (mot de passe oublié par e-mail).
-2. **Abonnement** : sans abonnement actif, une page présente les formules (par défaut 2 000 FCFA / mois et
-   15 000 FCFA / an) avec paiement **mobile money** (Orange Money, Moov Money via CinetPay). Un paiement fait
+2. **Abonnement** : sans abonnement actif, une page présente les formules (par défaut 3 000 FCFA / mois et
+   30 000 FCFA / an) avec paiement **mobile money** (Orange Money, Moov Money via CinetPay). Un paiement fait
    avant la fin de l'abonnement le **prolonge** sans perte de jours. Rappel 5 jours avant la fin.
 3. **Mon compte** (en haut à droite) : abonnement, historique des paiements, profil, déconnexion.
 4. **Mes préparations** sont sauvegardées en ligne et retrouvées sur tous ses appareils. Les préparations déjà

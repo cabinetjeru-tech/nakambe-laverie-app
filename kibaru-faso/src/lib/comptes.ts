@@ -2,6 +2,7 @@ import "server-only";
 import { finAbonnement, heuresRestantes, joursRestants, montantCommission, nouveauCodeParrainage, nouvellePeriode, refusPromo, tauxCommission, type CodePromo, type Formule } from "./abonnement";
 import { coutUsd, debutJour, type Consommation } from "./couts";
 import { notifierCommission, notifierPaiement } from "./email/notifications";
+import type { EtatQuota } from "./quota";
 import { verifierPaiement } from "./paiement/cinetpay";
 import { adminClient, sessionClient } from "./supabase/server";
 
@@ -30,7 +31,7 @@ export type Compte = {
   /** Accès en cours issu de l'essai gratuit de 24 h (et non d'un paiement). */
   essai: boolean;
   /** Abonnement qui couvre le moment présent (pour le quota du jour). */
-  enCours: { origine: string; formule_id: string | null } | null;
+  enCours: { origine: string; formule_id: string | null; debut: string } | null;
 };
 
 /** Adresses e-mail des administrateurs (variable ADMIN_EMAILS, séparées par des virgules). */
@@ -74,7 +75,7 @@ export async function chargerCompte(user: { id: string; email: string }): Promis
   const acces = aAcces(profil, fin, now);
   const { data: couvrant } = await db
     .from("abonnements")
-    .select("origine, formule_id")
+    .select("origine, formule_id, debut")
     .eq("utilisateur_id", user.id)
     .lte("debut", now.toISOString())
     .gt("fin", now.toISOString())
@@ -156,6 +157,9 @@ export async function traiterPaiement(transactionId: string): Promise<{ statut: 
 
 // ---------------------------------------------------------------- Parrainage
 
+/** Durée minimale (jours) d'une formule pour donner lieu à commission : mensuel et annuel uniquement. */
+export const DUREE_MIN_COMMISSION = 30;
+
 /**
  * Commission du parrain (20 % par défaut) sur chaque paiement réussi de son filleul, mensuel ou annuel.
  * Condition : le parrain est lui-même abonné (ou administrateur) et non suspendu au moment du paiement.
@@ -165,6 +169,9 @@ async function enregistrerCommission(paiement: PaiementRow) {
   const db = adminClient();
   const { data: filleul } = await db.from("profils").select("parrain_id").eq("id", paiement.utilisateur_id).single<{ parrain_id: string | null }>();
   if (!filleul?.parrain_id || filleul.parrain_id === paiement.utilisateur_id) return;
+  // Pas de commission sur les passes courts (journalier) : leur marge ne le permet pas.
+  const { data: formule } = await db.from("formules").select("duree_jours").eq("id", paiement.formule_id).maybeSingle<{ duree_jours: number }>();
+  if (!formule || formule.duree_jours < DUREE_MIN_COMMISSION) return;
   const { data: parrain } = await db.from("profils").select("*").eq("id", filleul.parrain_id).single<Profil>();
   if (!parrain) return;
   const { data: abos } = await db.from("abonnements").select("fin").eq("utilisateur_id", parrain.id).order("fin", { ascending: false }).limit(1);
@@ -251,24 +258,40 @@ export async function quotaJour(compte: Compte): Promise<number | null> {
   return data ? data.quota_jour : quotaDefaut();
 }
 
-/** Générations comptées depuis minuit (heure du Burkina Faso = UTC). */
-export async function generationsDuJour(utilisateurId: string): Promise<number> {
-  const { count } = await adminClient()
+/** Unités consommées depuis une date (1 par génération, 2 en mode expert ; les questions de précision ne comptent pas). */
+async function unitesDepuis(utilisateurId: string, depuis: Date): Promise<number> {
+  const { data } = await adminClient()
     .from("usages")
-    .select("id", { count: "exact", head: true })
+    .select("unites")
     .eq("utilisateur_id", utilisateurId)
     .eq("decompte", true)
-    .gte("cree_le", debutJour().toISOString());
-  return count ?? 0;
+    .gte("cree_le", depuis.toISOString())
+    .limit(100000);
+  return (data ?? []).reduce((n, u) => n + ((u as { unites: number | null }).unites ?? 1), 0);
 }
 
-export async function etatQuota(compte: Compte): Promise<{ limite: number | null; utilisees: number }> {
-  const [limite, utilisees] = await Promise.all([quotaJour(compte), generationsDuJour(compte.profil.id)]);
-  return { limite, utilisees };
+/** Générations comptées depuis minuit (heure du Burkina Faso = UTC). */
+export function generationsDuJour(utilisateurId: string): Promise<number> {
+  return unitesDepuis(utilisateurId, debutJour());
+}
+
+/** Plafond de générations sur toute la durée de la formule en cours (null = aucun : essai, accès accordé, administration). */
+export async function quotaPeriode(compte: Compte): Promise<number | null> {
+  const c = compte.enCours;
+  if (compte.profil.role === "admin" || !c || c.origine === "essai" || !c.formule_id) return null;
+  const { data } = await adminClient().from("formules").select("quota_periode").eq("id", c.formule_id).maybeSingle<{ quota_periode: number | null }>();
+  return data?.quota_periode ?? null;
+}
+
+export async function etatQuota(compte: Compte): Promise<EtatQuota> {
+  const [limite, utilisees, limitePeriode] = await Promise.all([quotaJour(compte), generationsDuJour(compte.profil.id), quotaPeriode(compte)]);
+  const periode =
+    limitePeriode !== null && compte.enCours ? { limite: limitePeriode, utilisees: await unitesDepuis(compte.profil.id, new Date(compte.enCours.debut)) } : null;
+  return { limite, utilisees, periode };
 }
 
 /** Enregistre la consommation d'un appel à l'IA (coût estimé au tarif public du modèle). */
-export async function enregistrerUsage(u: { utilisateurId: string | null; modele: string; consommation: Consommation; besoin?: string; decompte: boolean }) {
+export async function enregistrerUsage(u: { utilisateurId: string | null; modele: string; consommation: Consommation; besoin?: string; decompte: boolean; unites?: number }) {
   const { error } = await adminClient()
     .from("usages")
     .insert({
@@ -281,6 +304,7 @@ export async function enregistrerUsage(u: { utilisateurId: string | null; modele
       cout_usd: coutUsd(u.modele, u.consommation),
       besoin: u.besoin ?? null,
       decompte: u.decompte,
+      unites: u.unites ?? 1,
     });
   if (error) console.error("[usage]", error.message);
 }

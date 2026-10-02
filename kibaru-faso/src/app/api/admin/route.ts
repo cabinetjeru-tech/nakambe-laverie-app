@@ -148,6 +148,7 @@ const actionSchema = z.discriminatedUnion("action", [
     duree_jours: z.number().int().min(1).max(730),
     active: z.boolean(),
     quota_jour: z.number().int().min(1).max(10000).nullable().optional(),
+    quota_periode: z.number().int().min(1).max(100000).nullable().optional(),
   }),
   z.object({ action: z.literal("verifier_paiement"), transaction: z.string().regex(/^[A-Za-z0-9_-]{6,64}$/) }),
   z.object({
@@ -205,7 +206,7 @@ export async function POST(req: Request) {
       return Response.json({ ok: true });
     case "formule":
       if (!prixValide(x.prix_fcfa)) return Response.json({ error: "Prix invalide : nombre entier, multiple de 5, au moins 100 FCFA." }, { status: 400 });
-      await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active, quota_jour: x.quota_jour ?? null });
+      await db.from("formules").upsert({ id: x.id, libelle: x.libelle, prix_fcfa: x.prix_fcfa, duree_jours: x.duree_jours, active: x.active, quota_jour: x.quota_jour ?? null, quota_periode: x.quota_periode ?? null });
       return Response.json({ ok: true });
     case "promo": {
       const expire = x.expire_le ? new Date(x.expire_le) : null;
