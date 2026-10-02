@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { accepteCreditPass, dureeFormule, estPass, formatDate, formatFcfa, prixApresCredit, type Formule } from "@/lib/abonnement";
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import { CONTACT } from "@/lib/contact";
+import { PartageReseaux } from "./partage-reseaux";
 
 /** Espace enseignant : connexion, inscription, mot de passe, abonnement et paiement mobile money. */
 
@@ -553,6 +554,7 @@ function Parrainage({ p, telephone }: { p: ParrainageInfo; telephone: string | n
       <p className="mt-1 text-xs text-muted">
         Votre code : <strong>{p.code}</strong>
       </p>
+      <PartageReseaux lien={lien} className="mt-3" titre="Ou partagez directement sur" />
       <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
         {(
           [
@@ -798,11 +800,9 @@ function EspaceAmbassadeur({ a, code }: { a: AmbassadeurInfo; code: string }) {
               📋 {m.titre}
             </button>
           ))}
-          <a href={`https://wa.me/?text=${encodeURIComponent(messages[0]!.texte)}`} target="_blank" rel="noopener" className="rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-white">
-            Partager sur WhatsApp
-          </a>
         </div>
       </div>
+      <PartageReseaux lien={lien} className="mt-3" titre="Partager votre lien sur les réseaux" />
       <p className="mt-3 text-xs text-muted">
         Astuce : présentez PÉDAGOGUE.IA en 5 minutes lors d&apos;une animation pédagogique ou d&apos;une réunion de CEB, en préparant une vraie fiche devant vos collègues.
       </p>
