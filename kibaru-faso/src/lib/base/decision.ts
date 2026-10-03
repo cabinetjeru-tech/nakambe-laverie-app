@@ -5,7 +5,7 @@ import { parseEvalParams, type EvalParams } from "../evaluation";
 import { parseRemedParams, type RemedParams } from "../remediation";
 import { heuresDisponibles, parseProgParams, type ProgParams } from "../progression";
 import type { ArchivedDoc, DocInfo, Excerpt, RefDocument } from "../search";
-import { canonicalClasse, normalize } from "../search";
+import { canonicalClasse, normalize, serieDe } from "../search";
 import type { PendingDoc } from "./load";
 import { CLASS_INFO, STATUT_LABELS, subjectCodes, SUBJECTS, typeLabel } from "./structure";
 
@@ -24,6 +24,8 @@ export type RequestProfile = {
   pays: string;
   niveau?: string;
   classe?: string;
+  /** Série du lycée (A, C, D, E…), si indiquée avec la classe. */
+  serie?: string;
   matiere?: string;
   theme?: string;
   sousTheme?: string;
@@ -248,6 +250,7 @@ export function identifyRequest(message: string, ctxIn: TeacherContext, needsFro
     pays: "Burkina Faso",
     niveau: info?.niveau,
     classe,
+    serie: cm ? undefined : serieDe(ctx.classe),
     matiere: fiche && fromTheme ? undefined : matiere,
     matiereSuggeree: fromTheme,
     theme: ctx.theme?.trim() || undefined,
@@ -437,7 +440,7 @@ export function formatDecisionBlock(d: Decision): string {
   const lines = [
     "<decision_pedagogique>",
     `1. Besoin identifié : ${p.needs.map((n) => NEEDS[n]).join(" + ")}.`,
-    `2. Contexte minimal : pays = ${p.pays} ; niveau = ${p.niveau ?? "non précisé"} ; classe = ${p.classe ?? "NON PRÉCISÉE"}${src(p.origineClasse)} ; matière = ${p.matiere ?? "NON PRÉCISÉE"}${src(p.origineMatiere)}. Contexte pédagogique : thème = ${p.theme ?? "non précisé"}${p.sousTheme ? ` ; sous-thème = ${p.sousTheme}` : ""} ; type de séance = ${p.typeSeance ?? "non précisé"} ; durée = ${p.duree ?? "non précisée"}.${p.assumptions.length ? ` Hypothèses à annoncer : ${p.assumptions.join(" ; ")}.` : ""}`,
+    `2. Contexte minimal : pays = ${p.pays} ; niveau = ${p.niveau ?? "non précisé"} ; classe = ${p.classe ?? "NON PRÉCISÉE"}${p.serie ? ` série ${p.serie} (n'utilise que le programme de cette série)` : ""}${src(p.origineClasse)} ; matière = ${p.matiere ?? "NON PRÉCISÉE"}${src(p.origineMatiere)}. Contexte pédagogique : thème = ${p.theme ?? "non précisé"}${p.sousTheme ? ` ; sous-thème = ${p.sousTheme}` : ""} ; type de séance = ${p.typeSeance ?? "non précisé"} ; durée = ${p.duree ?? "non précisée"}.${p.assumptions.length ? ` Hypothèses à annoncer : ${p.assumptions.join(" ; ")}.` : ""}`,
     `3. Recherche dans la base : cible ${target ?? "non déterminable (classe inconnue)"} ; ordre de priorité : programme/curriculum, guide pédagogique, référentiel, progression, ressources institutionnelles, ressources pédagogiques, connaissances générales. Résultat : ${d.consultable.length} ressource(s) consultable(s), ${d.pending.length} NON ENCORE INTÉGRÉE(S)${d.pending.length ? ` [${d.pending.map((x) => `${id(x)} — ${x.title}`).join(" ; ")}]` : ""}, ${d.history.length} dans l'historique.`,
     `4. Sélection des sources (autorité, pertinence, actualité, statut, version, périmètre, cohérence) :${
       d.cards.length

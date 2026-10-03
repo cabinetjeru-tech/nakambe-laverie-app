@@ -18,6 +18,18 @@ export const CYCLES = [
   { code: "SECONDAIRE", label: "Secondaire", classes: ["2nde", "1ère", "Terminale"] },
 ] as const;
 export type Cycle = (typeof CYCLES)[number];
+
+/**
+ * Séries du second cycle (lycée). « Terminale D » reste reconnue comme « Terminale » pour la recherche
+ * documentaire ; la série est transmise à l'assistant pour qu'il applique le programme de la bonne série.
+ */
+export const SERIES: Record<string, readonly string[]> = { "2nde": ["A", "C"], "1ère": ["A", "C", "D", "E"], Terminale: ["A", "C", "D", "E"] };
+
+/** Série d'une classe saisie (« Terminale D » → « D »), ou undefined. */
+export function serieDe(classe: string | null | undefined): string | undefined {
+  const m = (classe ?? "").trim().match(/\s(A\d?|C|D|E|F\d?|G\d?)$/i);
+  return m && SERIES[canonicalClasse(classe!)] ? m[1]!.toUpperCase() : undefined;
+}
 export type Classe = Cycle["classes"][number];
 export const CLASSES: readonly Classe[] = CYCLES.flatMap((c) => c.classes);
 
