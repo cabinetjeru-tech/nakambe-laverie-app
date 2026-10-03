@@ -47,3 +47,18 @@ describe("cycles du préscolaire à la Terminale", () => {
     expect(disciplinesPour("6e")).not.toContain("Sciences d'observation");
   });
 });
+
+describe("séries du lycée", async () => {
+  const { serieDe } = await import("@/lib/search");
+  it("repère la série sans changer la classe utilisée pour la recherche", () => {
+    expect(serieDe("Terminale D")).toBe("D");
+    expect(serieDe("1ère A")).toBe("A");
+    expect(serieDe("2nde C")).toBe("C");
+    expect(serieDe("Terminale")).toBeUndefined();
+    expect(serieDe("CE1")).toBeUndefined();
+    expect(canonicalClasse("Terminale D")).toBe("Terminale");
+    expect(canonicalClasse("1ère C")).toBe("1ère");
+    expect(canonicalClasse("2nde A")).toBe("2nde");
+    expect(cycleDe("Terminale C")?.code).toBe("SECONDAIRE");
+  });
+});
