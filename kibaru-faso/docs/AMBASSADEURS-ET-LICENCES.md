@@ -30,7 +30,7 @@ Le classement se fait sur les ventes du mois, puis sur les inscriptions.
 
 Pour les écoles et lycées (surtout privés et confessionnels) qui paient pour plusieurs enseignants.
 
-1. L'établissement paie hors ligne : mobile money, virement ou espèces, contre reçu. Prix conseillé : **25 000 FCFA par enseignant et par an**, à partir de 10 places.
+1. L'établissement paie hors ligne : mobile money, virement ou espèces, contre reçu. Prix conseillé : **30 000 FCFA par enseignant et par an**, à partir de 10 places (contre 36 500 FCFA pour un abonnement annuel individuel).
 2. Créez la licence : nombre de places, montant payé, ambassadeur qui l'a apportée, date limite d'utilisation du code. Un **code à 8 caractères** est généré.
 3. Cliquez sur **« Copier le message pour le directeur »** et envoyez-le-lui. Il contient le lien `…/?licence=CODE` et la marche à suivre.
 4. Chaque enseignant se connecte ou crée son compte, puis active sa place dans « Mon compte » → **Licence établissement**. Le code est déjà rempli s'il est passé par le lien.

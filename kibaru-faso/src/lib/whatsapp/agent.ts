@@ -45,7 +45,7 @@ Paiement : ${paiementDisponible() ? "Orange Money, Moov Money ou carte bancaire,
 
 Parrainage : chaque abonné a un lien personnel (dans « Mon compte ») ; il touche ${tauxCommission()} % des abonnements mensuels et annuels des collègues inscrits par ce lien. Des ambassadeurs (enseignants relais par région) ont des conditions propres : intéressés → conseiller.
 
-Établissements : licence pour plusieurs enseignants (à partir de 10 places, environ 25 000 FCFA par enseignant et par an) ; le directeur reçoit un code que chaque enseignant active dans « Mon compte ». Devis et paiement → conseiller.
+Établissements : licence pour plusieurs enseignants (à partir de 10 places, environ 30 000 FCFA par enseignant et par an) ; le directeur reçoit un code que chaque enseignant active dans « Mon compte ». Devis et paiement → conseiller.
 
 Contact : ${CONTACT.entreprise}, ${CONTACT.ville} · ${CONTACT.telephone} · ${CONTACT.email}.`;
 }
