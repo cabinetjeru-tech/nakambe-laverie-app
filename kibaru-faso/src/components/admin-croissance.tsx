@@ -339,7 +339,7 @@ const ETAB_VIDE: FormEtab = {
   contact_email: "",
   places: "10",
   duree_jours: "365",
-  montant_fcfa: "250000",
+  montant_fcfa: "300000",
   ambassadeur_email: "",
   actif: true,
   expire_le: "",
@@ -420,8 +420,8 @@ export function Etablissements({ etablissements, action }: { etablissements: Eta
         <h2 className="font-bold text-faso-dark">🏫 Licences établissement</h2>
         <p className="mt-1 text-muted">
           Une école ou un lycée paie pour plusieurs enseignants en une fois (virement, mobile money ou espèces, contre reçu). Créez la licence, puis envoyez le message au
-          directeur : chaque enseignant active sa place avec le code. Prix conseillé : <strong>25 000 FCFA par enseignant et par an</strong> à partir de 10 places, soit
-          250 000 FCFA pour 10 enseignants. Chaque place donne l&apos;accès annuel (400 générations).
+          directeur : chaque enseignant active sa place avec le code. Prix conseillé : <strong>30 000 FCFA par enseignant et par an</strong> à partir de 10 places, soit
+          300 000 FCFA pour 10 enseignants (au lieu de 365 000 FCFA en abonnements individuels). Chaque place donne l&apos;accès annuel (400 générations).
         </p>
       </div>
 
