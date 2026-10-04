@@ -21,16 +21,16 @@ Pour chaque formule :
 
 La règle d'équité retenue : **même dans le pire cas** (abonné parrainé qui utilise 100 % de son plafond), PÉDAGOGUE.IA ne perd pas d'argent. La marge vient de l'usage moyen, qui est inférieur au plafond.
 
-## Les formules en vigueur (décision du 2026-10-02)
+## Les formules en vigueur (décision du 2026-10-02, annuel révisé le 2026-10-04)
 
 | Formule | Prix | Générations | Max/jour | Prix par génération |
 |---|---|---|---|---|
 | Essai | 0 FCFA | **1 fiche offerte** (valable 30 jours) | — | — |
 | Pass 24 h | 500 FCFA | 4 | 4 | 125 FCFA |
 | Mensuel | 7 500 FCFA | 40 | 6 | 187,5 FCFA |
-| Annuel | 30 000 FCFA (soit 2 500 FCFA/mois) | 400 | 8 | 75 FCFA |
+| Annuel | 36 500 FCFA (soit 100 FCFA/jour, ≈ 3 040 FCFA/mois) | 400 | 8 | 91 FCFA |
 
-Avec cette grille, l'annuel est **de loin le plus avantageux** : il coûte le prix de 4 mois. C'est un choix commercial assumé pour pousser l'engagement à l'année.
+Avec cette grille, l'annuel est **de loin le plus avantageux** : il coûte moins de 5 mois de mensuel, et « 100 FCFA par jour » est un argument simple à retenir. C'est un choix commercial assumé pour pousser l'engagement à l'année.
 
 ## Vérification, par abonné
 
@@ -39,19 +39,19 @@ Avec cette grille, l'annuel est **de loin le plus avantageux** : il coûte le pr
 | Générations utilisées | 40 | 20 | 400 | 200 | 4 | 1 |
 | IA | 2 000 | 1 000 | 20 000 | 10 000 | 200 | 50 |
 | Part des frais fixes (100 abonnés) | 280 | 280 | 3 360 | 3 360 | 10 | — |
-| Commission 10 % (parrainé / 1 sur 2) | 750 | 375 | 3 000 | 1 500 | 0 | — |
-| Code promo 5 % | 375 | 375 | 1 500 | 1 500 | — | — |
-| Frais de paiement 3,5 % | 263 | 263 | 1 050 | 1 050 | 18 | — |
-| **Total des coûts** | **3 668** | **2 293** | **28 910** | **17 410** | **228** | **50** |
-| **Marge** | **+3 832 (51 %)** | **+5 207 (69 %)** | **+1 090 (4 %)** | **+12 590 (42 %)** | **+272 (54 %)** | **−50** (coût d'acquisition) |
+| Commission 10 % (parrainé / 1 sur 2) | 750 | 375 | 3 650 | 1 825 | 0 | — |
+| Code promo 5 % | 375 | 375 | 1 825 | 1 825 | — | — |
+| Frais de paiement 3,5 % | 263 | 263 | 1 278 | 1 278 | 18 | — |
+| **Total des coûts** | **3 668** | **2 293** | **30 113** | **18 288** | **228** | **50** |
+| **Marge** | **+3 832 (51 %)** | **+5 207 (69 %)** | **+6 387 (17 %)** | **+18 212 (50 %)** | **+272 (54 %)** | **−50** (coût d'acquisition) |
 
 Montants en FCFA. Le pire cas suppose un abonné parrainé qui utilise aussi un code promo et tout son quota.
 
-**Seuil de rentabilité :** les frais fixes (≈ 28 000 FCFA par mois) sont couverts à partir d'environ **6 abonnés mensuels** ou **2 à 3 abonnés annuels** par mois à usage moyen.
+**Seuil de rentabilité :** les frais fixes (≈ 28 000 FCFA par mois) sont couverts à partir d'environ **6 abonnés mensuels** ou **2 abonnés annuels** par mois à usage moyen.
 
 ## Points de vigilance
 
-- **Codes promo :** 5 % par défaut. Sur l'annuel, le pire cas reste positif jusqu'à environ 8 % de remise : au-delà, réservez les remises au mensuel.
+- **Codes promo :** 5 % par défaut. Sur l'annuel, le pire cas reste positif jusqu'à environ 20 % de remise : au-delà, réservez les remises au mensuel.
 - **Essai :** 1 fiche offerte par nouvel inscrit, soit ≈ 50 FCFA de coût d'acquisition par enseignant (variable `QUOTA_ESSAI`).
 - **TVA :** les prix ci-dessus sont des prix payés par l'enseignant. Si MEGAVISION est assujettie à la TVA (18 %), celle-ci est comprise dedans et réduit la marge. Vérifier le régime fiscal avec le comptable.
 - **Recalibrage :** après 2 à 4 semaines, relever le coût moyen réel par génération dans l'admin et reprendre la formule. Si le coût réel est de 35 FCFA au lieu de 50, on peut augmenter les plafonds ou baisser les prix.
