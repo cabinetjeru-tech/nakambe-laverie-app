@@ -118,7 +118,7 @@ export async function notifierFicheOfferte(utilisateurId: string): Promise<void>
         ]);
         const prix = Object.fromEntries((formules ?? []).map((f) => [f.id as string, f.prix_fcfa as number]));
         const promo = ((promos ?? []) as CodePromo[]).find((x) => !x.expire_le || new Date(x.expire_le) > new Date()) ?? null;
-        return emailApresFicheOfferte({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 30000 }, promo });
+        return emailApresFicheOfferte({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 36500 }, promo });
       },
     });
   } catch (e) {
@@ -174,7 +174,7 @@ export async function envoyerRappels(maintenant = new Date()): Promise<{ finEssa
       type: "fin_essai",
       utilisateurId: id,
       to: p.email,
-      email: () => emailFinEssai({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 30000 }, promo }),
+      email: () => emailFinEssai({ nom: p.nom, site: site(), prix: { journalier: prix.journalier ?? null, mensuel: prix.mensuel ?? 7500, annuel: prix.annuel ?? 36500 }, promo }),
     });
     if (ok) res.finEssai++;
   }

@@ -28,7 +28,7 @@ Je vous recommande *PÉDAGOGUE.IA*, un assistant conçu pour les enseignants du 
 ✅ activités de remédiation et progressions annuelles ;
 ✅ téléchargement en PDF ou Word, prêt à imprimer.
 Il distingue toujours ce qui vient des documents officiels de ce qui est une proposition, et vérifie les calculs et les durées.
-🎁 1 fiche offerte, puis 500 FCFA la journée, 7 500 FCFA/mois ou 30 000 FCFA/an (Orange Money, Moov Money).${offre}
+🎁 1 fiche offerte, puis 500 FCFA la journée, 7 500 FCFA/mois ou 36 500 FCFA/an, soit 100 FCFA par jour (Orange Money, Moov Money).${offre}
 Inscription : ${lien}`,
     },
     {
