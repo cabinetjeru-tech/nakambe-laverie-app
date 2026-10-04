@@ -158,6 +158,18 @@ export function emailAdminPaiement(o: { email: string; nom?: string | null; form
   });
 }
 
+export function emailAdminWhatsApp(o: { numero: string; nom?: string | null; motif: string; texte: string; lienAdmin: string }): Email {
+  return composer(`💬 WhatsApp : ${o.nom || o.numero} attend un conseiller (${o.motif})`, {
+    titre: "Un client attend un conseiller sur WhatsApp",
+    paragraphes: [
+      `**${o.nom || "Contact"}** (${o.numero}) — motif : **${o.motif}**.`,
+      `Dernier message : « ${o.texte.slice(0, 500)} »`,
+      "Répondez depuis l'espace admin (onglet WhatsApp) ou directement dans WhatsApp Business. Le client attend une réponse dans les 24 h.",
+    ],
+    bouton: { libelle: "Ouvrir l'onglet WhatsApp", lien: o.lienAdmin },
+  });
+}
+
 export function emailTest(site: string): Email {
   return composer("Test d'envoi — PÉDAGOGUE.IA", {
     titre: "Les e-mails automatiques fonctionnent ✅",

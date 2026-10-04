@@ -5,6 +5,7 @@ import { formatDate, formatFcfa, type CodePromo, type Formule } from "@/lib/abon
 import { lienDecouvrir, messagesCampagne } from "@/lib/campagne";
 import type { Temoignage } from "@/lib/vitrine";
 import { BaseDocumentaire } from "./admin-base";
+import { WhatsAppAdmin } from "./admin-whatsapp";
 import { Ambassadeurs, Etablissements, type Ambassadeur, type Etablissement } from "./admin-croissance";
 import { deconnexion, Logo } from "./compte";
 import { PartageReseaux } from "./partage-reseaux";
@@ -76,7 +77,7 @@ type Donnees = {
   etablissements: Etablissement[];
   tauxParrainage: number;
 };
-type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "ambassadeurs" | "etablissements" | "campagne" | "vitrine" | "base" | "tarifs";
+type Onglet = "tableau" | "enseignants" | "paiements" | "parrainage" | "ambassadeurs" | "etablissements" | "whatsapp" | "campagne" | "vitrine" | "base" | "tarifs";
 /** Objectif de lancement : 5 000 enseignants abonnés. */
 const OBJECTIF_ABONNES = 5000;
 
@@ -129,6 +130,7 @@ export function AdminApp() {
     ["parrainage", `Parrainage${d.stats.commissionsDues ? " •" : ""}`],
     ["ambassadeurs", `🌍 Ambassadeurs (${d.ambassadeurs.filter((a) => a.actif).length})`],
     ["etablissements", "🏫 Établissements"],
+    ["whatsapp", "💬 WhatsApp"],
     ["campagne", "Campagne"],
     ["vitrine", `Vitrine${d.temoignages.some((t) => !t.publie) ? " •" : ""}`],
     ["base", "Base documentaire"],
@@ -169,6 +171,7 @@ export function AdminApp() {
         {onglet === "parrainage" && <ParrainageAdmin d={d} action={action} />}
         {onglet === "ambassadeurs" && <Ambassadeurs ambassadeurs={d.ambassadeurs} tauxParrainage={d.tauxParrainage} action={action} />}
         {onglet === "etablissements" && <Etablissements etablissements={d.etablissements} action={action} />}
+        {onglet === "whatsapp" && <WhatsAppAdmin />}
         {onglet === "campagne" && <Campagne d={d} action={action} />}
         {onglet === "vitrine" && <Vitrine d={d} action={action} />}
         {onglet === "base" && <BaseDocumentaire />}
