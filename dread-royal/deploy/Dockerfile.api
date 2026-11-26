@@ -1,0 +1,26 @@
+# API DREAD ROYAL (NestJS + Prisma)
+# Base : image officielle PostgreSQL 16 (Debian) → pg_dump 16 identique au serveur pour les sauvegardes,
+# Node.js 22 copié depuis l'image officielle. Aucun paquet système à télécharger.
+FROM node:22-bookworm-slim AS node
+
+FROM postgres:16-bookworm
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+ && node --version && pg_dump --version
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json packages/shared/
+COPY apps/api/package.json apps/api/
+RUN npm ci --workspace @dread-royal/shared --workspace @dread-royal/api --include-workspace-root=false --no-audit --no-fund
+COPY packages/shared packages/shared
+COPY apps/api apps/api
+RUN npm run build -w @dread-royal/shared \
+ && cd apps/api && npx prisma generate && npx nest build
+WORKDIR /app/apps/api
+ENV NODE_ENV=production PORT=4000 SWAGGER=off BACKUP_DIR=/backups
+EXPOSE 4000
+ENTRYPOINT []
+# Au démarrage : migrations, données de base (idempotent, jamais de données fictives), puis API
+CMD ["sh", "-c", "npx prisma migrate deploy && npx ts-node --transpile-only prisma/seed.ts && exec node dist/main"]

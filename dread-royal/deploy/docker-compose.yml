@@ -1,0 +1,64 @@
+# DREAD ROYAL — déploiement sur un seul serveur
+# Démarrage : cd deploy && docker compose up -d --build
+name: dreadroyal
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: dread_royal
+      POSTGRES_USER: dreadroyal
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?définir POSTGRES_PASSWORD dans deploy/.env}
+      TZ: Africa/Ouagadougou
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dreadroyal -d dread_royal"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Pas de port exposé : la base n'est joignable que par l'API
+
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://dreadroyal:${POSTGRES_PASSWORD}@db:5432/dread_royal?schema=public
+      JWT_SECRET: ${JWT_SECRET:?définir JWT_SECRET dans deploy/.env}
+      JWT_ACCESS_TTL: 15m
+      REFRESH_TTL_DAYS: 30
+      CORS_ORIGINS: https://${DOMAIN},https://localhost,capacitor://localhost
+      OWNER_USERNAME: ${OWNER_USERNAME:-proprietaire}
+      OWNER_PASSWORD: ${OWNER_PASSWORD:?définir OWNER_PASSWORD dans deploy/.env}
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+      BACKUP_KEEP: ${BACKUP_KEEP:-30}
+    volumes:
+      - ./backups:/backups
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?définir DOMAIN dans deploy/.env}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

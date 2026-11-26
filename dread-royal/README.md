@@ -3,7 +3,7 @@
 > **African Hair & Dreadlocks Studio** — « Votre couronne, votre identité. »
 > Logiciel de gestion intégrée du salon : rendez-vous, clients, caisse, facturation, comptabilité, personnel & commissions, stock, fidélité, rapports — **Web (PWA) + Android**, en français, en FCFA, pour le Burkina Faso.
 
-📐 [Architecture](docs/ARCHITECTURE.md) · 🗄️ [Base de données](docs/DATABASE.md) · 🗺️ [Feuille de route](docs/ROADMAP.md) · 📱 [Android](docs/ANDROID.md)
+📐 [Architecture](docs/ARCHITECTURE.md) · 🗄️ [Base de données](docs/DATABASE.md) · 🗺️ [Feuille de route](docs/ROADMAP.md) · 📱 [Android](docs/ANDROID.md) · 🚀 [Mise en ligne](docs/DEPLOIEMENT.md)
 
 ## Structure
 ```
@@ -42,6 +42,9 @@ Avec la démo : comptes `responsable`, `caisse`, `aziz`, `rasmata`, `clarisse`, 
 > ⚠️ `db:demo` refuse de s'exécuter sur une base contenant déjà des ventes : aucune donnée fictive en production.
 
 ## Production
+👉 **Mise en ligne simple (un VPS + Docker + HTTPS automatique) : [docs/DEPLOIEMENT.md](docs/DEPLOIEMENT.md)** — `cd deploy && ./install.sh`.
+
+Installation manuelle sans Docker :
 - API : `npm run build:api` puis `cd apps/api && npm run start:prod` (applique les migrations puis démarre). Derrière un reverse-proxy HTTPS (Nginx/Caddy). Variables : voir `apps/api/.env.example` (`CORS_ORIGINS` = domaine du site + `https://localhost` pour Android).
 - Web : `NEXT_PUBLIC_API_URL=https://api.domaine.bf/api npm run build:web` → servir `apps/web/out/` (tout hébergement statique). Installable comme application (PWA).
 - Android : voir [docs/ANDROID.md](docs/ANDROID.md).

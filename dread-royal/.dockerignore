@@ -1,0 +1,10 @@
+**/node_modules
+**/.next
+**/out
+**/dist
+**/*.tsbuildinfo
+apps/web/android
+backups
+**/.env
+**/.env.local
+deploy/.env

@@ -1,0 +1,31 @@
+# HTTPS automatique (Let's Encrypt) dès que DOMAIN pointe vers ce serveur.
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# API
+	handle /api/* {
+		reverse_proxy api:4000
+	}
+
+	# Service worker et manifeste : jamais mis en cache par le navigateur
+	@nocache path /sw.js /manifest.webmanifest
+	header @nocache Cache-Control "no-cache"
+	# Ressources Next.js versionnées : cache long
+	@static path /_next/static/*
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	# Site (export statique)
+	handle {
+		root * /srv
+		try_files {path} {path}/index.html /index.html
+		file_server
+	}
+}
