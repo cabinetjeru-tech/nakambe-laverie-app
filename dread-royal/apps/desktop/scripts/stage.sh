@@ -43,6 +43,11 @@ cp packages/shared/package.json "$APP/node_modules/@dread-royal/shared/" && cp -
 (cd "$APP" && node node_modules/prisma/build/index.js generate --schema api/prisma/schema.prisma >/dev/null)
 # Le moteur de schéma et la CLI Prisma ne sont pas utilisés à l'exécution (migrations appliquées par desktop/migrate.js)
 rm -rf "$APP/node_modules/prisma" "$APP/node_modules/@prisma/engines" "$APP/node_modules/.bin"
+# Allègement : cartes de débogage, moteurs Prisma inutiles (autres bases, wasm, edge)
+find "$APP/node_modules" -name "*.map" -delete
+find "$APP/node_modules/@prisma/client/runtime" \( -name "*mysql*" -o -name "*sqlite*" -o -name "*sqlserver*" -o -name "*cockroachdb*" -o -name "*wasm*" -o -name "edge*" -o -name "react-native*" -o -name "*.d.ts" -o -name "*.d.mts" \) -delete 2>/dev/null || true
+if [ "$TARGET" = win ]; then find "$APP/node_modules/.prisma/client" -name "libquery_engine-*.so.node" -delete; fi
+rm -rf "$APP/node_modules/typescript" "$APP/node_modules/@types"
 ls "$APP/node_modules/.prisma/client/" | grep -E "engine|\.node" || true
 
 echo "▶ 4. Binaires PostgreSQL ($PG_PKG@$PG_VERSION)"
@@ -59,6 +64,8 @@ if [ -f "$BUILD/pgsql/pg-symlinks.json" ]; then
   }" || true
 fi
 chmod +x "$BUILD/pgsql/bin/"* 2>/dev/null || true
+# Bibliothèques de l'interface pgAdmin (wxWidgets) : inutiles au serveur PostgreSQL
+rm -f "$BUILD/pgsql/bin/"wx*.dll
 
 echo "▶ 5. Icône"
 mkdir -p "$BUILD/resources"
