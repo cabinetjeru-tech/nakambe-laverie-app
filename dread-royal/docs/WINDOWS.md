@@ -47,8 +47,8 @@ Le jour où vous louerez un serveur (voir `docs/DEPLOIEMENT.md`), vos données p
 ---
 ### Pour le développeur : construire l'installateur
 ```bash
-cd apps/desktop
-npm install
-npm run dist:win      # → release/DREAD-ROYAL-Installation-<version>.exe  (sous Linux : nécessite wine)
-npm run dist:linux && npm start   # version Linux pour tester (utilisateur non root)
+cd apps/desktop && npm install
+npm run dist:win      # → release/DREAD-ROYAL-Installation-<version>.exe (fonctionne sous Linux, sans wine)
+npm run dist:linux    # paquet Linux identique, pour tester l'application empaquetée (utilisateur non root)
 ```
+Tests réalisés : application empaquetée (Linux, même code et même processus) lancée sur une installation neuve — création de la base, migrations, connexion, changement de mot de passe, caisse, vente, facture PDF, sauvegarde, restauration depuis l'écran, redémarrage avec données conservées, arrêt propre de PostgreSQL. L'installateur Windows a été généré et son contenu vérifié (moteur Prisma Windows, PostgreSQL Windows, migrations, interface) mais **n'a pas pu être exécuté sur un vrai PC Windows** dans l'environnement de développement.
