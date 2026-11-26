@@ -3,12 +3,13 @@
 > **African Hair & Dreadlocks Studio** — « Votre couronne, votre identité. »
 > Logiciel de gestion intégrée du salon : rendez-vous, clients, caisse, facturation, comptabilité, personnel & commissions, stock, fidélité, rapports — **Web (PWA) + Android**, en français, en FCFA, pour le Burkina Faso.
 
-📐 [Architecture](docs/ARCHITECTURE.md) · 🗄️ [Base de données](docs/DATABASE.md) · 🗺️ [Feuille de route](docs/ROADMAP.md) · 📱 [Android](docs/ANDROID.md) · 🚀 [Mise en ligne](docs/DEPLOIEMENT.md)
+🪟 **[Version Windows gratuite (sans serveur)](docs/WINDOWS.md)** · 📐 [Architecture](docs/ARCHITECTURE.md) · 🗄️ [Base de données](docs/DATABASE.md) · 🗺️ [Feuille de route](docs/ROADMAP.md) · 📱 [Android](docs/ANDROID.md) · 🚀 [Mise en ligne](docs/DEPLOIEMENT.md)
 
 ## Structure
 ```
 dread-royal/
 ├── apps/api        API NestJS 11 + Prisma 6 + PostgreSQL (permissions vérifiées côté serveur)
+├── apps/desktop    Application Windows autonome (Electron + PostgreSQL embarqué)
 ├── apps/web        Next.js 14 (export statique) + Tailwind + PWA + Capacitor Android
 ├── packages/shared Rôles, permissions, libellés FR, calculs de vente (partagés)
 ├── scripts         backup.sh / restore.sh

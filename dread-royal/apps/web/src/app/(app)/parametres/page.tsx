@@ -18,7 +18,15 @@ function Parametres() {
   const { toast } = useUi();
   const [tab, setTab] = useState<'salon' | 'fidelite' | 'tresorerie' | 'sauvegardes'>(can('settings.manage') ? 'salon' : 'sauvegardes');
   const settings = useApi<any>('/settings');
-  const backups = useApi<any[]>(can('backup.manage') ? '/backups' : null);
+  const backupInfo = useApi<any>(can('backup.manage') ? '/backups/info' : null);
+  const { confirm } = useUi();
+  const restore = async (file: string) => {
+    const r = await confirm({ title: 'Restaurer cette sauvegarde ?', danger: true, confirmLabel: 'Restaurer', message: <>Toutes les données actuelles seront <b>remplacées</b> par celles du {file}. L&apos;état actuel est d&apos;abord sauvegardé automatiquement. Vous devrez vous reconnecter.</>, reasonLabel: 'Tapez RESTAURER pour confirmer', reasonRequired: true });
+    if (!r.ok) return;
+    if (r.reason !== 'RESTAURER') { toast('error', 'Confirmation incorrecte : tapez RESTAURER'); return; }
+    setBusy(true);
+    try { await post(`/backups/${file}/restore`, { confirm: 'RESTAURER' }); toast('success', 'Sauvegarde restaurée. Reconnectez-vous.'); setTimeout(() => { localStorage.removeItem('dr.access'); localStorage.removeItem('dr.refresh'); location.href = '/login/'; }, 1500); } catch (e: any) { toast('error', e.message); } finally { setBusy(false); }
+  };
   const [f, setF] = useState<any>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (settings.data) setF(structuredClone(settings.data)); }, [settings.data]);
@@ -62,13 +70,17 @@ function Parametres() {
         </Card>
       )}
       {tab === 'sauvegardes' && (
-        <Card title="Sauvegardes de la base de données" actions={<Button icon={<DatabaseBackup className="h-4 w-4" />} loading={busy} onClick={async () => { setBusy(true); try { await post('/backups'); toast('success', 'Sauvegarde créée'); backups.reload(); } catch (e: any) { toast('error', e.message); } finally { setBusy(false); } }}>Sauvegarder maintenant</Button>}>
-          <p className="mb-3 text-sm text-neutral-600">Une sauvegarde automatique est réalisée chaque nuit (les 30 dernières sont conservées). Téléchargez régulièrement une copie hors du serveur (clé USB, cloud). La restauration se fait par l&apos;administrateur technique avec <code>scripts/restore.sh</code>.</p>
-          {backups.data && <Table rows={backups.data.map((b) => ({ ...b, id: b.file }))} empty="Aucune sauvegarde." columns={[
+        <Card title="Sauvegardes de la base de données" actions={<Button icon={<DatabaseBackup className="h-4 w-4" />} loading={busy} onClick={async () => { setBusy(true); try { await post('/backups'); toast('success', 'Sauvegarde créée'); backupInfo.reload(); } catch (e: any) { toast('error', e.message); } finally { setBusy(false); } }}>Sauvegarder maintenant</Button>}>
+          {backupInfo.data?.uiRestore ? (
+            <p className="mb-3 text-sm text-neutral-600">Des sauvegardes automatiques sont faites chaque jour à 13 h et 19 h. Dossier sur cet ordinateur : <code className="rounded bg-neutral-100 px-1 text-xs">{backupInfo.data.dir}</code> (menu Fichier → « Ouvrir le dossier des sauvegardes »). <b>Copiez-les chaque semaine sur une clé USB</b> : en cas de panne de l&apos;ordinateur, c&apos;est votre seule copie. Pour reprendre une sauvegarde venant d&apos;un autre ordinateur, copiez le fichier dans ce dossier puis cliquez sur « Restaurer ».</p>
+          ) : (
+            <p className="mb-3 text-sm text-neutral-600">Une sauvegarde automatique est réalisée chaque nuit. Téléchargez régulièrement une copie hors du serveur (clé USB, cloud). La restauration se fait par l&apos;administrateur technique avec <code>deploy/restore.sh</code>.</p>
+          )}
+          {backupInfo.data && <Table rows={backupInfo.data.items.map((b: any) => ({ ...b, id: b.file }))} empty="Aucune sauvegarde." columns={[
             { key: 'file', label: 'Fichier', render: (b: any) => <span className="font-mono text-xs">{b.file}</span> },
             { key: 'createdAt', label: 'Date', render: (b: any) => fmtDateTime(b.createdAt) },
             { key: 'size', label: 'Taille', align: 'right', render: (b: any) => `${(b.size / 1024).toFixed(0)} Ko` },
-            { key: 'd', label: '', render: (b: any) => <Button size="sm" variant="ghost" icon={<Download className="h-3.5 w-3.5" />} onClick={async () => { const a = document.createElement('a'); a.href = await fileUrl(`/backups/${b.file}`); a.click(); }}>Télécharger</Button> },
+            { key: 'd', label: '', render: (b: any) => <div className="flex gap-1"><Button size="sm" variant="ghost" icon={<Download className="h-3.5 w-3.5" />} onClick={async () => { const a = document.createElement('a'); a.href = await fileUrl(`/backups/${b.file}`); a.click(); }}>Télécharger</Button>{backupInfo.data?.uiRestore && b.file.endsWith('.json.gz') && <Button size="sm" variant="outline" onClick={() => restore(b.file)}>Restaurer</Button>}</div> },
           ]} />}
         </Card>
       )}

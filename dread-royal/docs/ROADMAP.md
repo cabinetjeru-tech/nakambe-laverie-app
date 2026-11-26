@@ -8,6 +8,7 @@
 | **P4** | Comptabilité (résultat, trésorerie, créances, dettes, journaux), dépenses, commissions et règlements, stock, fournisseurs, achats, inventaires | ✅ réalisé et testé |
 | **P5** | Fidélité et forfaits, statistiques, rapports + exports PDF/Excel/CSV, PWA hors connexion avec synchronisation | ✅ réalisé et testé |
 | **P5 — Android** | Projet Capacitor généré et configuré (icônes, splash, scheme HTTPS) | ⚠️ projet prêt ; compilation APK/AAB à faire sur un poste avec Android Studio (non testée ici) |
+| **Windows** | Application de bureau autonome (Electron + PostgreSQL embarqué), sauvegarde/restauration depuis l’écran, accès Wi-Fi pour les téléphones | ✅ testée (version Linux du même code) ; installateur Windows généré, non exécuté sur un vrai PC Windows |
 | P6 (à venir) | Rappels WhatsApp automatiques, paiement Mobile Money en ligne (API Orange/Moov), comptabilité en partie double validée par un comptable, multi-salons, notifications push | 🔜 |
 
 Détail des tests exécutés : section « Tests » du README.

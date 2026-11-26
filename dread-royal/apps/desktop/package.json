@@ -1,0 +1,66 @@
+{
+  "name": "dread-royal-desktop",
+  "productName": "DREAD ROYAL",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DREAD ROYAL Management System — application Windows autonome",
+  "author": "DREAD ROYAL",
+  "scripts": {
+    "stage": "bash scripts/stage.sh",
+    "start": "electron build/app",
+    "dist:win": "bash scripts/stage.sh win && electron-builder --win dir --x64 && node scripts/set-exe-icon.js \"release/win-unpacked/DREAD ROYAL.exe\" build/resources/icon.ico $npm_package_version && electron-builder --win nsis --x64 --prepackaged release/win-unpacked",
+    "dist:linux": "bash scripts/stage.sh linux && electron-builder --linux dir"
+  },
+  "build": {
+    "appId": "bf.dreadroyal.management",
+    "productName": "DREAD ROYAL",
+    "copyright": "DREAD ROYAL — Votre couronne, votre identité.",
+    "directories": {
+      "app": "build/app",
+      "output": "release",
+      "buildResources": "build/resources"
+    },
+    "asar": false,
+    "electronLanguages": [
+      "fr"
+    ],
+    "extraResources": [
+      {
+        "from": "build/pgsql",
+        "to": "pgsql"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/resources/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "DREAD ROYAL",
+      "installerLanguages": [
+        "fr_FR"
+      ],
+      "language": "1036",
+      "artifactName": "DREAD-ROYAL-Installation-${version}.${ext}",
+      "deleteAppDataOnUninstall": false
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Office"
+    }
+  },
+  "devDependencies": {
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
+    "resedit": "^1.7.2"
+  }
+}
