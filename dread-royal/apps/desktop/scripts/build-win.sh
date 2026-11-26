@@ -16,10 +16,15 @@ for f in .prisma/client/index.js @dread-royal/shared/dist/index.js @prisma/clien
 done
 test -f release/win-unpacked/resources/app/node_modules/.prisma/client/query_engine-windows.dll.node || { echo "ERREUR : moteur Prisma Windows absent"; exit 1; }
 node scripts/set-exe-icon.js "release/win-unpacked/DREAD ROYAL.exe" build/resources/icon.ico "$VERSION"
-NSIS=$(ls -d ~/.cache/electron-builder/nsis/nsis-3* | head -1)
-MAKENSIS="$NSIS/linux/makensis"; [ "$(uname)" = Darwin ] && MAKENSIS="$NSIS/mac/makensis"
-command -v makensis >/dev/null && MAKENSIS=makensis
-chmod +x "$MAKENSIS" 2>/dev/null || true
+# makensis : paquet système (apt install nsis) de préférence, sinon celui mis en cache par electron-builder
+if command -v makensis >/dev/null; then
+  MAKENSIS=(makensis)
+else
+  NSIS=$(ls -d ~/.cache/electron-builder/nsis/nsis-3* 2>/dev/null | head -1)
+  [ -n "$NSIS" ] || { echo "ERREUR : makensis introuvable (sudo apt-get install nsis)"; exit 1; }
+  chmod +x "$NSIS/linux/makensis" 2>/dev/null || true
+  MAKENSIS=(env NSISDIR="$NSIS" "$NSIS/linux/makensis")
+fi
 OUT="$HERE/release/DREAD-ROYAL-Installation-$VERSION.exe"
-NSISDIR="$NSIS" "$MAKENSIS" -V2 -DVERSION="$VERSION" -DOUTFILE="$OUT" -DSRCDIR="$HERE/release/win-unpacked" -DICON="$HERE/build/resources/icon.ico" scripts/installer.nsi
+"${MAKENSIS[@]}" -V2 -DVERSION="$VERSION" -DOUTFILE="$OUT" -DSRCDIR="$HERE/release/win-unpacked" -DICON="$HERE/build/resources/icon.ico" scripts/installer.nsi
 ls -lh "$OUT"

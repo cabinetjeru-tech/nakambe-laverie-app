@@ -1,0 +1,65 @@
+# Construit l'installateur Windows de DREAD ROYAL et le publie dans les Releases du dépôt.
+name: DREAD ROYAL — installateur Windows
+
+on:
+  push:
+    branches: [ccr-81b8e263-f5d31h, main]
+    paths: ['dread-royal/**', '.github/workflows/dread-royal-windows.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dread-royal-windows
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: dread-royal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Outils
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq nsis
+          pip install --quiet pillow
+      - name: Dépendances
+        run: |
+          npm ci --no-audit --no-fund
+          cd apps/desktop && npm ci --no-audit --no-fund
+      - name: Construction de l'installateur (sans wine)
+        run: cd apps/desktop && bash scripts/build-win.sh
+      - name: Publication dans les Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./apps/desktop/package.json').version")
+          TAG="dread-royal-v${VERSION}"
+          FILE="apps/desktop/release/DREAD-ROYAL-Installation-${VERSION}.exe"
+          cat > notes.md <<EOT
+          Installateur Windows de DREAD ROYAL Management System ${VERSION}.
+
+          1. Téléchargez **DREAD-ROYAL-Installation-${VERSION}.exe** ci-dessous (rubrique *Assets*).
+          2. Double-cliquez dessus. Si Windows affiche « Windows a protégé votre ordinateur » : *Informations complémentaires* → *Exécuter quand même*.
+          3. Identifiant : \`proprietaire\` — mot de passe provisoire : \`DreadRoyal2026\` (à changer à la première connexion).
+
+          Guide complet : dread-royal/docs/WINDOWS.md
+          EOT
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$FILE" --clobber
+          else
+            gh release create "$TAG" "$FILE" --target "$GITHUB_SHA" --title "DREAD ROYAL ${VERSION} — Windows" --notes-file notes.md --latest
+          fi
+      - name: Copie de secours (artefact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: DREAD-ROYAL-Installation-Windows
+          path: dread-royal/apps/desktop/release/DREAD-ROYAL-Installation-*.exe
+          retention-days: 30
