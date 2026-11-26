@@ -1,0 +1,26 @@
+{
+  "name": "dread-royal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DREAD ROYAL MANAGEMENT SYSTEM — gestion intégrée du salon (Web + Android)",
+  "workspaces": [
+    "packages/shared",
+    "apps/api",
+    "apps/web"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @dread-royal/shared",
+    "build:api": "npm run build:shared && npm run build -w @dread-royal/api",
+    "build:web": "npm run build:shared && npm run build -w @dread-royal/web",
+    "build": "npm run build:shared && npm run build -w @dread-royal/api && npm run build -w @dread-royal/web",
+    "dev:api": "npm run start:dev -w @dread-royal/api",
+    "dev:web": "npm run dev -w @dread-royal/web",
+    "test": "npm run test -w @dread-royal/shared && npm run test:e2e -w @dread-royal/api",
+    "db:migrate": "npm run prisma:deploy -w @dread-royal/api",
+    "db:seed": "npm run seed -w @dread-royal/api",
+    "db:demo": "npm run seed:demo -w @dread-royal/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

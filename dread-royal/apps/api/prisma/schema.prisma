@@ -1,0 +1,751 @@
+// DREAD ROYAL MANAGEMENT SYSTEM — schéma de données
+// Tous les montants sont des entiers en FCFA.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Utilisateurs & sécurité ─────────────────────────────
+
+model Role {
+  id          String   @id @default(uuid())
+  code        String   @unique // OWNER, MANAGER, CASHIER, STYLIST, STOCK_MANAGER, …
+  name        String
+  description String?
+  permissions String[]
+  isSystem    Boolean  @default(false)
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  username           String         @unique
+  passwordHash       String
+  fullName           String
+  phone              String?
+  roleId             String
+  role               Role           @relation(fields: [roleId], references: [id])
+  staffId            String?        @unique
+  staff              Staff?         @relation(fields: [staffId], references: [id])
+  active             Boolean        @default(true)
+  mustChangePassword Boolean        @default(false)
+  failedLogins       Int            @default(0)
+  lockedUntil        DateTime?
+  lastLoginAt        DateTime?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  sessions           Session[]
+  auditLogs          AuditLog[]
+}
+
+model Session {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  userAgent  String?
+  ip         String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // CREATE, UPDATE, CANCEL, LOGIN, …
+  entity    String
+  entityId  String?
+  summary   String?
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model Counter {
+  key   String @id // ex: INVOICE-2026
+  value Int    @default(0)
+}
+
+// ───────────────────────────── Clients ─────────────────────────────
+
+enum Gender {
+  MALE
+  FEMALE
+  CHILD_MALE
+  CHILD_FEMALE
+}
+
+model Client {
+  id            String               @id @default(uuid())
+  code          String               @unique // CL-000001
+  firstName     String
+  lastName      String
+  phone         String?
+  phone2        String?
+  gender        Gender
+  birthDate     DateTime?            @db.Date
+  preferences   String?
+  notes         String?
+  loyaltyPoints Int                  @default(0)
+  active        Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  appointments  Appointment[]
+  sales         Sale[]
+  loyalty       LoyaltyTransaction[]
+  subscriptions ClientSubscription[]
+
+  @@index([lastName, firstName])
+  @@index([phone])
+}
+
+// ───────────────────────────── Personnel ─────────────────────────────
+
+enum ContractType {
+  CDI
+  CDD
+  STAGE
+  PRESTATAIRE
+  JOURNALIER
+}
+
+enum StaffStatus {
+  ACTIVE
+  ON_LEAVE
+  INACTIVE
+}
+
+enum CommissionMode {
+  SERVICE_DEFAULT // utilise la commission définie sur chaque prestation
+  PERCENT // pourcentage individuel sur toutes ses prestations
+  FIXED // montant fixe individuel par prestation
+  NONE
+}
+
+model Staff {
+  id              String            @id @default(uuid())
+  code            String            @unique // EMP-001
+  firstName       String
+  lastName        String
+  phone           String?
+  position        String // Locticien, Tresseuse, Barbier, Caissière, …
+  isStylist       Boolean           @default(true)
+  hireDate        DateTime          @db.Date
+  contractType    ContractType
+  baseSalary      Int               @default(0)
+  commissionMode  CommissionMode    @default(SERVICE_DEFAULT)
+  commissionRate  Float             @default(0) // % si mode PERCENT
+  commissionFixed Int               @default(0) // FCFA si mode FIXED
+  status          StaffStatus       @default(ACTIVE)
+  color           String            @default("#D4AF37")
+  notes           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  user            User?
+  appointments    Appointment[]
+  saleItems       SaleItem[]
+  commissions     Commission[]
+  payouts         CommissionPayout[]
+}
+
+// ───────────────────────────── Prestations ─────────────────────────────
+
+enum CommissionType {
+  PERCENT
+  FIXED
+  NONE
+}
+
+model ServiceCategory {
+  id        String    @id @default(uuid())
+  code      String    @unique
+  name      String
+  sortOrder Int       @default(0)
+  services  Service[]
+}
+
+model Service {
+  id              String            @id @default(uuid())
+  code            String            @unique
+  name            String
+  description     String?
+  categoryId      String
+  category        ServiceCategory   @relation(fields: [categoryId], references: [id])
+  price           Int
+  priceMax        Int? // tarif « à partir de … jusqu'à … » (longueur / volume)
+  durationMin     Int
+  commissionType  CommissionType    @default(PERCENT)
+  commissionValue Float             @default(0)
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  appointmentItems AppointmentItem[]
+  saleItems       SaleItem[]
+}
+
+// ───────────────────────────── Rendez-vous ─────────────────────────────
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id             String            @id @default(uuid())
+  code           String            @unique // RDV-2026-000001
+  clientId       String
+  client         Client            @relation(fields: [clientId], references: [id])
+  staffId        String
+  staff          Staff             @relation(fields: [staffId], references: [id])
+  startAt        DateTime
+  endAt          DateTime
+  status         AppointmentStatus @default(PENDING)
+  notes          String?
+  cancelReason   String?
+  reminderSentAt DateTime? // future intégration WhatsApp
+  createdById    String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  items          AppointmentItem[]
+  sales          Sale[]
+
+  @@index([staffId, startAt])
+  @@index([startAt])
+}
+
+model AppointmentItem {
+  id            String      @id @default(uuid())
+  appointmentId String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  serviceId     String
+  service       Service     @relation(fields: [serviceId], references: [id])
+  price         Int
+  durationMin   Int
+}
+
+// ───────────────────────────── Ventes & paiements ─────────────────────────────
+
+enum SaleStatus {
+  VALIDATED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+enum SaleItemType {
+  SERVICE
+  PRODUCT
+  PACKAGE
+}
+
+enum PaymentMethod {
+  CASH
+  ORANGE_MONEY
+  MOOV_MONEY
+  BANK_TRANSFER
+  OTHER
+}
+
+enum PaymentKind {
+  PAYMENT
+  DEPOSIT // acompte
+  REFUND
+}
+
+model Sale {
+  id             String         @id @default(uuid())
+  number         String         @unique // FAC-2026-000001
+  clientId       String?
+  client         Client?        @relation(fields: [clientId], references: [id])
+  appointmentId  String?
+  appointment    Appointment?   @relation(fields: [appointmentId], references: [id])
+  status         SaleStatus     @default(VALIDATED)
+  subtotal       Int
+  discount       Int            @default(0)
+  discountReason String?
+  loyaltyPointsUsed Int         @default(0)
+  loyaltyDiscount Int           @default(0)
+  total          Int
+  paidAmount     Int            @default(0)
+  refundedAmount Int            @default(0)
+  balance        Int
+  paymentStatus  PaymentStatus  @default(UNPAID)
+  notes          String?
+  cashierId      String
+  saleDate       DateTime       @default(now())
+  clientOpId     String?        @unique // identifiant d'opération hors ligne (anti-doublon)
+  cancelledAt    DateTime?
+  cancelledById  String?
+  cancelReason   String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  items          SaleItem[]
+  payments       Payment[]
+  loyalty        LoyaltyTransaction[]
+  subscriptions  ClientSubscription[]
+
+  @@index([saleDate])
+  @@index([clientId])
+}
+
+model SaleItem {
+  id          String       @id @default(uuid())
+  saleId      String
+  sale        Sale         @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  type        SaleItemType
+  serviceId   String?
+  service     Service?     @relation(fields: [serviceId], references: [id])
+  productId   String?
+  product     Product?     @relation(fields: [productId], references: [id])
+  packageId   String?
+  package     LoyaltyPackage? @relation(fields: [packageId], references: [id])
+  staffId     String?
+  staff       Staff?       @relation(fields: [staffId], references: [id])
+  label       String
+  quantity    Int          @default(1)
+  unitPrice   Int
+  lineDiscount Int         @default(0)
+  total       Int
+  unitCost    Int          @default(0) // coût d'achat unitaire (produits) au moment de la vente
+  commissions Commission[]
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  number        String        @unique // REC-2026-000001
+  saleId        String
+  sale          Sale          @relation(fields: [saleId], references: [id])
+  kind          PaymentKind   @default(PAYMENT)
+  method        PaymentMethod
+  amount        Int // positif ; un remboursement est de kind REFUND (montant positif, sens sortant)
+  reference     String? // n° transaction Orange/Moov, virement…
+  reason        String?
+  cashSessionId String?
+  cashSession   CashSession?  @relation(fields: [cashSessionId], references: [id])
+  receivedById  String
+  paidAt        DateTime      @default(now())
+  createdAt     DateTime      @default(now())
+
+  @@index([paidAt])
+}
+
+// ───────────────────────────── Caisse ─────────────────────────────
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+model CashSession {
+  id               String            @id @default(uuid())
+  number           String            @unique // CAI-2026-0001
+  status           CashSessionStatus @default(OPEN)
+  openedById       String
+  openedAt         DateTime          @default(now())
+  openingAmount    Int
+  closedById       String?
+  closedAt         DateTime?
+  expectedAmount   Int? // solde théorique à la clôture
+  countedAmount    Int? // solde réel compté
+  difference       Int? // écart = réel − théorique
+  differenceReason String?
+  notes            String?
+  movements        CashMovement[]
+  payments         Payment[]
+}
+
+enum CashMovementType {
+  IN
+  OUT
+}
+
+enum CashMovementSource {
+  SALE_PAYMENT
+  REFUND
+  EXPENSE
+  OTHER_INCOME
+  SUPPLIER_PAYMENT
+  COMMISSION_PAYOUT
+  MANUAL
+}
+
+model CashMovement {
+  id          String             @id @default(uuid())
+  sessionId   String
+  session     CashSession        @relation(fields: [sessionId], references: [id])
+  type        CashMovementType
+  source      CashMovementSource
+  amount      Int
+  label       String
+  referenceId String?
+  userId      String
+  createdAt   DateTime           @default(now())
+}
+
+// ───────────────────────────── Comptabilité ─────────────────────────────
+
+model ExpenseCategory {
+  id               String    @id @default(uuid())
+  code             String    @unique
+  name             String
+  syscohadaAccount String? // compte indicatif, à valider par un comptable
+  active           Boolean   @default(true)
+  expenses         Expense[]
+}
+
+enum ExpenseStatus {
+  PAID
+  PARTIAL
+  UNPAID
+  CANCELLED
+}
+
+model Expense {
+  id            String          @id @default(uuid())
+  number        String          @unique // DEP-2026-000001
+  categoryId    String
+  category      ExpenseCategory @relation(fields: [categoryId], references: [id])
+  supplierId    String?
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id])
+  label         String
+  amount        Int
+  paidAmount    Int             @default(0)
+  status        ExpenseStatus
+  expenseDate   DateTime        @db.Date
+  method        PaymentMethod?
+  reference     String?
+  notes         String?
+  createdById   String
+  cancelledAt   DateTime?
+  cancelledById String?
+  cancelReason  String?
+  createdAt     DateTime        @default(now())
+  payments      SupplierPayment[]
+
+  @@index([expenseDate])
+}
+
+model OtherIncome {
+  id            String        @id @default(uuid())
+  number        String        @unique // REV-2026-000001
+  label         String
+  category      String // Location de poste, Formation, Divers…
+  amount        Int
+  method        PaymentMethod
+  incomeDate    DateTime      @db.Date
+  reference     String?
+  createdById   String
+  cancelledAt   DateTime?
+  cancelledById String?
+  cancelReason  String?
+  createdAt     DateTime      @default(now())
+}
+
+// ───────────────────────────── Commissions ─────────────────────────────
+
+enum CommissionStatus {
+  PENDING // vente pas encore soldée
+  DUE // due au collaborateur
+  PAID
+  CANCELLED
+}
+
+model Commission {
+  id         String           @id @default(uuid())
+  saleItemId String
+  saleItem   SaleItem         @relation(fields: [saleItemId], references: [id])
+  isReversal Boolean          @default(false) // régularisation négative après annulation d'une vente déjà commissionnée
+  staffId    String
+  staff      Staff            @relation(fields: [staffId], references: [id])
+  baseAmount Int
+  rule       String // « 30 % » ou « 1 000 FCFA fixe »
+  amount     Int
+  status     CommissionStatus @default(PENDING)
+  earnedAt   DateTime? // date à laquelle la vente a été soldée
+  payoutId   String?
+  payout     CommissionPayout? @relation(fields: [payoutId], references: [id])
+  createdAt  DateTime         @default(now())
+
+  @@index([staffId, status])
+  @@index([saleItemId])
+}
+
+model CommissionPayout {
+  id          String        @id @default(uuid())
+  number      String        @unique // COM-2026-0001
+  staffId     String
+  staff       Staff         @relation(fields: [staffId], references: [id])
+  amount      Int
+  method      PaymentMethod
+  periodFrom  DateTime?
+  periodTo    DateTime?
+  expenseId   String?       @unique // dépense « Commissions » générée
+  paidById    String
+  notes       String?
+  createdAt   DateTime      @default(now())
+  commissions Commission[]
+}
+
+// ───────────────────────────── Stocks & fournisseurs ─────────────────────────────
+
+model Supplier {
+  id        String     @id @default(uuid())
+  name      String
+  contact   String?
+  phone     String?
+  address   String?
+  notes     String?
+  active    Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  products  Product[]
+  purchases Purchase[]
+  expenses  Expense[]
+}
+
+model ProductCategory {
+  id       String    @id @default(uuid())
+  code     String    @unique
+  name     String
+  products Product[]
+}
+
+model Product {
+  id            String          @id @default(uuid())
+  reference     String          @unique
+  name          String
+  categoryId    String
+  category      ProductCategory @relation(fields: [categoryId], references: [id])
+  supplierId    String?
+  supplier      Supplier?       @relation(fields: [supplierId], references: [id])
+  purchasePrice Int
+  salePrice     Int
+  quantity      Int             @default(0)
+  minQuantity   Int             @default(0)
+  unit          String          @default("pièce")
+  sellable      Boolean         @default(true) // false = fourniture à usage interne
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  movements     StockMovement[]
+  saleItems     SaleItem[]
+  purchaseLines PurchaseLine[]
+}
+
+enum StockMovementType {
+  PURCHASE // entrée fournisseur
+  IN // autre entrée
+  SALE // sortie par vente
+  SALE_CANCEL // retour suite à annulation
+  USAGE // consommation interne (salon)
+  OUT // autre sortie (casse, perte…)
+  ADJUSTMENT // ajustement justifié
+  INVENTORY // écart d'inventaire
+}
+
+model StockMovement {
+  id             String            @id @default(uuid())
+  productId      String
+  product        Product           @relation(fields: [productId], references: [id])
+  type           StockMovementType
+  quantity       Int // signé : + entrée, − sortie
+  quantityBefore Int
+  quantityAfter  Int
+  unitCost       Int
+  reason         String?
+  saleId         String?
+  purchaseId     String?
+  inventoryId    String?
+  userId         String
+  createdAt      DateTime          @default(now())
+
+  @@index([productId, createdAt])
+}
+
+enum PurchaseStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+model Purchase {
+  id           String            @id @default(uuid())
+  number       String            @unique // ACH-2026-000001
+  supplierId   String
+  supplier     Supplier          @relation(fields: [supplierId], references: [id])
+  purchaseDate DateTime          @db.Date
+  total        Int
+  paidAmount   Int               @default(0)
+  status       PurchaseStatus
+  reference    String? // n° facture fournisseur
+  notes        String?
+  createdById  String
+  createdAt    DateTime          @default(now())
+  lines        PurchaseLine[]
+  payments     SupplierPayment[]
+}
+
+model PurchaseLine {
+  id         String   @id @default(uuid())
+  purchaseId String
+  purchase   Purchase @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id])
+  quantity   Int
+  unitCost   Int
+  total      Int
+}
+
+model SupplierPayment {
+  id         String        @id @default(uuid())
+  purchaseId String?
+  purchase   Purchase?     @relation(fields: [purchaseId], references: [id])
+  expenseId  String?
+  expense    Expense?      @relation(fields: [expenseId], references: [id])
+  amount     Int
+  method     PaymentMethod
+  reference  String?
+  paidById   String
+  paidAt     DateTime      @default(now())
+}
+
+model Inventory {
+  id          String    @id @default(uuid())
+  number      String    @unique // INV-2026-0001
+  notes       String?
+  status      String    @default("VALIDATED")
+  createdById String
+  createdAt   DateTime  @default(now())
+  lines       InventoryLine[]
+}
+
+model InventoryLine {
+  id          String    @id @default(uuid())
+  inventoryId String
+  inventory   Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  productId   String
+  expectedQty Int
+  countedQty  Int
+  difference  Int
+}
+
+// ───────────────────────────── Fidélité ─────────────────────────────
+
+enum LoyaltyTxType {
+  EARN
+  REDEEM
+  ADJUST
+  CANCEL
+}
+
+model LoyaltyTransaction {
+  id        String        @id @default(uuid())
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id])
+  type      LoyaltyTxType
+  points    Int // signé
+  saleId    String?
+  sale      Sale?         @relation(fields: [saleId], references: [id])
+  reason    String?
+  userId    String?
+  createdAt DateTime      @default(now())
+
+  @@index([clientId])
+}
+
+model LoyaltyPackage {
+  id            String               @id @default(uuid())
+  code          String               @unique
+  name          String
+  description   String?
+  price         Int
+  durationDays  Int                  @default(30)
+  visits        Int // nombre de passages inclus
+  serviceIds    String[] // prestations couvertes
+  active        Boolean              @default(true)
+  createdAt     DateTime             @default(now())
+  subscriptions ClientSubscription[]
+  saleItems     SaleItem[]
+}
+
+model ClientSubscription {
+  id              String         @id @default(uuid())
+  clientId        String
+  client          Client         @relation(fields: [clientId], references: [id])
+  packageId       String
+  package         LoyaltyPackage @relation(fields: [packageId], references: [id])
+  saleId          String?
+  sale            Sale?          @relation(fields: [saleId], references: [id])
+  startDate       DateTime       @db.Date
+  endDate         DateTime       @db.Date
+  visitsTotal     Int
+  visitsUsed      Int            @default(0)
+  status          String         @default("ACTIVE") // ACTIVE, EXPIRED, CANCELLED
+  createdAt       DateTime       @default(now())
+  usages          SubscriptionUsage[]
+}
+
+model SubscriptionUsage {
+  id             String             @id @default(uuid())
+  subscriptionId String
+  subscription   ClientSubscription @relation(fields: [subscriptionId], references: [id])
+  serviceId      String?
+  staffId        String?
+  notes          String?
+  userId         String
+  usedAt         DateTime           @default(now())
+}
+
+// ───────────────────────────── Synchronisation hors ligne ─────────────────────────────
+
+enum SyncStatus {
+  APPLIED
+  CONFLICT
+  REJECTED
+}
+
+model SyncOperation {
+  opId       String     @id // UUID généré sur l'appareil
+  userId     String
+  deviceId   String?
+  type       String // client.create, appointment.create, sale.create
+  payload    Json
+  status     SyncStatus
+  resultId   String?
+  message    String?
+  clientCreatedAt DateTime?
+  receivedAt DateTime   @default(now())
+
+  @@index([userId, receivedAt])
+}

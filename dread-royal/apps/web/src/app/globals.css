@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; }
+html, body { background: #F4F4F2; }
+body { -webkit-tap-highlight-color: transparent; }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+.gold-text { background: linear-gradient(180deg, #F6E27A 0%, #D4AF37 45%, #9C7A1E 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.kente { background-image: repeating-linear-gradient(90deg, #D4AF37 0 12px, #0B0B0B 12px 16px, #B91C1C 16px 22px, #0B0B0B 22px 26px, #15803D 26px 30px, #0B0B0B 30px 34px); }
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}
