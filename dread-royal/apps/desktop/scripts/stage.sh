@@ -21,7 +21,8 @@ npm run build -w @dread-royal/shared >/dev/null
 NEXT_PUBLIC_API_URL=/api npm run build -w @dread-royal/web >/dev/null
 
 echo "▶ 2. Assemblage dans $APP"
-rm -rf "$APP" && mkdir -p "$APP/api/prisma" "$APP/node_modules/@dread-royal/shared"
+rm -rf "$APP" && mkdir -p "$APP/api/prisma" "$APP/vendor/shared"
+cp packages/shared/package.json "$APP/vendor/shared/" && cp -r packages/shared/dist "$APP/vendor/shared/dist"
 cp -r "$HERE/src" "$APP/desktop"
 cp -r apps/api/dist "$APP/api/dist"
 cp -r apps/api/assets "$APP/api/assets"
@@ -31,15 +32,14 @@ cp -r apps/web/out "$APP/web"
 node -e "
 const api = require('./apps/api/package.json');
 const deps = { ...api.dependencies, pg: '^8.13.0' };
-delete deps['@dread-royal/shared'];
+deps['@dread-royal/shared'] = 'file:vendor/shared'; // paquet local déclaré : conservé par npm et electron-builder
 const pkg = { name: 'dread-royal-desktop', productName: 'DREAD ROYAL', version: require('$HERE/package.json').version, private: true,
   description: 'DREAD ROYAL Management System', author: 'DREAD ROYAL', main: 'desktop/main.js', dependencies: deps };
 require('fs').writeFileSync('$APP/package.json', JSON.stringify(pkg, null, 2));
 "
 
 echo "▶ 3. Dépendances de production"
-(cd "$APP" && npm install --omit=dev --no-audit --no-fund --no-package-lock --ignore-scripts >/dev/null)
-cp packages/shared/package.json "$APP/node_modules/@dread-royal/shared/" && cp -r packages/shared/dist "$APP/node_modules/@dread-royal/shared/dist"
+(cd "$APP" && npm install --omit=dev --install-links --no-audit --no-fund --no-package-lock --ignore-scripts >/dev/null)
 (cd "$APP" && node node_modules/prisma/build/index.js generate --schema api/prisma/schema.prisma >/dev/null)
 # Le moteur de schéma et la CLI Prisma ne sont pas utilisés à l'exécution (migrations appliquées par desktop/migrate.js)
 rm -rf "$APP/node_modules/prisma" "$APP/node_modules/@prisma/engines" "$APP/node_modules/.bin"

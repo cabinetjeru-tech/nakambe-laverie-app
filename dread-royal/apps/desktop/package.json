@@ -9,7 +9,7 @@
     "stage": "bash scripts/stage.sh",
     "start": "electron build/app",
     "dist:win": "bash scripts/build-win.sh",
-    "dist:linux": "bash scripts/stage.sh linux && electron-builder --linux dir"
+    "dist:linux": "bash scripts/build-linux.sh"
   },
   "build": {
     "appId": "bf.dreadroyal.management",
@@ -56,7 +56,8 @@
         "dir"
       ],
       "category": "Office"
-    }
+    },
+    "npmRebuild": false
   },
   "devDependencies": {
     "electron": "^33.4.11",
